@@ -35,8 +35,8 @@
 #endif // CAFFE2_USE_CNMEM
 
 #include "caffe2/core/asan.h"
-#include "caffe2/core/common_cudnn.h"
-#include "caffe2/core/context_gpu.h"
+#include "caffe2/core/common_hip.h"
+#include "caffe2/core/context_hip.h"
 #include "caffe2/core/init.h"
 #include "caffe2/core/logging.h"
 #include "caffe2/core/tensor.h"

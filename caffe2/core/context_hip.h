@@ -26,7 +26,7 @@
 
 #ifndef CAFFE2_CONTEXT_HIP_H
 #define CAFFE2_CONTEXT_HIP_H
-#include "caffe2/core/common_gpu.h"
+#include "caffe2/core/common_hip.h"
 #include "caffe2/core/context.h"
 #include "caffe2/core/logging.h"
 #include "caffe2/core/tensor.h"
@@ -66,7 +66,7 @@ private:
   ThreadLocalHIPObjects() {
     for (int i = 0; i < CAFFE2_COMPILE_TIME_MAX_GPUS; ++i) {
       hip_streams_[i] = vector<hipStream_t>();
-      cublas_handles_[i] = vector<cublasHandle_t>();
+      hipblas_handles_[i] = vector<hipblasHandle_t>();
     }
   }
 
@@ -83,30 +83,30 @@ private:
     return gpu_streams[stream_id];
   }
 
-  cublasHandle_t GetHandle(int gpu, int stream_id) {
+  hipblasHandle_t GetHandle(int gpu, int stream_id) {
     DeviceGuard guard(gpu);
-    vector<cublasHandle_t> &gpu_handles = cublas_handles_[gpu];
+    vector<hipblasHandle_t> &gpu_handles = hipblas_handles_[gpu];
     if (gpu_handles.size() <= stream_id) {
       gpu_handles.resize(stream_id + 1, nullptr);
     }
     if (!gpu_handles[stream_id]) {
-      CUBLAS_ENFORCE(cublasCreate(&gpu_handles[stream_id]));
-      // The default is CUBLAS_POINTER_MODE_HOST. You can override
-      // it after obtaining the cublas handle, but do that with
+      HIPBLAS_ENFORCE(hipblasCreate(&gpu_handles[stream_id]));
+      // The default is HIPBLAS_POINTER_MODE_HOST. You can override
+      // it after obtaining the hipblas handle, but do that with
       // caution.
-      CUBLAS_ENFORCE(cublasSetPointerMode(gpu_handles[stream_id],
-                                          CUBLAS_POINTER_MODE_HOST));
-      CUBLAS_ENFORCE(
-          cublasSetStream(gpu_handles[stream_id], GetStream(gpu, stream_id)));
+      HIPBLAS_ENFORCE(cublasSetPointerMode(gpu_handles[stream_id],
+                                          HIPBLAS_POINTER_MODE_HOST));
+      HIPBLAS_ENFORCE(
+          hipblasSetStream(gpu_handles[stream_id], GetStream(gpu, stream_id)));
     }
     return gpu_handles[stream_id];
   }
 
   ~ThreadLocalHIPObjects() noexcept {
     for (int i = 0; i < CAFFE2_COMPILE_TIME_MAX_GPUS; ++i) {
-      for (auto &handle : cublas_handles_[i]) {
+      for (auto &handle : hipblas_handles_[i]) {
         if (handle) {
-          CUBLAS_CHECK(cublasDestroy(handle));
+          HIPBLAS_CHECK(hipblasDestroy(handle));
         }
       }
       for (auto &stream : hip_streams_[i]) {
@@ -117,7 +117,7 @@ private:
     }
   }
   vector<hipStream_t> hip_streams_[CAFFE2_COMPILE_TIME_MAX_GPUS];
-  vector<cublasHandle_t> cublas_handles_[CAFFE2_COMPILE_TIME_MAX_GPUS];
+  vector<hipblasHandle_t> hipblas_handles_[CAFFE2_COMPILE_TIME_MAX_GPUS];
 };
 
 class HIPContext final {
@@ -162,7 +162,7 @@ public:
     return hip_objects_.GetStream(gpu_id, stream_id);
   }
 
-  cublasHandle_t cublas_handle() {
+  hipblasHandle_t hipblas_handle() {
     return hip_objects_.GetHandle(gpu_id_, stream_id_);
   }
 
