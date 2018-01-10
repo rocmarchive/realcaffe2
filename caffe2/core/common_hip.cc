@@ -23,9 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "common_hip.h"
-#include "caffe2/core/asan.h"
 #include "caffe2/core/common_hip.h"
+#include "caffe2/core/asan.h"
 #include "caffe2/core/init.h"
 #include "caffe2/core/logging.h"
 #include <atomic>
@@ -33,7 +32,6 @@
 #include <sstream>
 
 namespace caffe2 {
-
 int NumHipDevices() {
   if (getenv("CAFFE2_DEBUG_HIP_INIT_ORDER")) {
     static bool first = true;
@@ -51,10 +49,6 @@ int NumHipDevices() {
       // Everything is good.
       break;
     case hipErrorNoDevice:
-      count = 0;
-      break;
-    case hipErrorInsufficientDriver:
-      LOG(WARNING) << "Insufficient hip driver. Cannot use hip.";
       count = 0;
       break;
     case hipErrorInitializationError:
@@ -96,11 +90,9 @@ int NumHipDevices() {
   }
   return count;
 }
-
 namespace {
 int gDefaultGPUID = 0;
 } // namespace
-
 void SetDefaultGPUID(const int deviceid) {
   CAFFE_ENFORCE_LT(
       deviceid, NumHipDevices(),
@@ -110,21 +102,18 @@ void SetDefaultGPUID(const int deviceid) {
   gDefaultGPUID = deviceid;
 }
 int GetDefaultGPUID() { return gDefaultGPUID; }
-
 int GetCurrentGPUID() {
   int gpu_id = 0;
   HIP_ENFORCE(hipGetDevice(&gpu_id));
   return gpu_id;
 }
-
 int GetGPUIDForPointer(const void *ptr) {
-  hipPointerAttributes attr;
+  hipPointerAttribute_t attr;
   HIP_ENFORCE(hipPointerGetAttributes(&attr, ptr));
   return attr.device;
 }
-
-const hipDeviceProp &GetDeviceProperty(const int deviceid) {
-  static vector<hipDeviceProp> props;
+const hipDeviceProp_t &GetDeviceProperty(const int deviceid) {
+  static vector<hipDeviceProp_t> props;
   CAFFE_ENFORCE_LT(deviceid, NumHipDevices(),
                    "The gpu id should be smaller than the number of gpus ",
                    "on this machine: ", deviceid, " vs ", NumHipDevices());
@@ -136,9 +125,8 @@ const hipDeviceProp &GetDeviceProperty(const int deviceid) {
   }
   return props[deviceid];
 }
-
 void DeviceQuery(const int device) {
-  const hipDeviceProp &prop = GetDeviceProperty(device);
+  const hipDeviceProp_t &prop = GetDeviceProperty(device);
   std::stringstream ss;
   ss << std::endl;
   ss << "Device id:                     " << device << std::endl;
@@ -150,7 +138,6 @@ void DeviceQuery(const int device) {
      << std::endl;
   ss << "Total registers per block:     " << prop.regsPerBlock << std::endl;
   ss << "Warp size:                     " << prop.warpSize << std::endl;
-  ss << "Maximum memory pitch:          " << prop.memPitch << std::endl;
   ss << "Maximum threads per block:     " << prop.maxThreadsPerBlock
      << std::endl;
   ss << "Maximum dimension of block:    " << prop.maxThreadsDim[0] << ", "
@@ -159,17 +146,12 @@ void DeviceQuery(const int device) {
      << prop.maxGridSize[1] << ", " << prop.maxGridSize[2] << std::endl;
   ss << "Clock rate:                    " << prop.clockRate << std::endl;
   ss << "Total constant memory:         " << prop.totalConstMem << std::endl;
-  ss << "Texture alignment:             " << prop.textureAlignment << std::endl;
-  ss << "Concurrent copy and execution: " << (prop.deviceOverlap ? "Yes" : "No")
-     << std::endl;
   ss << "Number of multiprocessors:     " << prop.multiProcessorCount
      << std::endl;
-  ss << "Kernel execution timeout:      "
-     << (prop.kernelExecTimeoutEnabled ? "Yes" : "No") << std::endl;
+  ss << "Kernel execution timeout:      ";
   LOG(INFO) << ss.str();
   return;
 }
-
 bool GetHipPeerAccessPattern(vector<vector<bool>> *pattern) {
   int gpu_count;
   if (hipGetDeviceCount(&gpu_count) != hipSuccess)
@@ -189,68 +171,62 @@ bool GetHipPeerAccessPattern(vector<vector<bool>> *pattern) {
   }
   return true;
 }
-
-const char *cublasGetErrorString(cublasStatus_t error) {
+const char *rocblasGetErrorString(rocblas_status error) {
   switch (error) {
-  case CUBLAS_STATUS_SUCCESS:
-    return "CUBLAS_STATUS_SUCCESS";
-  case CUBLAS_STATUS_NOT_INITIALIZED:
-    return "CUBLAS_STATUS_NOT_INITIALIZED";
-  case CUBLAS_STATUS_ALLOC_FAILED:
-    return "CUBLAS_STATUS_ALLOC_FAILED";
-  case CUBLAS_STATUS_INVALID_VALUE:
-    return "CUBLAS_STATUS_INVALID_VALUE";
-  case CUBLAS_STATUS_ARCH_MISMATCH:
-    return "CUBLAS_STATUS_ARCH_MISMATCH";
-  case CUBLAS_STATUS_MAPPING_ERROR:
-    return "CUBLAS_STATUS_MAPPING_ERROR";
-  case CUBLAS_STATUS_EXECUTION_FAILED:
-    return "CUBLAS_STATUS_EXECUTION_FAILED";
-  case CUBLAS_STATUS_INTERNAL_ERROR:
-    return "CUBLAS_STATUS_INTERNAL_ERROR";
-#if HIP_VERSION >= 6000
-  case CUBLAS_STATUS_NOT_SUPPORTED:
-    return "CUBLAS_STATUS_NOT_SUPPORTED";
-#if HIP_VERSION >= 6050
-  case CUBLAS_STATUS_LICENSE_ERROR:
-    return "CUBLAS_STATUS_LICENSE_ERROR";
-#endif // HIP_VERSION >= 6050
-#endif // HIP_VERSION >= 6000
+  case rocblas_status_success:
+    return "rocblas_status_success";
+  case rocblas_status_invalid_handle:
+    return "rocblas_status_invalid_handle";
+  case rocblas_status_not_implemented:
+    return "rocblas_status_not_implemented";
+  case rocblas_status_invalid_pointer:
+    return "rocblas_status_invalid_pointer";
+  case rocblas_status_invalid_size:
+    return "rocblas_status_invalid_size";
+  case rocblas_status_memory_error:
+    return "rocblas_status_memory_error";
+  case rocblas_status_internal_error:
+    return "rocblas_status_internal_error";
   }
   // To suppress compiler warning.
-  return "Unrecognized cublas error string";
+  return "Unrecognized rocblas error string";
 }
-
-const char *curandGetErrorString(curandStatus_t error) {
+const char *hiprngGetErrorString(hiprngStatus_t error) {
   switch (error) {
-  case CURAND_STATUS_SUCCESS:
-    return "CURAND_STATUS_SUCCESS";
-  case CURAND_STATUS_VERSION_MISMATCH:
-    return "CURAND_STATUS_VERSION_MISMATCH";
-  case CURAND_STATUS_NOT_INITIALIZED:
-    return "CURAND_STATUS_NOT_INITIALIZED";
-  case CURAND_STATUS_ALLOCATION_FAILED:
-    return "CURAND_STATUS_ALLOCATION_FAILED";
-  case CURAND_STATUS_TYPE_ERROR:
-    return "CURAND_STATUS_TYPE_ERROR";
-  case CURAND_STATUS_OUT_OF_RANGE:
-    return "CURAND_STATUS_OUT_OF_RANGE";
-  case CURAND_STATUS_LENGTH_NOT_MULTIPLE:
-    return "CURAND_STATUS_LENGTH_NOT_MULTIPLE";
-  case CURAND_STATUS_DOUBLE_PRECISION_REQUIRED:
-    return "CURAND_STATUS_DOUBLE_PRECISION_REQUIRED";
-  case CURAND_STATUS_LAUNCH_FAILURE:
-    return "CURAND_STATUS_LAUNCH_FAILURE";
-  case CURAND_STATUS_PREEXISTING_FAILURE:
-    return "CURAND_STATUS_PREEXISTING_FAILURE";
-  case CURAND_STATUS_INITIALIZATION_FAILED:
-    return "CURAND_STATUS_INITIALIZATION_FAILED";
-  case CURAND_STATUS_ARCH_MISMATCH:
-    return "CURAND_STATUS_ARCH_MISMATCH";
-  case CURAND_STATUS_INTERNAL_ERROR:
-    return "CURAND_STATUS_INTERNAL_ERROR";
+  case HIPRNG_STATUS_SUCCESS:
+    return "HIPRNG_STATUS_SUCCESS";
+  case HIPRNG_STATUS_VERSION_MISMATCH:
+    return "HIPRNG_STATUS_VERSION_MISMATCH";
+  case HIPRNG_STATUS_NOT_INITIALIZED:
+    return "HIPRNG_STATUS_NOT_INITIALIZED";
+  case HIPRNG_STATUS_ALLOCATION_FAILED:
+    return "HIPRNG_STATUS_ALLOCATION_FAILED";
+  case HIPRNG_STATUS_TYPE_ERROR:
+    return "HIPRNG_STATUS_TYPE_ERROR";
+  case HIPRNG_STATUS_OUT_OF_RANGE:
+    return "HIPRNG_STATUS_OUT_OF_RANGE";
+  case HIPRNG_STATUS_LENGTH_NOT_MULTIPLE:
+    return "HIPRNG_STATUS_LENGTH_NOT_MULTIPLE";
+  case HIPRNG_STATUS_LAUNCH_FAILURE:
+    return "HIPRNG_STATUS_LAUNCH_FAILURE";
+  case HIPRNG_STATUS_PREEXISTING_FAILURE:
+    return "HIPRNG_STATUS_PREEXISTING_FAILURE";
+  case HIPRNG_STATUS_INITIALIZATION_FAILED:
+    return "HIPRNG_STATUS_INITIALIZATION_FAILED";
+  case HIPRNG_STATUS_ARCH_MISMATCH:
+    return "HIPRNG_STATUS_ARCH_MISMATCH";
+  case HIPRNG_FUNCTION_NOT_IMPLEMENTED:
+    return "HIPRNG_FUNCTION_NOT_IMPLEMENTED";
+  case HIPRNG_INVALID_SEED:
+    return "HIPRNG_INVALID_SEED";
+  case HIPRNG_INVALID_STREAM_CREATOR:
+    return "HIPRNG_INVALID_STREAM_CREATOR";
+  case HIPRNG_INVALID_VALUE:
+    return "HIPRNG_INVALID_VALUE";
+  case HIPRNG_STATUS_INTERNAL_ERROR:
+    return "HIPRNG_STATUS_INTERNAL_ERROR";
   }
   // To suppress compiler warning.
-  return "Unrecognized curand error string";
+  return "Unrecognized hiprng error string";
 }
 } // namespace caffe2

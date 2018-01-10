@@ -23,49 +23,46 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-
 #ifndef CAFFE2_CORE_COMMON_HIP_H_
 #define CAFFE2_CORE_COMMON_HIP_H_
 
+#define HIP_VERSION 1
 #include "caffe2/core/common.h"
 #include "caffe2/core/logging.h"
 #include <assert.h>
 #include <hip/hip_runtime.h>
 #include <hip/hip_runtime_api.h>
+#include <hiprng.h>
+#include <rocblas.h>
 
+#undef hipLaunchKernel
+#define hipLaunchKernel hipLaunchKernelGGL
 // This is a macro defined for hip fp16 support. In default, hip fp16 is
 // supported by NVCC 7.5, but it is also included in the Tegra X1 platform with
 // a (custom?) NVCC 7.0. As a result, we would normally just check the hip
 // version here, but would also allow a use to pass in the flag
 // CAFFE_HAS_HIP_FP16 manually.
-
 #ifndef CAFFE_HAS_HIP_FP16
 #if HIP_VERSION >= 7050
 #define CAFFE_HAS_HIP_FP16
 #endif // HIP_VERSION >= 7050
 #endif // CAFFE_HAS_HIP_FP16
-
 #ifdef CAFFE_HAS_HIP_FP16
 #include <hip_fp16.h>
 #endif
-
 /**
  * The maximum number of GPUs that caffe2 recognizes.
  */
 #define CAFFE2_COMPILE_TIME_MAX_GPUS 8
-
 namespace caffe2 {
-
 /**
  * A runtime function to report the hip version that Caffe2 is built with.
  */
 inline int HipVersion() { return HIP_VERSION; }
-
 /**
  * Returns the number of devices.
  */
 int NumHipDevices();
-
 /**
  * Check if the current running session has a hip gpu present.
  *
@@ -76,7 +73,6 @@ int NumHipDevices();
  * meaning that there is no usable GPU present.
  */
 inline bool HasHipGPU() { return NumHipDevices() > 0; }
-
 /**
  * Sets the default GPU id for Caffe2.
  *
@@ -85,32 +81,26 @@ inline bool HasHipGPU() { return NumHipDevices() > 0; }
  * called, GPU 0 will be the default GPU id.
  */
 void SetDefaultGPUID(const int deviceid);
-
 /**
  * Gets the default GPU id for Caffe2.
  */
 int GetDefaultGPUID();
-
 /**
  * Gets the current GPU id. This is a simple wrapper around hipGetDevice().
  */
 int GetCurrentGPUID();
-
 /**
  * Gets the GPU id that the current pointer is located at.
  */
 int GetGPUIDForPointer(const void *ptr);
-
 /**
  * Gets the device property for the given device.
  */
-const hipDeviceProp &GetDeviceProperty(const int device);
-
+const hipDeviceProp_t &GetDeviceProperty(const int device);
 /**
  * Runs a device query function and prints out the results to LOG(INFO).
  */
 void DeviceQuery(const int deviceid);
-
 /**
  * Return a peer access pattern by returning a matrix (in the format of a
  * nested vector) of boolean values specifying whether peer access is possible.
@@ -119,17 +109,14 @@ void DeviceQuery(const int deviceid);
  * the GPU access pattern.
  */
 bool GetHipPeerAccessPattern(vector<vector<bool>> *pattern);
-
 /**
- * Return a human readable cublas error string.
+ * Return a human readable rocblas error string.
  */
-const char *cublasGetErrorString(cublasStatus_t error);
-
+const char *rocblasGetErrorString(rocblas_status error);
 /**
- * Return a human readable curand error string.
+ * Return a human readable hiprng error string.
  */
-const char *curandGetErrorString(curandStatus_t error);
-
+const char *hiprngGetErrorString(hiprngStatus_t error);
 // HIP: various checks for different function calls.
 #define HIP_ENFORCE(condition)                                                 \
   do {                                                                         \
@@ -142,7 +129,6 @@ const char *curandGetErrorString(curandStatus_t error);
     hipError_t error = condition;                                              \
     CHECK(error == hipSuccess) << hipGetErrorString(error);                    \
   } while (0)
-
 #define HIP_DRIVERAPI_ENFORCE(condition)                                       \
   do {                                                                         \
     CUresult result = condition;                                               \
@@ -162,48 +148,40 @@ const char *curandGetErrorString(curandStatus_t error);
                  << msg;                                                       \
     }                                                                          \
   } while (0)
-
-#define CUBLAS_ENFORCE(condition)                                              \
+#define ROCBLAS_ENFORCE(condition)                                             \
   do {                                                                         \
-    cublasStatus_t status = condition;                                         \
-    CAFFE_ENFORCE_EQ(status, CUBLAS_STATUS_SUCCESS, "Error at: ", __FILE__,    \
+    rocblas_status status = condition;                                         \
+    CAFFE_ENFORCE_EQ(status, rocblas_status_success, "Error at: ", __FILE__,   \
                      ":", __LINE__, ": ",                                      \
-                     ::caffe2::cublasGetErrorString(status));                  \
+                     ::caffe2::rocblasGetErrorString(status));                 \
   } while (0)
-#define CUBLAS_CHECK(condition)                                                \
+#define ROCBLAS_CHECK(condition)                                               \
   do {                                                                         \
-    cublasStatus_t status = condition;                                         \
-    CHECK(status == CUBLAS_STATUS_SUCCESS)                                     \
-        << ::caffe2::cublasGetErrorString(status);                             \
+    rocblas_status status = condition;                                         \
+    CHECK(status == rocblas_status_success)                                    \
+        << ::caffe2::rocblasGetErrorString(status);                            \
   } while (0)
-
-#define CURAND_ENFORCE(condition)                                              \
+#define HIPRNG_ENFORCE(condition)                                              \
   do {                                                                         \
-    curandStatus_t status = condition;                                         \
-    CAFFE_ENFORCE_EQ(status, CURAND_STATUS_SUCCESS, "Error at: ", __FILE__,    \
+    hiprngStatus_t status = condition;                                         \
+    CAFFE_ENFORCE_EQ(status, HIPRNG_STATUS_SUCCESS, "Error at: ", __FILE__,    \
                      ":", __LINE__, ": ",                                      \
-                     ::caffe2::curandGetErrorString(status));                  \
+                     ::caffe2::hiprngGetErrorString(status));                  \
   } while (0)
-#define CURAND_CHECK(condition)                                                \
+#define HIPRNG_CHECK(condition)                                                \
   do {                                                                         \
-    curandStatus_t status = condition;                                         \
-    CHECK(status == CURAND_STATUS_SUCCESS)                                     \
-        << ::caffe2::curandGetErrorString(status);                             \
+    hiprngStatus_t status = condition;                                         \
+    CHECK(status == HIPRNG_STATUS_SUCCESS)                                     \
+        << ::caffe2::hiprngGetErrorString(status);                             \
   } while (0)
-
 #define HIP_1D_KERNEL_LOOP(i, n)                                               \
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < (n);                 \
-       i += blockDim.x * gridDim.x)
-
-// HIP_KERNEL_ASSERT is a macro that wraps an assert() call inside hip
-// kernels. This is not supported by Apple platforms so we special case it.
-// See http://docs.nvidia.com/hip/hip-c-programming-guide/#assertion
+  for (int i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x; i < (n);        \
+       i += hipBlockDim_x * hipGridDim_x)
 #ifdef __APPLE__
 #define HIP_KERNEL_ASSERT(...)
 #else // __APPLE__
 #define HIP_KERNEL_ASSERT(...) assert(__VA_ARGS__)
 #endif // __APPLE__
-
 // The following helper functions are here so that you can write a kernel call
 // when you are not particularly interested in maxing out the kernels'
 // performance. Usually, this will give you a reasonable speed, but if you
@@ -214,7 +192,6 @@ const char *curandGetErrorString(curandStatus_t error);
 // for different computation capabilities.
 // For more info on HIP compute capabilities, visit the NVidia website at:
 //    http://docs.nvidia.com/hip/hip-c-programming-guide/index.html#compute-capabilities
-
 // The number of hip threads to use. 512 is used for backward compatibility,
 // and it is observed that setting it to 1024 usually does not bring much
 // performance gain (which makes sense, because warp size being 32 means that
@@ -226,7 +203,6 @@ constexpr int CAFFE_HIP_NUM_THREADS = 512;
 // the hardware at runtime, and pick the number of blocks that makes most
 // sense for the specific runtime environment. This is a todo item.
 constexpr int CAFFE_MAXIMUM_NUM_BLOCKS = 4096;
-
 /**
  * @brief Compute the number of blocks needed to run N threads.
  */
@@ -234,7 +210,6 @@ inline int CAFFE_GET_BLOCKS(const int N) {
   return std::min((N + CAFFE_HIP_NUM_THREADS - 1) / CAFFE_HIP_NUM_THREADS,
                   CAFFE_MAXIMUM_NUM_BLOCKS);
 }
-
 class DeviceGuard {
 public:
   explicit DeviceGuard(int newDevice) : previous_(GetCurrentGPUID()) {
@@ -242,12 +217,11 @@ public:
       HIP_ENFORCE(hipSetDevice(newDevice));
     }
   }
-
   ~DeviceGuard() noexcept { HIP_CHECK(hipSetDevice(previous_)); }
 
 private:
   int previous_;
 };
-
 } // namespace caffe2
+
 #endif // CAFFE2_CORE_COMMON_HIP_H_
