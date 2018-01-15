@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * Copyright (c) 2016-present, Facebook, Inc.
  *
@@ -72,15 +73,11 @@ bool AccuracyOp<float, CUDAContext>::RunOnDevice() {
   Y->Resize(vector<TIndex>());
   float* Ydata = Y->mutable_data<float>();
   math::Set<float, CUDAContext>(1, 0, Ydata, &context_);
-  AccuracyKernel<<<
-      std::min(CAFFE_MAXIMUM_NUM_BLOCKS, N),
-      CAFFE_CUDA_NUM_THREADS,
-      0,
-      context_.cuda_stream()>>>(
+  hipLaunchKernelGGL((AccuracyKernel), dim3(std::min(CAFFE_MAXIMUM_NUM_BLOCKS, N)), dim3(CAFFE_CUDA_NUM_THREADS), 0, context_.cuda_stream(), 
       N, D, top_k_, X.data<float>(), label.data<int>(), Ydata);
   // This is going to be executed only in one single kernel. Not very beautiful,
   // but probably we have to do this?
-  AccuracyDivideKernel<<<1, 1, 0, context_.cuda_stream()>>>(
+  hipLaunchKernelGGL((AccuracyDivideKernel), dim3(1), dim3(1), 0, context_.cuda_stream(), 
       N, Ydata);
   return true;
 }

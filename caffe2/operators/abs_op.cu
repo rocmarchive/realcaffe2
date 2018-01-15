@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * Copyright (c) 2016-present, Facebook, Inc.
  *
@@ -39,11 +40,7 @@ struct AbsCUDAFunctor {
   template <typename T>
   inline void
   operator()(const int n, const T* x, T* y, CUDAContext* device_context) {
-    AbsKernel<T>
-        <<<CAFFE_GET_BLOCKS(n),
-           CAFFE_CUDA_NUM_THREADS,
-           0,
-           device_context->cuda_stream()>>>(n, x, y);
+    hipLaunchKernelGGL((AbsKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_CUDA_NUM_THREADS), 0, device_context->cuda_stream(), n, x, y);
     return;
   }
 };
@@ -56,11 +53,7 @@ struct AbsGradientCUDAFunctor {
       const T* dy,
       T* dx,
       CUDAContext* device_context) {
-    AbsGradientKernel<T>
-        <<<CAFFE_GET_BLOCKS(n),
-           CAFFE_CUDA_NUM_THREADS,
-           0,
-           device_context->cuda_stream()>>>(n, x, dy, dx);
+    hipLaunchKernelGGL((AbsGradientKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_CUDA_NUM_THREADS), 0, device_context->cuda_stream(), n, x, dy, dx);
     return;
   }
 };
