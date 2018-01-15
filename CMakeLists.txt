@@ -21,7 +21,8 @@ option(BUILD_SHARE_DIR "Build files in the share/ directory" OFF)
 option(BUILD_TEST "Build C++ test binaries (need gtest and gbenchmark)" ON)
 option(USE_ATEN "Use ATen" OFF)
 option(USE_ASAN "Use Address Sanitizer" OFF)
-option(USE_CUDA "Use Cuda" ON)
+option(USE_CUDA "Use Cuda" OFF)
+option(USE_HIP "Use HIP" ON)
 option(USE_FFMPEG "Use ffmpeg" OFF)
 option(USE_GFLAGS "Use GFLAGS" ON)
 option(USE_GLOG "Use GLOG" ON)
@@ -32,7 +33,7 @@ option(USE_LMDB "Use LMDB" ON)
 option(USE_METAL "Use Metal for iOS build" ON)
 option(USE_MOBILE_OPENGL "Use OpenGL for mobile code" ON)
 option(USE_MPI "Use MPI" ON)
-option(USE_NCCL "Use NCCL" ON)
+option(USE_NCCL "Use NCCL" OFF)
 option(USE_NERVANA_GPU "Use Nervana GPU backend" OFF)
 option(USE_NNPACK "Use NNPACK" ON)
 option(USE_OBSERVERS "Use Observer Library" OFF)
@@ -48,6 +49,14 @@ option(USE_ZSTD "Use ZSTD" OFF)
 
 
 # ---[ CMake scripts + modules
+if(NOT DEFINED HIP_PATH)
+    if(NOT DEFINED ENV{HIP_PATH})
+        set(HIP_PATH "/opt/rocm/hip" CACHE PATH "Path to which HIP has been installed")
+    else()
+        set(HIP_PATH $ENV{HIP_PATH} CACHE PATH "Path to which HIP has been installed")
+    endif()
+endif()
+list(APPEND CMAKE_MODULE_PATH ${HIP_PATH}/cmake)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 # ---[ CMake build directories
@@ -76,6 +85,9 @@ endif()
 
 # ---[ Dependencies
 include(cmake/Dependencies.cmake)
+if(USE_HIP)
+  include(${HIP_PATH}/cmake/FindHIP.cmake)
+endif()
 
 # ---[ Whitelist file if whitelist is specified
 include(cmake/Whitelist.cmake)
@@ -167,6 +179,9 @@ endif()
 target_link_libraries(caffe2 INTERFACE ${CAFFE2_INTERFACE_LIBS})
 if (USE_CUDA)
   target_link_libraries(caffe2_gpu INTERFACE ${CAFFE2_INTERFACE_LIBS})
+endif()
+if (USE_HIP)
+#  target_link_libraries(caffe2_hip INTERFACE ${CAFFE2_INTERFACE_LIBS})
 endif()
 
 # Note(jiayq): when building static libraries, all PRIVATE dependencies
