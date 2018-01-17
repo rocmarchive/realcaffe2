@@ -311,12 +311,12 @@ CAFFE_DEFINE_REGISTRY(
         OperatorBase,
         const OperatorDef&,
         Workspace*);
-    CAFFE_REGISTER_DEVICE_TYPE(DeviceType::HIP, HIPOperatorRegistry);
+CAFFE_REGISTER_DEVICE_TYPE(DeviceType::HIP, HIPOperatorRegistry);
 
-    CAFFE_DEFINE_REGISTRY(
-            GradientRegistry,
-            GradientMakerBase,
-            const OperatorDef&, const vector<GradientWrapper>&);
+CAFFE_DEFINE_REGISTRY(
+        GradientRegistry,
+        GradientMakerBase,
+        const OperatorDef&, const vector<GradientWrapper>&);
 
 GradientOpsMeta GetGradientForOp(
     const OperatorDef& def, const vector<GradientWrapper>& g_output) {
