@@ -257,6 +257,19 @@ inline bool HasCudaRuntime() {
   return g_caffe2_has_cuda_linked;
 }
 
+// A global variable to mark if Caffe2 has HIP linked to the current runtime.
+// Do not directly use this variable, but instead use the HasHipRuntime()
+// function below.
+extern bool g_caffe2_has_hip_linked;
+
+// HasHipRuntime() tells the program whether the binary has HIP runtime
+// linked. This function should not be used in static initialization functions
+// as the underlying boolean variable is going to be switched on when one
+// loads libcaffe2_gpu.so.
+inline bool HasHipRuntime() {
+  return g_caffe2_has_hip_linked;
+}
+
 // Returns which setting Caffe2 was configured and built with (exported from
 // CMake)
 const std::map<string, string>& GetBuildOptions();
