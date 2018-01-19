@@ -61,5 +61,6 @@ __global__ void AbsGradientKernel(const int N, const T *X, const T *dY, T *dX) {
 
     REGISTER_HIP_OPERATOR(
             AbsGradient, BinaryElementwiseOp<TensorTypes<float>, HIPContext,
-                                     WithoutBroadcast<AbsGradientCUDAFunctor>>);
+            WithoutBroadcast<AbsGradientHIPFunctor>>
+    );
 } // namespace caffe2
