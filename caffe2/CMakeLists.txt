@@ -52,7 +52,7 @@ endif()
 
 # Debug messages - if you want to get a list of source files, enable the
 # following.
-if (TRUE)
+if (FALSE)
   message(STATUS "CPU sources: ")
   foreach(tmp ${Caffe2_CPU_SRCS})
     message(STATUS "  " ${tmp})
@@ -180,7 +180,7 @@ if(USE_HIP)
   #set(CMAKE_SHARED_LINKER_FLAGS "-fPIC -Wl,-Bsymbolic")
   #set_source_files_properties(${Caffe2_HIP_SRCS} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
   HIP_ADD_LIBRARY(caffe2_hip ${Caffe2_HIP_SRCS})
-  
+
   target_include_directories(
       caffe2_hip INTERFACE $<INSTALL_INTERFACE:include>)
   target_compile_options(caffe2 INTERFACE "-std=c++11")
