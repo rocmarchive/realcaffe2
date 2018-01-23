@@ -12,6 +12,10 @@ set(Caffe2_GPU_SRCS ${Caffe2_GPU_SRCS} ${tmp})
 file(GLOB tmp *_test.cc)
 exclude(Caffe2_GPU_SRCS "${Caffe2_GPU_SRCS}" ${tmp})
 
+# ---[ HIP files
+file(GLOB tmp *_hip.cc)
+set(Caffe2_HIP_SRCS ${Caffe2_HIP_SRCS} ${tmp})
+
 # ---[ CPU files.
 file(GLOB tmp *.cc)
 set(Caffe2_CPU_SRCS ${Caffe2_CPU_SRCS} ${tmp})

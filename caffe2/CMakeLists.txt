@@ -52,7 +52,7 @@ endif()
 
 # Debug messages - if you want to get a list of source files, enable the
 # following.
-if (FALSE)
+if (TRUE)
   message(STATUS "CPU sources: ")
   foreach(tmp ${Caffe2_CPU_SRCS})
     message(STATUS "  " ${tmp})
@@ -177,23 +177,61 @@ if(USE_HIP)
   set(Caffe2_HIP_GCC_COMPILE_FLAGS "-D__HIP_PLATFORM_HCC__=1")
   INCLUDE_DIRECTORIES(/opt/rocm/include)
   LINK_DIRECTORIES(/opt/rocm/lib)
-  set(CMAKE_SHARED_LINKER_FLAGS "-fPIC -Wl,-Bsymbolic")
-  set_source_files_properties(${Caffe2_HIP_SRCS} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
-  #HIP_ADD_LIBRARY(Caffe2_HIP SHARED ${Caffe2_HIP_SRCS})
-  #list(APPEND Caffe2_MAIN_LIBS_ORDER Caffe2_HIP)
-  list(APPEND Caffe2_MAIN_LIBS hip_hcc)
-
+  #set(CMAKE_SHARED_LINKER_FLAGS "-fPIC -Wl,-Bsymbolic")
+  #set_source_files_properties(${Caffe2_HIP_SRCS} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
+  HIP_ADD_LIBRARY(caffe2_hip ${Caffe2_HIP_SRCS})
+  
+  target_include_directories(
+      caffe2_hip INTERFACE $<INSTALL_INTERFACE:include>)
+  target_compile_options(caffe2 INTERFACE "-std=c++11")
+  list(APPEND Caffe2_MAIN_LIBS_ORDER caffe2_hip)
+  add_dependencies(caffe2_hip Caffe2_PROTO)
   if (BUILD_SHARED_LIBS)
-    #target_link_libraries(Caffe2_HIP Caffe2_CPU ${Caffe2_DEPENDENCY_LIBS} ${Caffe2_HIP_DEPENDENCY_LIBS})
-    #list(APPEND Caffe2_MAIN_LIBS Caffe2_HIP)
+    target_link_libraries(
+        caffe2_hip
+        PRIVATE
+        caffe2
+        ${Caffe2_DEPENDENCY_LIBS}
+        ${Caffe2_HIP_DEPENDENCY_LIBS})
   else()
-    #target_link_libraries(Caffe2_HIP ${Caffe2_DEPENDENCY_LIBS})
-    #caffe_add_whole_archive_flag(Caffe2_HIP tmp)
-    #list(APPEND Caffe2_MAIN_LIBS ${tmp})
+    target_link_libraries(
+        caffe2_hip
+        PRIVATE
+        ${Caffe2_DEPENDENCY_LIBS}
+        ${Caffe2_HIP_DEPENDENCY_LIBS})
   endif()
-  #install(TARGETS Caffe2_HIP DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-  link_directories(${CMAKE_INSTALL_PREFIX}/lib)
+  caffe_add_linker_flag(caffe2_hip Caffe2_HIP_LINK)
+  list(APPEND Caffe2_MAIN_LIBS_ORDER caffe2_hip)
+  list(APPEND Caffe2_MAIN_LIBS ${Caffe2_HIP_LINK})
+  list(APPEND Caffe2_MAIN_LIBS_ORDER caffe2_hip)
+  if (Caffe2_EXTERNAL_DEPENDENCIES)
+    add_dependencies(caffe2_hip ${Caffe2_EXTERNAL_DEPENDENCIES})
+  endif()
+  install(TARGETS caffe2_hip EXPORT Caffe2Targets DESTINATION lib)
 endif()
+
+# ---[ HIP library.
+#if(USE_HIP)
+#  set(Caffe2_HIP_GCC_COMPILE_FLAGS "-D__HIP_PLATFORM_HCC__=1")
+#  INCLUDE_DIRECTORIES(/opt/rocm/include)
+#  LINK_DIRECTORIES(/opt/rocm/lib)
+#  set(CMAKE_SHARED_LINKER_FLAGS "-fPIC -Wl,-Bsymbolic")
+#  set_source_files_properties(${Caffe2_HIP_SRCS} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
+#  #HIP_ADD_LIBRARY(Caffe2_HIP SHARED ${Caffe2_HIP_SRCS})
+#  #list(APPEND Caffe2_MAIN_LIBS_ORDER Caffe2_HIP)
+#  list(APPEND Caffe2_MAIN_LIBS hip_hcc)
+
+#  if (BUILD_SHARED_LIBS)
+#    #target_link_libraries(Caffe2_HIP Caffe2_CPU ${Caffe2_DEPENDENCY_LIBS} ${Caffe2_HIP_DEPENDENCY_LIBS})
+#    #list(APPEND Caffe2_MAIN_LIBS Caffe2_HIP)
+#  else()
+#    #target_link_libraries(Caffe2_HIP ${Caffe2_DEPENDENCY_LIBS})
+#    #caffe_add_whole_archive_flag(Caffe2_HIP tmp)
+#    #list(APPEND Caffe2_MAIN_LIBS ${tmp})
+#  endif()
+#  #install(TARGETS Caffe2_HIP DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+#  link_directories(${CMAKE_INSTALL_PREFIX}/lib)
+#endif()
 
 # ---[ Test binaries.
 if (BUILD_TEST)
