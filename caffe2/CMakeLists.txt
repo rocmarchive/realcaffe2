@@ -174,9 +174,10 @@ endif()
 
 # ---[ HIP library.
 if(USE_HIP)
-  set(Caffe2_HIP_GCC_COMPILE_FLAGS "-D__HIP_PLATFORM_HCC__=1")
-  INCLUDE_DIRECTORIES(/opt/rocm/include)
-  LINK_DIRECTORIES(/opt/rocm/lib)
+  set(Caffe2_HIP_GCC_COMPILE_FLAGS "-D__HIP_PLATFORM_HCC__=1 -D__HCC__=1")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Caffe2_HIP_GCC_COMPILE_FLAGS}")
+  #INCLUDE_DIRECTORIES(/opt/rocm/include)
+  #LINK_DIRECTORIES(/opt/rocm/lib)
   #set(CMAKE_SHARED_LINKER_FLAGS "-fPIC -Wl,-Bsymbolic")
   #set_source_files_properties(${Caffe2_HIP_SRCS} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
   HIP_ADD_LIBRARY(caffe2_hip ${Caffe2_HIP_SRCS})
