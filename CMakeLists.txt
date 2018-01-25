@@ -49,14 +49,6 @@ option(USE_ZSTD "Use ZSTD" OFF)
 
 
 # ---[ CMake scripts + modules
-if(NOT DEFINED HIP_PATH)
-    if(NOT DEFINED ENV{HIP_PATH})
-        set(HIP_PATH "/opt/rocm/hip" CACHE PATH "Path to which HIP has been installed")
-    else()
-        set(HIP_PATH $ENV{HIP_PATH} CACHE PATH "Path to which HIP has been installed")
-    endif()
-endif()
-list(APPEND CMAKE_MODULE_PATH ${HIP_PATH}/cmake)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 # ---[ CMake build directories
@@ -85,9 +77,6 @@ endif()
 
 # ---[ Dependencies
 include(cmake/Dependencies.cmake)
-if(USE_HIP)
-  include(${HIP_PATH}/cmake/FindHIP.cmake)
-endif()
 
 # ---[ Whitelist file if whitelist is specified
 include(cmake/Whitelist.cmake)
@@ -181,7 +170,7 @@ if (USE_CUDA)
   target_link_libraries(caffe2_gpu INTERFACE ${CAFFE2_INTERFACE_LIBS})
 endif()
 if (USE_HIP)
-#  target_link_libraries(caffe2_hip INTERFACE ${CAFFE2_INTERFACE_LIBS})
+  target_link_libraries(caffe2_hip INTERFACE ${CAFFE2_INTERFACE_LIBS})
 endif()
 
 # Note(jiayq): when building static libraries, all PRIVATE dependencies
