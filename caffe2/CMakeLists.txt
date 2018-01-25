@@ -212,29 +212,6 @@ if(USE_HIP)
   install(TARGETS caffe2_hip EXPORT Caffe2Targets DESTINATION lib)
 endif()
 
-# ---[ HIP library.
-#if(USE_HIP)
-#  set(Caffe2_HIP_GCC_COMPILE_FLAGS "-D__HIP_PLATFORM_HCC__=1")
-#  INCLUDE_DIRECTORIES(/opt/rocm/include)
-#  LINK_DIRECTORIES(/opt/rocm/lib)
-#  set(CMAKE_SHARED_LINKER_FLAGS "-fPIC -Wl,-Bsymbolic")
-#  set_source_files_properties(${Caffe2_HIP_SRCS} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
-#  #HIP_ADD_LIBRARY(Caffe2_HIP SHARED ${Caffe2_HIP_SRCS})
-#  #list(APPEND Caffe2_MAIN_LIBS_ORDER Caffe2_HIP)
-#  list(APPEND Caffe2_MAIN_LIBS hip_hcc)
-
-#  if (BUILD_SHARED_LIBS)
-#    #target_link_libraries(Caffe2_HIP Caffe2_CPU ${Caffe2_DEPENDENCY_LIBS} ${Caffe2_HIP_DEPENDENCY_LIBS})
-#    #list(APPEND Caffe2_MAIN_LIBS Caffe2_HIP)
-#  else()
-#    #target_link_libraries(Caffe2_HIP ${Caffe2_DEPENDENCY_LIBS})
-#    #caffe_add_whole_archive_flag(Caffe2_HIP tmp)
-#    #list(APPEND Caffe2_MAIN_LIBS ${tmp})
-#  endif()
-#  #install(TARGETS Caffe2_HIP DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-#  link_directories(${CMAKE_INSTALL_PREFIX}/lib)
-#endif()
-
 # ---[ Test binaries.
 if (BUILD_TEST)
   set(Caffe2_ALL_TEST_SRCS ${Caffe2_CPU_TEST_SRCS})
@@ -334,18 +311,23 @@ if (BUILD_PYTHON)
   endif()
 
   if(USE_HIP)
-    #add_library(caffe2_pybind11_state_hip MODULE ${Caffe2_HIP_PYTHON_SRCS})
-    #add_dependencies(caffe2_pybind11_state_hip ${Caffe2_MAIN_LIBS_ORDER})
-    #set_target_properties(caffe2_pybind11_state_hip PROPERTIES PREFIX "")
-    #set_target_properties(
-    #    caffe2_pybind11_state_hip PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-    #    ${CMAKE_BINARY_DIR}/caffe2/python)
-    #target_link_libraries(
-    #    caffe2_pybind11_state_hip ${Caffe2_MAIN_LIBS} ${Caffe2_DEPENDENCY_LIBS}
-    #    ${Caffe2_PYTHON_DEPENDENCY_LIBS})
-    #install(
-    #    TARGETS caffe2_pybind11_state_hip DESTINATION
-    #    ${CMAKE_INSTALL_PREFIX}/caffe2/python)
+    add_library(caffe2_pybind11_state_hip MODULE ${Caffe2_HIP_PYTHON_SRCS})
+    set_target_properties(caffe2_pybind11_state_hip PROPERTIES COMPILE_FLAGS "-fvisibility=hidden")
+    add_dependencies(caffe2_pybind11_state_hip ${Caffe2_MAIN_LIBS_ORDER})
+    set_target_properties(caffe2_pybind11_state_hip PROPERTIES PREFIX "")
+    if (APPLE)
+      set_target_properties(caffe2_pybind11_state_hip PROPERTIES SUFFIX ".so")
+      set_target_properties(caffe2_pybind11_state_hip PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+    elseif (MSVC)
+      set_target_properties(caffe2_pybind11_state_hip PROPERTIES SUFFIX ".pyd")
+    endif()
+    set_target_properties(
+        caffe2_pybind11_state_hip PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+        ${CMAKE_BINARY_DIR}/caffe2/python)
+    target_link_libraries(
+        caffe2_pybind11_state_hip ${Caffe2_CPU_LINK} ${Caffe2_HIP_LINK} ${Caffe2_DEPENDENCY_LIBS}
+        ${Caffe2_HIP_DEPENDENCY_LIBS} ${Caffe2_PYTHON_DEPENDENCY_LIBS})
+    install(TARGETS caffe2_pybind11_state_hip DESTINATION caffe2/python)
   endif()
 
   if (MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
