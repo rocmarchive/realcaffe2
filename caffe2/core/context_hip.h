@@ -1,0 +1,341 @@
+#ifndef CAFFE2_CORE_CONTEXT_HIP_H_
+#define CAFFE2_CORE_CONTEXT_HIP_H_
+
+#include <ctime>
+#include <mutex>
+
+//#include "caffe2/core/common_cudnn.h"
+#include "caffe2/core/common_hip.h"
+#include "caffe2/core/context.h"
+#include "caffe2/core/logging.h"
+#include "caffe2/core/tensor.h"
+#include "caffe2/core/types.h"
+#include "caffe2/proto/caffe2.pb.h"
+
+namespace caffe2 {
+
+enum class HipMemoryPoolType {
+  NONE = 0,
+  //CUB = 1,
+};
+
+/**
+ * Gets the current memory pool type used by Caffe2.
+ *
+ * The memory pool is set up during caffe2's global initialization time.
+ */
+HipMemoryPoolType GetHipMemoryPoolType();
+
+/**
+ * A struct to host thread-local cuda objects.
+ *
+ * In Caffe2, each thread has its own non-default cuda stream as well as
+ * related objects such as cublas and curand handles. This is achieved by
+ * having the ThreadLocalCUDAObjects wrapper that takes care of allocating
+ * and deallocating these objects at the thread scope. This class is solely
+ * used inside CUDAContext and should not be used externally.
+ */
+class ThreadLocalHIPObjects {
+  friend class HIPContext;
+
+ private:
+  ThreadLocalHIPObjects() {
+    for (int i = 0; i < CAFFE2_COMPILE_TIME_MAX_GPUS; ++i) {
+      hip_streams_[i] = vector<hipStream_t>();
+#if 0 // Ashish TBD: Add the handles to miopen, rocrand, rocblas here
+      cublas_handles_[i] = vector<cublasHandle_t>();
+      cudnn_handles_[i] = vector<cudnnHandle_t>();
+#endif
+    }
+  }
+
+  hipStream_t GetStream(int gpu, int stream_id) {
+    vector<hipStream_t>& gpu_streams = hip_streams_[gpu];
+    if (gpu_streams.size() <= stream_id) {
+      gpu_streams.resize(stream_id + 1, nullptr);
+    }
+    if (!gpu_streams[stream_id]) {
+      DeviceGuard guard(gpu);
+      HIP_ENFORCE(hipStreamCreateWithFlags(
+          &gpu_streams[stream_id], hipStreamNonBlocking));
+    }
+    return gpu_streams[stream_id];
+  }
+
+#if 0 // Ashish TBD: Placeholder for handles when integrating miopen, rocrand and so on
+  cublasHandle_t GetHandle(int gpu, int stream_id) {
+    DeviceGuard guard(gpu);
+    vector<cublasHandle_t>& gpu_handles = cublas_handles_[gpu];
+    if (gpu_handles.size() <= stream_id) {
+      gpu_handles.resize(stream_id + 1, nullptr);
+    }
+    if (!gpu_handles[stream_id]) {
+      CUBLAS_ENFORCE(cublasCreate(&gpu_handles[stream_id]));
+      // The default is CUBLAS_POINTER_MODE_HOST. You can override
+      // it after obtaining the cublas handle, but do that with
+      // caution.
+      CUBLAS_ENFORCE(cublasSetPointerMode(
+          gpu_handles[stream_id], CUBLAS_POINTER_MODE_HOST));
+      CUBLAS_ENFORCE(
+          cublasSetStream(gpu_handles[stream_id], GetStream(gpu, stream_id)));
+    }
+    return gpu_handles[stream_id];
+  }
+
+  cudnnHandle_t GetCudnnHandle(int gpu, int stream_id) {
+    DeviceGuard guard(gpu);
+    vector<cudnnHandle_t>& gpu_handles = cudnn_handles_[gpu];
+    if (gpu_handles.size() <= stream_id) {
+      gpu_handles.resize(stream_id + 1, nullptr);
+    }
+    if (!gpu_handles[stream_id]) {
+      CUDNN_ENFORCE(cudnnCreate(&gpu_handles[stream_id]));
+      CUDNN_ENFORCE(
+          cudnnSetStream(gpu_handles[stream_id], GetStream(gpu, stream_id)));
+    }
+    return gpu_handles[stream_id];
+  }
+#endif
+
+  ~ThreadLocalHIPObjects() noexcept {
+    for (int i = 0; i < CAFFE2_COMPILE_TIME_MAX_GPUS; ++i) {
+#if 0 // Ashish TBD: rocblas handle goes here
+      for (auto& handle : cublas_handles_[i]) {
+        if (handle) {
+          CUBLAS_CHECK(cublasDestroy(handle));
+        }
+      }
+#endif
+      for (auto& stream : hip_streams_[i]) {
+        if (stream) {
+          HIP_CHECK(hipStreamDestroy(stream));
+        }
+      }
+#if 0 // Ashish TBD: miopen handle goes here
+      for (auto& handle : cudnn_handles_[i]) {
+        if (handle) {
+          CUDNN_CHECK(cudnnDestroy(handle));
+        }
+      }
+#endif
+    }
+  }
+  vector<hipStream_t> hip_streams_[CAFFE2_COMPILE_TIME_MAX_GPUS];
+#if 0 // Ashish TBD: miopen and rocblas handles
+  vector<cublasHandle_t> cublas_handles_[CAFFE2_COMPILE_TIME_MAX_GPUS];
+  vector<cudnnHandle_t> cudnn_handles_[CAFFE2_COMPILE_TIME_MAX_GPUS];
+#endif
+};
+
+class HIPContext final {
+ public:
+  // The default HIP context constructor.
+  explicit HIPContext(const int gpu_id = -1);
+  explicit HIPContext(const DeviceOption& option);
+
+  ~HIPContext() {
+#if 0 // Ashish TBD: rocrand destructor
+    if (curand_generator_) {
+      CURAND_ENFORCE(curandDestroyGenerator(curand_generator_));
+    }
+#endif
+    FinishDeviceComputation();
+  }
+
+  inline void SwitchToDevice(int stream_id) {
+    set_stream_id(stream_id);
+    CaffeHipSetDevice(gpu_id_);
+  }
+  inline void SwitchToDevice() {
+    SwitchToDevice(0);
+  }
+
+  inline void WaitEvent(const Event& ev) {
+    ev.Wait(HIP, this);
+  }
+
+  inline void Record(Event* ev, const char* err_msg = nullptr) const {
+    CAFFE_ENFORCE(ev, "Event must not be null.");
+    ev->Record(HIP, this, err_msg);
+  }
+
+  void FinishDeviceComputation() {
+    hipStreamSynchronize(hip_objects_.GetStream(gpu_id_, stream_id_));
+    hipError_t error = hipGetLastError();
+    if (error != hipSuccess) {
+      CAFFE_THROW("Encountered HIP error: ", hipGetErrorString(error));
+    }
+  }
+
+  inline int hip_gpu_id() const {
+    return gpu_id_;
+  }
+
+  inline hipStream_t hip_stream() {
+    return hip_stream(gpu_id_, stream_id_);
+  }
+
+  inline hipStream_t hip_stream() const {
+    return hip_stream(gpu_id_, stream_id_);
+  }
+
+  static hipStream_t hip_stream(int gpu_id, int stream_id) {
+    return hip_objects_.GetStream(gpu_id, stream_id);
+  }
+
+#if 0 // Ashish TBD: rocblas, miopen, rocrand handles
+  cublasHandle_t cublas_handle() {
+    return cuda_objects_.GetHandle(gpu_id_, stream_id_);
+  }
+
+  cudnnHandle_t cudnn_handle() {
+    return cuda_objects_.GetCudnnHandle(gpu_id_, stream_id_);
+  }
+
+  curandGenerator_t& curand_generator() {
+    if (!curand_generator_) {
+      DeviceGuard guard(gpu_id_);
+      CURAND_ENFORCE(
+          curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
+      CURAND_ENFORCE(
+          curandSetPseudoRandomGeneratorSeed(curand_generator_, random_seed_));
+      CHECK_NOTNULL(curand_generator_);
+    }
+    CURAND_ENFORCE(curandSetStream(curand_generator_, cuda_stream()));
+    return curand_generator_;
+  }
+#endif
+
+  static std::pair<void*, MemoryDeleter> New(size_t nbytes);
+
+  // Get a mutex to lock out hipMalloc / hipFree calls when
+  // NCCL kernels are being launched. Should remove threat of
+  // deadlocks
+  static std::mutex& mutex();
+
+  // Functions to query memory stats. Only available if flag
+  // --caffe2_gpu_memory_tracking is enabled.
+  static std::vector<long> TotalMemoryByGpu();
+  static std::vector<long> MaxMemoryByGpu();
+
+  template <class SrcContext, class DstContext>
+  inline void CopyBytes(size_t nbytes, const void* src, void* dst) {
+    HIP_ENFORCE(hipMemcpyAsync(
+        dst,
+        src,
+        nbytes,
+        hipMemcpyDefault,
+        hip_objects_.GetStream(gpu_id_, stream_id_)));
+  }
+
+  template <typename T, class SrcContext, class DstContext>
+  inline void Copy(int n, const T* src, T* dst) {
+    CopyBytes<SrcContext, DstContext>(n * sizeof(T),
+                                 static_cast<const void*>(src),
+                                 static_cast<void*>(dst));
+  }
+
+  template <class SrcContext, class DstContext>
+  inline void
+  CopyItems(const TypeMeta& meta, size_t n, const void* src, void* dst) {
+    CAFFE_ENFORCE(!meta.copy(), "HIPContext requires fundamental types.");
+    CopyBytes<SrcContext, DstContext>(n * meta.itemsize(), src, dst);
+  }
+
+  // By default HIP operators have async device parts
+  static bool HasAsyncPartDefault() {
+    return true;
+  }
+
+  static bool SupportsAsyncScheduling() {
+    return true;
+  }
+
+  static bool IsStreamFree(const DeviceOption& option, int stream_id) {
+    auto stream = HIPContext::hip_stream(option.hip_gpu_id(), stream_id);
+    return hipStreamQuery(stream) == hipSuccess;
+  }
+
+ protected:
+  static void Delete(void* data);
+  void set_stream_id(int stream_id) {
+    stream_id_ = stream_id;
+  }
+
+  int gpu_id_;
+  int stream_id_ = 0;
+  int random_seed_;
+#if 0 // Ashish TBD: rocrand
+  curandGenerator_t curand_generator_{nullptr};
+#endif
+  static thread_local ThreadLocalHIPObjects hip_objects_;
+};
+
+// For the CPU context, we also allow a (probably expensive) function
+// to copy the data from a HIP context. Inside the function, we create
+// a temporary CUDAContext object to carry out the copy. From the caller's
+// side, these functions are synchronous with respect to the host, similar
+// to a normal CPUContext::CopyBytes<CPUContext, CPUContext> call.
+template<>
+inline void CPUContext::CopyBytes<HIPContext, CPUContext>(
+    size_t nbytes, const void* src, void* dst) {
+  HIPContext context(GetGPUIDForPointer(src));
+  context.CopyBytes<HIPContext, CPUContext>(nbytes, src, dst);
+}
+template<>
+inline void CPUContext::CopyBytes<CPUContext, HIPContext>(
+    size_t nbytes, const void* src, void* dst) {
+  HIPContext context(GetGPUIDForPointer(dst));
+  context.CopyBytes<CPUContext, HIPContext>(nbytes, src, dst);
+}
+
+/**
+ * An allocator that does the CPU memory allocation with pinned memory.
+ *
+ * This is needed because if we want to do any asynchronous HIP memcpy,
+ * the underlying CPU memory also needs to be allocated into pinned memory
+ * space. As a result, whenever Caffe2 is built with GPU and there is
+ * GPU present during runtime, at global initialization time we will set
+ * the CPU memory allocator to allocate pinned memory.
+ */
+struct PinnedCPUAllocator final : CPUAllocator {
+  PinnedCPUAllocator() {}
+  ~PinnedCPUAllocator() override {}
+  std::pair<void*, MemoryDeleter> New(size_t nbytes) override {
+    void* data;
+    std::lock_guard<std::mutex> lock(HIPContext::mutex());
+    HIP_ENFORCE(hipHostMalloc(&data, nbytes));
+    memset(data, 0, nbytes);
+    return {data, Delete};
+  }
+
+  MemoryDeleter GetDeleter() override {
+    return Delete;
+  }
+
+ private:
+  static void Delete(void* data) {
+    // Caffe2 uses a lazy way to figure out if one is actually going to use GPUs
+    // or not. If a HIPContext::New() call is made, inside the CUDAContext
+    // function we will switch the cpu side allocator to a PinnedCPUAllocator.
+    // But, if one calls CPUContext::New() before any HIP allocations,
+    // PinnedCPUAllocator can still delete the corresponding memory.
+    std::lock_guard<std::mutex> lock(HIPContext::mutex());
+    hipError_t err = hipHostFree(data);
+    if (err == hipErrorInvalidValue) {
+      free(data);
+      // Calling hipGetLastError will reset the HIP error.
+      hipGetLastError();
+    } else {
+      // For all other errors, still do a HIP check.
+      HIP_ENFORCE(err);
+    }
+  }
+};
+
+// For simplicity, we will typedef Tensor<CPUContext> to TensorCPU.
+typedef Tensor<HIPContext> TensorHIP;
+
+}  // namespace caffe2
+
+#endif  // CAFFE2_CORE_CONTEXT_HIP_H_

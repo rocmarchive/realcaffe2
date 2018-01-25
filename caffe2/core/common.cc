@@ -18,6 +18,7 @@
 
 namespace caffe2 {
 bool g_caffe2_has_cuda_linked = false;
+bool g_caffe2_has_hip_linked = false;
 
 const std::map<string, string>& GetBuildOptions() {
 #ifndef CAFFE2_BUILD_STRINGS

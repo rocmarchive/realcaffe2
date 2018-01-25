@@ -5,6 +5,7 @@
 # CMakeLists.txt files under each folder respectively.
 set(Caffe2_CPU_SRCS)
 set(Caffe2_GPU_SRCS)
+set(Caffe2_HIP_SRCS)
 
 # Caffe2_{CPU,GPU}_TEST_SRCS is the list that will have all the related source
 # files for CPU and GPU tests respectively.
@@ -46,6 +47,7 @@ add_subdirectory(utils)
 if (CAFFE2_WHITELISTED_FILES)
   caffe2_do_whitelist(Caffe2_CPU_SRCS CAFFE2_WHITELISTED_FILES)
   caffe2_do_whitelist(Caffe2_GPU_SRCS CAFFE2_WHITELISTED_FILES)
+  caffe2_do_whitelist(Caffe2_HIP_SRCS CAFFE2_WHITELISTED_FILES)
 endif()
 
 # Debug messages - if you want to get a list of source files, enable the
@@ -61,6 +63,11 @@ if (FALSE)
     message(STATUS "  " ${tmp})
   endforeach()
 
+  message(STATUS "HIP sources: ")
+  foreach(tmp ${Caffe2_HIP_SRCS})
+    message(STATUS "  " ${tmp})
+  endforeach()
+
   message(STATUS "CPU test sources: ")
   foreach(tmp ${Caffe2_CPU_TEST_SRCS})
     message(STATUS "  " ${tmp})
@@ -68,6 +75,11 @@ if (FALSE)
 
   message(STATUS "GPU test sources: ")
   foreach(tmp ${Caffe2_GPU_TEST_SRCS})
+    message(STATUS "  " ${tmp})
+  endforeach()
+
+  message(STATUS "HIP test sources: ")
+  foreach(tmp ${Caffe2_HIP_TEST_SRCS})
     message(STATUS "  " ${tmp})
   endforeach()
 endif()
@@ -160,6 +172,69 @@ if(USE_CUDA)
   install(TARGETS caffe2_gpu EXPORT Caffe2Targets DESTINATION lib)
 endif()
 
+# ---[ HIP library.
+if(USE_HIP)
+  set(Caffe2_HIP_GCC_COMPILE_FLAGS "-D__HIP_PLATFORM_HCC__=1")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Caffe2_HIP_GCC_COMPILE_FLAGS}")
+  set(HIP_HIPCC_FLAGS "${HIP_HIPCC_FLAGS} -fPIC")
+  INCLUDE_DIRECTORIES(/opt/rocm/include)
+  LINK_DIRECTORIES(/opt/rocm/lib)
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fPIC -Wl,-Bsymbolic")
+  set_source_files_properties(${Caffe2_HIP_SRCS} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
+  HIP_ADD_LIBRARY(caffe2_hip ${Caffe2_HIP_SRCS})
+
+  target_include_directories(
+      caffe2_hip INTERFACE $<INSTALL_INTERFACE:include>)
+  target_compile_options(caffe2 INTERFACE "-std=c++11")
+  list(APPEND Caffe2_MAIN_LIBS_ORDER caffe2_hip)
+  add_dependencies(caffe2_hip Caffe2_PROTO)
+  if (BUILD_SHARED_LIBS)
+    target_link_libraries(
+        caffe2_hip
+        PRIVATE
+        caffe2
+        ${Caffe2_DEPENDENCY_LIBS}
+        ${Caffe2_HIP_DEPENDENCY_LIBS})
+  else()
+    target_link_libraries(
+        caffe2_hip
+        PRIVATE
+        ${Caffe2_DEPENDENCY_LIBS}
+        ${Caffe2_HIP_DEPENDENCY_LIBS})
+  endif()
+  caffe_add_linker_flag(caffe2_hip Caffe2_HIP_LINK)
+  list(APPEND Caffe2_MAIN_LIBS_ORDER caffe2_hip)
+  list(APPEND Caffe2_MAIN_LIBS ${Caffe2_HIP_LINK})
+  list(APPEND Caffe2_MAIN_LIBS_ORDER caffe2_hip)
+  if (Caffe2_EXTERNAL_DEPENDENCIES)
+    add_dependencies(caffe2_hip ${Caffe2_EXTERNAL_DEPENDENCIES})
+  endif()
+  install(TARGETS caffe2_hip EXPORT Caffe2Targets DESTINATION lib)
+endif()
+
+# ---[ HIP library.
+#if(USE_HIP)
+#  set(Caffe2_HIP_GCC_COMPILE_FLAGS "-D__HIP_PLATFORM_HCC__=1")
+#  INCLUDE_DIRECTORIES(/opt/rocm/include)
+#  LINK_DIRECTORIES(/opt/rocm/lib)
+#  set(CMAKE_SHARED_LINKER_FLAGS "-fPIC -Wl,-Bsymbolic")
+#  set_source_files_properties(${Caffe2_HIP_SRCS} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
+#  #HIP_ADD_LIBRARY(Caffe2_HIP SHARED ${Caffe2_HIP_SRCS})
+#  #list(APPEND Caffe2_MAIN_LIBS_ORDER Caffe2_HIP)
+#  list(APPEND Caffe2_MAIN_LIBS hip_hcc)
+
+#  if (BUILD_SHARED_LIBS)
+#    #target_link_libraries(Caffe2_HIP Caffe2_CPU ${Caffe2_DEPENDENCY_LIBS} ${Caffe2_HIP_DEPENDENCY_LIBS})
+#    #list(APPEND Caffe2_MAIN_LIBS Caffe2_HIP)
+#  else()
+#    #target_link_libraries(Caffe2_HIP ${Caffe2_DEPENDENCY_LIBS})
+#    #caffe_add_whole_archive_flag(Caffe2_HIP tmp)
+#    #list(APPEND Caffe2_MAIN_LIBS ${tmp})
+#  endif()
+#  #install(TARGETS Caffe2_HIP DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+#  link_directories(${CMAKE_INSTALL_PREFIX}/lib)
+#endif()
+
 # ---[ Test binaries.
 if (BUILD_TEST)
   set(Caffe2_ALL_TEST_SRCS ${Caffe2_CPU_TEST_SRCS})
@@ -167,6 +242,34 @@ if (BUILD_TEST)
     list(APPEND Caffe2_ALL_TEST_SRCS ${Caffe2_GPU_TEST_SRCS})
   endif()
 
+  if (USE_HIP)
+    set(Caffe2_HIP_GCC_COMPILE_FLAGS "-D__HIP_PLATFORM_HCC__=1")
+    set(Caffe2_HIP_GCC_COMPILE_FLAGS "${Caffe2_HIP_GCC_COMPILE_FLAGS} -I${Caffe2_ROCBLAS_DIR}/include")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Caffe2_HIP_GCC_COMPILE_FLAGS}")
+    INCLUDE_DIRECTORIES(${HIP_PATH}/include)
+    foreach(test_src ${Caffe2_ALL_TEST_SRCS})
+      get_filename_component(test_name ${test_src} NAME_WE)
+      add_executable(${test_name} "${test_src}")
+      add_dependencies(${test_name} ${Caffe2_MAIN_LIBS_ORDER})
+      target_link_libraries(${test_name} ${Caffe2_MAIN_LIBS} ${Caffe2_DEPENDENCY_LIBS} gtest_main)
+      if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 3.0)
+        target_compile_features(${test_name} PRIVATE cxx_range_for)
+      endif()
+      add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+      install(TARGETS ${test_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/test)
+    endforeach()
+    foreach(test_src ${Caffe2_HIP_TEST_SRCS})
+      get_filename_component(test_name ${test_src} NAME_WE)
+      add_executable(${test_name} "${test_src}")
+      add_dependencies(${test_name} ${Caffe2_MAIN_LIBS_ORDER})
+      target_link_libraries(${test_name} ${Caffe2_MAIN_LIBS} ${Caffe2_DEPENDENCY_LIBS} ${Caffe2_HIP_DEPENDENCY_LIBS} gtest_main)
+      if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 3.0)
+        target_compile_features(${test_name} PRIVATE cxx_range_for)
+      endif()
+      add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
+      install(TARGETS ${test_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/test)
+    endforeach()
+  else()
   foreach(test_src ${Caffe2_ALL_TEST_SRCS})
     get_filename_component(test_name ${test_src} NAME_WE)
     add_executable(${test_name} "${test_src}")
@@ -186,6 +289,7 @@ if (BUILD_TEST)
     add_test(NAME ${test_name} COMMAND $<TARGET_FILE:${test_name}>)
     install(TARGETS ${test_name} DESTINATION test)
   endforeach()
+  endif()
 endif()
 
 
@@ -227,6 +331,21 @@ if (BUILD_PYTHON)
         caffe2_pybind11_state_gpu ${Caffe2_CPU_LINK} ${Caffe2_GPU_LINK} ${Caffe2_DEPENDENCY_LIBS}
         ${Caffe2_CUDA_DEPENDENCY_LIBS} ${Caffe2_PYTHON_DEPENDENCY_LIBS})
     install(TARGETS caffe2_pybind11_state_gpu DESTINATION caffe2/python)
+  endif()
+
+  if(USE_HIP)
+    #add_library(caffe2_pybind11_state_hip MODULE ${Caffe2_HIP_PYTHON_SRCS})
+    #add_dependencies(caffe2_pybind11_state_hip ${Caffe2_MAIN_LIBS_ORDER})
+    #set_target_properties(caffe2_pybind11_state_hip PROPERTIES PREFIX "")
+    #set_target_properties(
+    #    caffe2_pybind11_state_hip PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+    #    ${CMAKE_BINARY_DIR}/caffe2/python)
+    #target_link_libraries(
+    #    caffe2_pybind11_state_hip ${Caffe2_MAIN_LIBS} ${Caffe2_DEPENDENCY_LIBS}
+    #    ${Caffe2_PYTHON_DEPENDENCY_LIBS})
+    #install(
+    #    TARGETS caffe2_pybind11_state_hip DESTINATION
+    #    ${CMAKE_INSTALL_PREFIX}/caffe2/python)
   endif()
 
   if (MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")

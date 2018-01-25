@@ -362,6 +362,17 @@ if(USE_CUDA)
   endif()
 endif()
 
+# ---[ HIP
+if(USE_HIP)
+  include(cmake/Hip.cmake)
+  if(HAVE_HIP)
+    message(WARNING "Compiling with HIP for AMD.")
+  else()
+    message(WARNING "Not compiling with HIP for AMD.")
+    set(USE_HIP OFF)
+  endif()
+endif()
+
 # ---[ NCCL
 if(USE_NCCL)
   if(NOT USE_CUDA)
