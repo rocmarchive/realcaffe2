@@ -18,10 +18,10 @@
 #include "caffe2/operators/accuracy_op.h"
 #include "caffe2/utils/math.h"
 #include "hip/hip_runtime.h"
-#include <cub/block/block_reduce.cuh>
+//#include <cub/block/block_reduce.cuh>
 
 namespace caffe2 {
-
+/*
 namespace {
 __global__ void AccuracyKernel(const int N, const int D, const int top_k,
                                const float *Xdata, const int *labelData,
@@ -80,4 +80,4 @@ __global__ void AccuracyDivideKernel(const int N, float *accuracy) {
 }
 
 REGISTER_HIP_OPERATOR(Accuracy, AccuracyOp<float, HIPContext>);
-} // namespace caffe2
+*/} // namespace caffe2
