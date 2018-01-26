@@ -25,8 +25,8 @@ from caffe2.python import extension_loader
 # if that still fails, we will exit loud.
 with extension_loader.DlopenGuard():
     try:
-        from caffe2.python.caffe2_pybind11_state_gpu import *  # noqa
-        if num_cuda_devices():  # noqa
+        from caffe2.python.caffe2_pybind11_state_hip import *  # noqa
+        if num_hip_devices():  # noqa
             has_gpu_support = True
         else:
             has_gpu_support = False
