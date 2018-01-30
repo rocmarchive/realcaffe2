@@ -57,23 +57,23 @@ operator_tracebacks = defaultdict(dict)
 is_asan = C.is_asan
 has_gpu_support = C.has_gpu_support
 if has_gpu_support:
-    NumCudaDevices = C.num_cuda_devices
+    NumHipDevices = C.num_hip_devices
     SetDefaultGPUID = C.set_default_gpu_id
     GetDefaultGPUID = C.get_default_gpu_id
-    GetCUDAVersion = C.get_cuda_version
-    GetCuDNNVersion = C.get_cudnn_version
+    GetHIPVersion = C.get_hip_version
+    #GetCuDNNVersion = C.get_cudnn_version
 
-    def GetCudaPeerAccessPattern():
-        return np.asarray(C.get_cuda_peer_access_pattern())
+    def GetHipPeerAccessPattern():
+        return np.asarray(C.get_hip_peer_access_pattern())
 
     GetDeviceProperties = C.get_device_properties
 else:
-    NumCudaDevices = lambda: 0 # noqa
+    NumHipDevices = lambda: 0 # noqa
     SetDefaultGPUID = lambda x: None # noqa
     GetDefaultGPUID = lambda: 0 # noqa
-    GetCuDNNVersion = lambda: 0 # noqa
-    GetCuDNNVersion = lambda: 0 # noqa
-    GetCudaPeerAccessPattern = lambda: np.array([]) # noqa
+    #GetCuDNNVersion = lambda: 0 # noqa
+    #GetCuDNNVersion = lambda: 0 # noqa
+    GetHipPeerAccessPattern = lambda: np.array([]) # noqa
     GetDeviceProperties = lambda x: None # noqa
 
 
@@ -312,10 +312,10 @@ def FeedBlob(name, arr, device_option=None):
     if device_option is None:
         device_option = scope.CurrentDeviceScope()
 
-    if device_option and device_option.device_type == caffe2_pb2.CUDA:
+    if device_option and device_option.device_type == caffe2_pb2.HIP:
         if arr.dtype == np.dtype('float64'):
             logger.warning(
-                "CUDA operators do not support 64-bit doubles, " +
+                "HIP operators do not support 64-bit doubles, " +
                 "please use arr.astype(np.float32) or np.int32 for ints." +
                 " Blob: {}".format(name) +
                 " type: {}".format(str(arr.dtype))
