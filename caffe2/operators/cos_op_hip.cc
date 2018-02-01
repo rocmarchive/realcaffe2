@@ -22,52 +22,49 @@
 
 namespace caffe2 {
 
-    template<typename T>
-    __global__ void CosKernel(const int N, const T *X, T *Y) {
-        HIP_1D_KERNEL_LOOP(i, N) {
-            Y[i] = cos(X[i]);
-        }
-    }
+template <typename T>
+__global__ void CosKernel(const int N, const T* X, T* Y) {
+  HIP_1D_KERNEL_LOOP(i, N) {
+    Y[i] = cos(X[i]);
+  }
+}
 
-    template<typename T>
-    __global__ void CosGradientKernel(const int N, const T *X, const T *dY, T *dX) {
-        HIP_1D_KERNEL_LOOP(i, N) {
-            dX[i] = -dY[i] * sin(X[i]);
-        }
-    }
+template <typename T>
+__global__ void CosGradientKernel(const int N, const T* X, const T* dY, T* dX) {
+  HIP_1D_KERNEL_LOOP(i, N) {
+    dX[i] = -dY[i] * sin(X[i]);
+  }
+}
 
-    struct CosHIPFunctor {
-        template<typename T>
-        inline void
-        operator()(const int n, const T *x, T *y, HIPContext *device_context) {
-            hipLaunchKernelGGL((CosKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0,
-                               device_context->hip_stream(), n, x, y);
-            return;
-        }
-    };
+struct CosHIPFunctor {
+  template <typename T>
+  inline void
+  operator()(const int n, const T* x, T* y, HIPContext* device_context) {
+    hipLaunchKernelGGL((CosKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, y);
+    return;
+  }
+};
 
-    struct CosGradientHIPFunctor {
-        template<typename T>
-        inline void Run(
-                const int n,
-                const T *x,
-                const T *dy,
-                T *dx,
-                HIPContext *device_context) {
-            hipLaunchKernelGGL((CosGradientKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0,
-                               device_context->hip_stream(), n, x, dy, dx);
-            return;
-        }
-    };
+struct CosGradientHIPFunctor {
+  template <typename T>
+  inline void Run(
+      const int n,
+      const T* x,
+      const T* dy,
+      T* dx,
+      HIPContext* device_context) {
+    hipLaunchKernelGGL((CosGradientKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, dy, dx);
+    return;
+  }
+};
 
-    REGISTER_HIP_OPERATOR(
-            Cos,
-            UnaryElementwiseOp<TensorTypes<float>, HIPContext, CosHIPFunctor>);
-
-    REGISTER_HIP_OPERATOR(
-            CosGradient,
-            BinaryElementwiseOp<
-                    TensorTypes<float>,
-                    HIPContext,
-                    WithoutBroadcast<CosGradientHIPFunctor>>);
+REGISTER_HIP_OPERATOR(
+    Cos,
+    UnaryElementwiseOp<TensorTypes<float>, HIPContext, CosHIPFunctor>);
+REGISTER_HIP_OPERATOR(
+    CosGradient,
+    BinaryElementwiseOp<
+        TensorTypes<float>,
+        HIPContext,
+        WithoutBroadcast<CosGradientHIPFunctor>>);
 } // namespace caffe2
