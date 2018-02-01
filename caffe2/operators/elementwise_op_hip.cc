@@ -15,35 +15,35 @@
  * limitations under the License.
  */
 
-//#define CUB_STDERR
-//#include <cub/block/block_load.cuh>
-//#include <cub/block/block_reduce.cuh>
-//#include <cub/device/device_reduce.cuh>
-#include "caffe2/core/common_hip.h"
+#define CUB_STDERR
+#include <cub/block/block_load.cuh>
+#include <cub/block/block_reduce.cuh>
+#include <cub/device/device_reduce.cuh>
+#include "caffe2/core/common_gpu.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/elementwise_op.h"
 #include "caffe2/utils/conversions.h"
 
 namespace caffe2 {
-/*
+
 #define CUDA_FUNCTOR(name, op, input_type, output_type) \
 template <int b_is_scalar, typename T, typename R> \
 __global__ void name##Kernel(const T* a, const T* b, R* out, int n) { \
-  CUDA_1D_KERNEL_LOOP(i, n) { \
+  HIP_1D_KERNEL_LOOP(i, n) { \
     out[i] = op(a[i], b[b_is_scalar ? 0 : i]); \
   } \
 } \
 template <typename T, typename R> \
 __global__ void name##BroadcastKernel( \
     const T* a, const T* b, R* out, int pre, int n) { \
-  CUDA_1D_KERNEL_LOOP(i, pre * n) { \
+  HIP_1D_KERNEL_LOOP(i, pre * n) { \
     out[i] = op(a[i], b[i % n]); \
   } \
 } \
 template <typename T, typename R> \
 __global__ void name##Broadcast2Kernel( \
     const T* a, const T* b, R* out, int pre, int n, int post) { \
-  CUDA_1D_KERNEL_LOOP(i, pre * n * post) { \
+  HIP_1D_KERNEL_LOOP(i, pre * n * post) { \
     out[i] = op(a[i], b[(i / post) % n]); \
   } \
 } \
@@ -51,34 +51,34 @@ __global__ void name##Broadcast2Kernel( \
 struct Cuda##name##Functor { \
   template <bool b_is_scalar, typename T, typename R> \
   inline void Run( \
-      size_t n, const T* a, const T* b, R* out, CUDAContext* context) { \
+      size_t n, const T* a, const T* b, R* out, HIPContext* context) { \
     name##Kernel<b_is_scalar, T, R><<<CAFFE_GET_BLOCKS(n), \
-                                      CAFFE_CUDA_NUM_THREADS, \
-                                      0, context->cuda_stream()>>>( \
+                                      CAFFE_HIP_NUM_THREADS, \
+                                      0, context->hip_stream()>>>( \
         a, b, out, n); \
   } \
   template <typename T, typename R> \
   void RunWithBroadcast( \
       const T* a, const T* b, R* out, size_t pre, size_t n, \
-      CUDAContext* context) { \
+      HIPContext* context) { \
     name##BroadcastKernel<T, R><<<CAFFE_GET_BLOCKS(pre * n), \
-                                  CAFFE_CUDA_NUM_THREADS, \
-                                  0, context->cuda_stream()>>>( \
+                                  CAFFE_HIP_NUM_THREADS, \
+                                  0, context->hip_stream()>>>( \
         a, b, out, pre, n); \
   } \
   template <typename T, typename R> \
   void RunWithBroadcast2( \
       const T* a, const T* b, R* out, size_t pre, size_t n, size_t post, \
-      CUDAContext* context) { \
+      HIPContext* context) { \
     name##Broadcast2Kernel<T, R><<<CAFFE_GET_BLOCKS(pre * n * post), \
-                                   CAFFE_CUDA_NUM_THREADS, \
-                                   0, context->cuda_stream()>>>( \
+                                   CAFFE_HIP_NUM_THREADS, \
+                                   0, context->hip_stream()>>>( \
         a, b, out, pre, n, post); \
   } \
 }; \
-REGISTER_CUDA_OPERATOR( \
+REGISTER_HIP_OPERATOR( \
     name, BinaryElementwiseOp< \
-        input_type, CUDAContext, Cuda##name##Functor, output_type>)
+        input_type, HIPContext, Cuda##name##Functor, output_type>)
 
 #define CUDA_SUB(x, y) ((x) - (y))
 CUDA_FUNCTOR(Sub, CUDA_SUB, NumericTypes, SameTypeAsInput);
@@ -113,13 +113,13 @@ CUDA_FUNCTOR(Or, CUDA_OR, BoolTypes, FixedType<bool>);
 #define CUDA_XOR(x, y) ((x) ^ (y))
 CUDA_FUNCTOR(Xor, CUDA_XOR, BoolTypes, FixedType<bool>);
 #undef CUDA_XOR
-*/
+
 __global__ void NotKernel(const int n, const bool* x, bool* y) {
   HIP_1D_KERNEL_LOOP(i, n) {
     y[i] = !x[i];
   }
 }
-struct HipNotFunctor {
+struct CudaNotFunctor {
   inline void operator()(
       const int n, const bool* x, bool* y, HIPContext* context) {
     hipLaunchKernelGGL((NotKernel), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context->hip_stream(), n, x, y);
@@ -127,36 +127,36 @@ struct HipNotFunctor {
 };
 REGISTER_HIP_OPERATOR(
     Not,
-    UnaryElementwiseOp<BoolTypes, HIPContext, HipNotFunctor>);
-/*
+    UnaryElementwiseOp<BoolTypes, HIPContext, CudaNotFunctor>);
+
 __global__ void DivKernel(const int n, float *dXdata, float *dYdata,
                           const float *dZdata, const float *Ydata,
                           const float *Zdata) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
+  HIP_1D_KERNEL_LOOP(i, n) {
     dXdata[i] = dZdata[i] / Ydata[i];
     dYdata[i] = - (dZdata[i] * Zdata[i]) / Ydata[i];
   }
 }
 
 void ElementWiseDivide(
-    CUDAContext& context,
+    HIPContext& context,
     const int n,
     float* dXdata,
     float* dYdata,
     const float* dZdata,
     const float* Ydata,
     const float* Zdata) {
-  hipLaunchKernelGGL((DivKernel), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_CUDA_NUM_THREADS), 0, context.cuda_stream(), n, dXdata, dYdata, dZdata, Ydata, Zdata);
+  hipLaunchKernelGGL((DivKernel), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context.hip_stream(), n, dXdata, dYdata, dZdata, Ydata, Zdata);
 }
 
-REGISTER_CUDA_OPERATOR(DivGradient, DivGradientOp<CUDAContext>);
+REGISTER_HIP_OPERATOR(DivGradient, DivGradientOp<HIPContext>);
 
 namespace {
 
 template <typename T>
 __global__ void
 reduce_sum_like_post1(const T* g_idata, T* g_odata, int pre, int N) {
-  int n = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+  int n = blockIdx.x * blockDim.x + threadIdx.x;
   if (n >= N) {
     return;
   }
@@ -174,12 +174,12 @@ void device_reduce(
     const T* d_in,
     T* d_out,
     int N,
-    Tensor<CUDAContext>* buffer,
-    CUDAContext* context) {
+    Tensor<HIPContext>* buffer,
+    HIPContext* context) {
   // Determine temporary device storage requirements
   size_t temp_storage_bytes = 0;
   cub::DeviceReduce::Sum(
-      NULL, temp_storage_bytes, d_in, d_out, N, context->cuda_stream());
+      NULL, temp_storage_bytes, d_in, d_out, N, context->hip_stream());
 
   auto buffer_size = temp_storage_bytes / sizeof(T);
   buffer_size += temp_storage_bytes % sizeof(T) != 0 ? 1 : 0;
@@ -192,7 +192,7 @@ void device_reduce(
       d_in,
       d_out,
       N,
-      context->cuda_stream());
+      context->hip_stream());
 }
 
 template <>
@@ -200,14 +200,14 @@ void device_reduce<float16>(
     const float16* in,
     float16* out,
     int N,
-    Tensor<CUDAContext>* buffer,
-    CUDAContext* context) {
+    Tensor<HIPContext>* buffer,
+    HIPContext* context) {
   auto buffer_size = 1;
 
   if (buffer->size() != buffer_size) {
     buffer->Resize(buffer_size);
 
-    math::Set<float16, CUDAContext>(
+    math::Set<float16, HIPContext>(
         N,
         convert::To<float,float16>(1.),
         buffer->mutable_data<float16>(),
@@ -231,10 +231,10 @@ void device_reduce<float16>(
 template <typename T, int BLOCK_THREADS>
 __global__ void
 reduce_sum_like(const T* g_idata, T* g_odata, int pre, int N, int post) {
-  int n = hipBlockIdx_x;
+  int n = blockIdx.x;
   float sum = 0.0;
   int limit = pre * post;
-  for (int i = hipThreadIdx_x; i < limit; i += hipBlockDim_x) {
+  for (int i = threadIdx.x; i < limit; i += blockDim.x) {
     int curPre = i / post;
     int curPost = i % post;
 
@@ -245,7 +245,7 @@ reduce_sum_like(const T* g_idata, T* g_odata, int pre, int N, int post) {
   // Shared memory
   __shared__ typename BlockReduceT::TempStorage temp_storage;
   float aggregate = BlockReduceT(temp_storage).Sum(sum);
-  if (hipThreadIdx_x == 0) {
+  if (threadIdx.x == 0) {
     g_odata[n] = convert::To<float, T>(aggregate);
   }
 }
@@ -253,7 +253,7 @@ reduce_sum_like(const T* g_idata, T* g_odata, int pre, int N, int post) {
 
 template <>
 template <typename T>
-bool SumReduceLikeOp<CUDAContext>::DoRunWithType() {
+bool SumReduceLikeOp<HIPContext>::DoRunWithType() {
   const auto& A = Input(0);
   const auto& B = Input(1);
   auto* C = Output(0);
@@ -270,16 +270,16 @@ bool SumReduceLikeOp<CUDAContext>::DoRunWithType() {
     // because we check shape(B) \in shape(A) before,
     // post and pre cannot be 1 at same time
     if (post == 1) {
-      hipLaunchKernelGGL((reduce_sum_like_post1<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_CUDA_NUM_THREADS), 0, context_.cuda_stream(), Adata, Cdata, pre, n);
+      hipLaunchKernelGGL((reduce_sum_like_post1<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), Adata, Cdata, pre, n);
     } else {
       if (post >= 128) {
-        hipLaunchKernelGGL((reduce_sum_like<T, 512>), dim3(n), dim3(512), 0, context_.cuda_stream(), Adata, Cdata, pre, n, post);
+        hipLaunchKernelGGL((reduce_sum_like<T, 512>), dim3(n), dim3(512), 0, context_.hip_stream(), Adata, Cdata, pre, n, post);
       } else if (post >= 64) {
-        hipLaunchKernelGGL((reduce_sum_like<T, 128>), dim3(n), dim3(128), 0, context_.cuda_stream(), Adata, Cdata, pre, n, post);
+        hipLaunchKernelGGL((reduce_sum_like<T, 128>), dim3(n), dim3(128), 0, context_.hip_stream(), Adata, Cdata, pre, n, post);
       } else if (post >= 32) {
-        hipLaunchKernelGGL((reduce_sum_like<T, 64>), dim3(n), dim3(64), 0, context_.cuda_stream(), Adata, Cdata, pre, n, post);
+        hipLaunchKernelGGL((reduce_sum_like<T, 64>), dim3(n), dim3(64), 0, context_.hip_stream(), Adata, Cdata, pre, n, post);
       } else {
-        hipLaunchKernelGGL((reduce_sum_like<T, 32>), dim3(n), dim3(32), 0, context_.cuda_stream(), Adata, Cdata, pre, n, post);
+        hipLaunchKernelGGL((reduce_sum_like<T, 32>), dim3(n), dim3(32), 0, context_.hip_stream(), Adata, Cdata, pre, n, post);
       }
     }
   }
@@ -287,17 +287,17 @@ bool SumReduceLikeOp<CUDAContext>::DoRunWithType() {
 }
 
 template <>
-bool SumReduceLikeOp<CUDAContext>::RunOnDevice() {
+bool SumReduceLikeOp<HIPContext>::RunOnDevice() {
   return DispatchHelper<TensorTypes<float, float16>>::call(this, Input(0));
 }
 
-REGISTER_CUDA_OPERATOR(SumReduceLike, SumReduceLikeOp<CUDAContext>);
+REGISTER_HIP_OPERATOR(SumReduceLike, SumReduceLikeOp<HIPContext>);
 
 namespace {
 
 template <bool is_scaler, typename T, typename M>
 __global__ void binary_add_kernel(const int N, const T* a, const T* b, T* r) {
-  CUDA_1D_KERNEL_LOOP(idx, N) {
+  HIP_1D_KERNEL_LOOP(idx, N) {
     r[idx] = convert::To<M, T>(
         convert::To<T, M>(a[idx]) +
         convert::To<T, M>(is_scaler ? b[0] : b[idx]));
@@ -312,7 +312,7 @@ __global__ void binary_add_kernel_broadcast(
     const int pre,
     const int post,
     const int n) {
-  CUDA_1D_KERNEL_LOOP(idx, no_post ? pre * n : pre * post * n) {
+  HIP_1D_KERNEL_LOOP(idx, no_post ? pre * n : pre * post * n) {
     r[idx] = convert::To<M, T>(
         convert::To<T, M>(a[idx]) +
         convert::To<T, M>(no_post ? b[idx % n] : b[(idx / post) % n]));
@@ -321,10 +321,10 @@ __global__ void binary_add_kernel_broadcast(
 } // namespace
 
 // Actual Add operator, because the above macros are read-only.
-class CUDAAddOp final : public Operator<CUDAContext> {
+class CUDAAddOp final : public Operator<HIPContext> {
  public:
   CUDAAddOp(const OperatorDef& operator_def, Workspace* ws)
-      : Operator<CUDAContext>(operator_def, ws),
+      : Operator<HIPContext>(operator_def, ws),
         OP_SINGLE_ARG(bool, "broadcast", enable_broadcast_, 0),
         OP_SINGLE_ARG(int, "axis", axis_, -1),
         OP_SINGLE_ARG(string, "axis_str", axis_str_, ""),
@@ -377,16 +377,16 @@ class CUDAAddOp final : public Operator<CUDAContext> {
           X0.dims(),
           X1.dims(),
           "Dimension mismatch - did you forget to set broadcast=1?");
-      hipLaunchKernelGGL((binary_add_kernel<false, T, M>), dim3(CAFFE_GET_BLOCKS(X0.size())), dim3(CAFFE_CUDA_NUM_THREADS), 0, context_.cuda_stream(), X0.size(), X0data, X1data, outputData);
+      hipLaunchKernelGGL((binary_add_kernel<false, T, M>), dim3(CAFFE_GET_BLOCKS(X0.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), X0.size(), X0data, X1data, outputData);
     } else if (X1.size() == 1) {
-      hipLaunchKernelGGL((binary_add_kernel<true, T, M>), dim3(CAFFE_GET_BLOCKS(X0.size())), dim3(CAFFE_CUDA_NUM_THREADS), 0, context_.cuda_stream(), X0.size(), X0data, X1data, outputData);
+      hipLaunchKernelGGL((binary_add_kernel<true, T, M>), dim3(CAFFE_GET_BLOCKS(X0.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), X0.size(), X0data, X1data, outputData);
     } else {
       size_t pre, n, post;
       std::tie(pre, n, post) = calculate_broadcast_sizes(X0, X1, axis_);
       if (post == 1) {
-        hipLaunchKernelGGL((binary_add_kernel_broadcast<true, T, M>), dim3(CAFFE_GET_BLOCKS(pre * n)), dim3(CAFFE_CUDA_NUM_THREADS), 0, context_.cuda_stream(), X0data, X1data, outputData, pre, post, n);
+        hipLaunchKernelGGL((binary_add_kernel_broadcast<true, T, M>), dim3(CAFFE_GET_BLOCKS(pre * n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), X0data, X1data, outputData, pre, post, n);
       } else {
-        hipLaunchKernelGGL((binary_add_kernel_broadcast<false, T, M>), dim3(CAFFE_GET_BLOCKS(pre * post * n)), dim3(CAFFE_CUDA_NUM_THREADS), 0, context_.cuda_stream(), X0data, X1data, outputData, pre, post, n);
+        hipLaunchKernelGGL((binary_add_kernel_broadcast<false, T, M>), dim3(CAFFE_GET_BLOCKS(pre * post * n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), X0data, X1data, outputData, pre, post, n);
       }
     }
     return true;
@@ -413,6 +413,6 @@ class CUDAAddOp final : public Operator<CUDAContext> {
   string order_;
 };
 
-REGISTER_CUDA_OPERATOR(Add, CUDAAddOp);
-*/
+REGISTER_HIP_OPERATOR(Add, CUDAAddOp);
+
 }  // namespace caffe2
