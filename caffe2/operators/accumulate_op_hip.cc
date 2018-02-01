@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "caffe2/core/context_hip.h"
-#include "caffe2/operators/assert_op.h"
+#include "caffe2/operators/accumulate_op.h"
 
 namespace caffe2 {
-
-REGISTER_HIP_OPERATOR(Assert, AssertOp<HIPContext>);
-
-} // namespace caffe2
+REGISTER_HIP_OPERATOR(Accumulate, AccumulateOp<float, HIPContext>);
+}  // namespace caffe2
