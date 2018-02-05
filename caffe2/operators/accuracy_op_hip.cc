@@ -19,11 +19,11 @@
 #include "caffe2/operators/accuracy_op.h"
 #include "caffe2/utils/math.h"
 
-#include <cub/block/block_reduce.cuh>
+//#include <cub/block/block_reduce.cuh>
 
 namespace caffe2 {
 
-namespace {
+namespace hip_ops {
 __global__ void AccuracyKernel(
     const int N,
     const int D,
@@ -31,8 +31,8 @@ __global__ void AccuracyKernel(
     const float* Xdata,
     const int* labelData,
     float* accuracy) {
-  typedef cub::BlockReduce<int, CAFFE_HIP_NUM_THREADS> BlockReduce;
-  __shared__ typename BlockReduce::TempStorage temp_storage;
+  //typedef cub::BlockReduce<int, CAFFE_HIP_NUM_THREADS> BlockReduce;
+  //__shared__ typename BlockReduce::TempStorage temp_storage;
   int correct = 0;
   for (int row = blockIdx.x; row < N; row += gridDim.x) {
     const int label = labelData[row];
@@ -44,7 +44,7 @@ __global__ void AccuracyKernel(
         ++ngt;
       }
     }
-    ngt = BlockReduce(temp_storage).Sum(ngt);
+    //ngt = BlockReduce(temp_storage).Sum(ngt);
     if (ngt <= top_k) {
       ++correct;
     }
@@ -73,11 +73,11 @@ bool AccuracyOp<float, HIPContext>::RunOnDevice() {
   Y->Resize(vector<TIndex>());
   float* Ydata = Y->mutable_data<float>();
   math::Set<float, HIPContext>(1, 0, Ydata, &context_);
-  hipLaunchKernelGGL((AccuracyKernel), dim3(std::min(CAFFE_MAXIMUM_NUM_BLOCKS, N)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
+  hipLaunchKernelGGL((hip_ops::AccuracyKernel), dim3(std::min(CAFFE_MAXIMUM_NUM_BLOCKS, N)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
       N, D, top_k_, X.data<float>(), label.data<int>(), Ydata);
   // This is going to be executed only in one single kernel. Not very beautiful,
   // but probably we have to do this?
-  hipLaunchKernelGGL((AccuracyDivideKernel), dim3(1), dim3(1), 0, context_.hip_stream(), 
+  hipLaunchKernelGGL((hip_ops::AccuracyDivideKernel), dim3(1), dim3(1), 0, context_.hip_stream(),
       N, Ydata);
   return true;
 }
