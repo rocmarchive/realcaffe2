@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_runtime.h>
+#include <hiprand.h>
 
 #if 0
 // Disable strict aliasing errors for CUDA 9.
