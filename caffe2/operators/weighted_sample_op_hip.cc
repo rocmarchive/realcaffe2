@@ -76,8 +76,8 @@ bool WeightedSampleOp<float, HIPContext>::RunOnDevice() {
     }
 
     float* unif_samples_data = unif_samples_.mutable_data<float>();
-   // CURAND_ENFORCE(curandGenerateUniform(
-     //   context_.curand_generator(), unif_samples_data, batch_size));
+    HIPRAND_ENFORCE(hiprandGenerateUniform(
+        context_.hiprand_generator(), unif_samples_data, batch_size));
 
     hipLaunchKernelGGL((hip_ops::WeightedSampleKernel), dim3(CAFFE_GET_BLOCKS(batch_size)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
         batch_size,

@@ -190,6 +190,7 @@ if(USE_HIP)
   target_compile_options(caffe2 INTERFACE "-std=c++11")
   list(APPEND Caffe2_MAIN_LIBS_ORDER caffe2_hip)
   add_dependencies(caffe2_hip Caffe2_PROTO)
+    list(APPEND Caffe2_HIP_DEPENDENCY_LIBS rocrand hiprand)
   if (BUILD_SHARED_LIBS)
     target_link_libraries(
         caffe2_hip
