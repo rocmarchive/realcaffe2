@@ -153,6 +153,11 @@ bool GetHipPeerAccessPattern(vector<vector<bool> >* pattern);
  */
 bool TensorCoreAvailable();
 
+/**
+ * Return a human readable curand error string.
+ */
+const char* hiprandGetErrorString(hiprandStatus_t error);
+
 #if 0 // ashish TBD: Fix this when integrating rocblas and rocrand
 /**
  * Return a human readable cublas error string.
@@ -216,7 +221,7 @@ const char* curandGetErrorString(curandStatus_t error);
         __FILE__,                                \
         ":",                                     \
         __LINE__,                                \
-        ": ",                                    \
+        i": ",                                    \
         ::caffe2::cublasGetErrorString(status)); \
   } while (0)
 #define CUBLAS_CHECK(condition)                    \
@@ -246,6 +251,21 @@ const char* curandGetErrorString(curandStatus_t error);
         << ::caffe2::curandGetErrorString(status); \
   } while (0)
 #endif
+
+
+#define HIPRAND_ENFORCE(condition)                \
+  do {                                           \
+    hiprandStatus_t status = condition;           \
+    CAFFE_ENFORCE_EQ(                            \
+        status,                                  \
+        HIPRAND_STATUS_SUCCESS,                   \
+        "Error at: ",                            \
+        __FILE__,                                \
+        ":",                                     \
+        __LINE__,                                \
+        ": ",                                    \
+        ::caffe2::hiprandGetErrorString(status)); \
+  } while (0)
 
 #define HIP_1D_KERNEL_LOOP(i, n)                                 \
   for (size_t i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x; i < (n); \
