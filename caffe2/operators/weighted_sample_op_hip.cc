@@ -4,7 +4,7 @@
 #include "caffe2/utils/math.h"
 
 namespace caffe2 {
-namespace {
+namespace hip_ops {
 
 __global__ void WeightedSampleKernel(
     const int batch_size,
@@ -76,10 +76,10 @@ bool WeightedSampleOp<float, HIPContext>::RunOnDevice() {
     }
 
     float* unif_samples_data = unif_samples_.mutable_data<float>();
-    CURAND_ENFORCE(curandGenerateUniform(
-        context_.curand_generator(), unif_samples_data, batch_size));
+   // CURAND_ENFORCE(curandGenerateUniform(
+     //   context_.curand_generator(), unif_samples_data, batch_size));
 
-    hipLaunchKernelGGL((WeightedSampleKernel), dim3(CAFFE_GET_BLOCKS(batch_size)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
+    hipLaunchKernelGGL((hip_ops::WeightedSampleKernel), dim3(CAFFE_GET_BLOCKS(batch_size)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
         batch_size,
         weights_dim,
         in_weights_data,
