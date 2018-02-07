@@ -42,8 +42,8 @@ class ThreadLocalHIPObjects {
   ThreadLocalHIPObjects() {
     for (int i = 0; i < CAFFE2_COMPILE_TIME_MAX_GPUS; ++i) {
       hip_streams_[i] = vector<hipStream_t>();
-#if 0 // Ashish TBD: Add the handles to miopen, rocrand, rocblas here
-      cublas_handles_[i] = vector<cublasHandle_t>();
+      rocblas_handles_[i] = vector<rocblas_handle>();
+#if 0 // Ashish TBD: Add the handles to miopen, rocrand here
       cudnn_handles_[i] = vector<cudnnHandle_t>();
 #endif
     }
@@ -62,26 +62,26 @@ class ThreadLocalHIPObjects {
     return gpu_streams[stream_id];
   }
 
-#if 0 // Ashish TBD: Placeholder for handles when integrating miopen, rocrand and so on
-  cublasHandle_t GetHandle(int gpu, int stream_id) {
+  rocblas_handle GetHandle(int gpu, int stream_id) {
     DeviceGuard guard(gpu);
-    vector<cublasHandle_t>& gpu_handles = cublas_handles_[gpu];
+    vector<rocblas_handle>& gpu_handles = rocblas_handles_[gpu];
     if (gpu_handles.size() <= stream_id) {
       gpu_handles.resize(stream_id + 1, nullptr);
     }
     if (!gpu_handles[stream_id]) {
-      CUBLAS_ENFORCE(cublasCreate(&gpu_handles[stream_id]));
-      // The default is CUBLAS_POINTER_MODE_HOST. You can override
-      // it after obtaining the cublas handle, but do that with
+      ROCBLAS_ENFORCE(rocblas_create_handle(&gpu_handles[stream_id]));
+      // The default is ROCBLAS_POINTER_MODE_HOST. You can override
+      // it after obtaining the rocblas handle, but do that with
       // caution.
-      CUBLAS_ENFORCE(cublasSetPointerMode(
-          gpu_handles[stream_id], CUBLAS_POINTER_MODE_HOST));
-      CUBLAS_ENFORCE(
-          cublasSetStream(gpu_handles[stream_id], GetStream(gpu, stream_id)));
+      ROCBLAS_ENFORCE(rocblas_set_pointer_mode(
+          gpu_handles[stream_id], rocblas_pointer_mode_host));
+      ROCBLAS_ENFORCE(
+          rocblas_set_stream(gpu_handles[stream_id], GetStream(gpu, stream_id)));
     }
     return gpu_handles[stream_id];
   }
 
+#if 0 // Ashish TBD: Placeholder for handles when integrating miopen, rocrand and so on
   cudnnHandle_t GetCudnnHandle(int gpu, int stream_id) {
     DeviceGuard guard(gpu);
     vector<cudnnHandle_t>& gpu_handles = cudnn_handles_[gpu];
@@ -99,13 +99,11 @@ class ThreadLocalHIPObjects {
 
   ~ThreadLocalHIPObjects() noexcept {
     for (int i = 0; i < CAFFE2_COMPILE_TIME_MAX_GPUS; ++i) {
-#if 0 // Ashish TBD: rocblas handle goes here
-      for (auto& handle : cublas_handles_[i]) {
+      for (auto& handle : rocblas_handles_[i]) {
         if (handle) {
-          CUBLAS_CHECK(cublasDestroy(handle));
+          ROCBLAS_CHECK(rocblas_destroy_handle(handle));
         }
       }
-#endif
       for (auto& stream : hip_streams_[i]) {
         if (stream) {
           HIP_CHECK(hipStreamDestroy(stream));
@@ -121,8 +119,8 @@ class ThreadLocalHIPObjects {
     }
   }
   vector<hipStream_t> hip_streams_[CAFFE2_COMPILE_TIME_MAX_GPUS];
+  vector<rocblas_handle> rocblas_handles_[CAFFE2_COMPILE_TIME_MAX_GPUS];
 #if 0 // Ashish TBD: miopen and rocblas handles
-  vector<cublasHandle_t> cublas_handles_[CAFFE2_COMPILE_TIME_MAX_GPUS];
   vector<cudnnHandle_t> cudnn_handles_[CAFFE2_COMPILE_TIME_MAX_GPUS];
 #endif
 };
@@ -183,11 +181,11 @@ class HIPContext final {
     return hip_objects_.GetStream(gpu_id, stream_id);
   }
 
-#if 0 // Ashish TBD: rocblas, miopen, rocrand handles
-  cublasHandle_t cublas_handle() {
-    return cuda_objects_.GetHandle(gpu_id_, stream_id_);
+  rocblas_handle get_rocblas_handle() {
+    return hip_objects_.GetHandle(gpu_id_, stream_id_);
   }
 
+#if 0 // Ashish TBD: miopen, rocrand handles
   cudnnHandle_t cudnn_handle() {
     return cuda_objects_.GetCudnnHandle(gpu_id_, stream_id_);
   }
