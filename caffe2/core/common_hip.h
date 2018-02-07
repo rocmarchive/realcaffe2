@@ -6,25 +6,7 @@
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_runtime.h>
 #include <hiprand.h>
-
-#if 0
-// Disable strict aliasing errors for CUDA 9.
-// The cuda_fp16.h header in CUDA 9 RC triggers this diagnostic.
-// It is included by cusparse.h as well, so guarding the
-// inclusion of that header here is not enough.
-#if CUDA_VERSION >= 9000
-#ifdef __GNUC__
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
-#pragma GCC diagnostic push
-#endif
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif // __GNUC__
-#endif // CUDA_VERSION >= 9000
-
-#include <cublas_v2.h>
-#include <curand.h>
-#include <driver_types.h>
-#endif
+#include <rocblas.h>
 
 #include "caffe2/core/logging.h"
 #include "caffe2/core/common.h"
@@ -158,17 +140,10 @@ bool TensorCoreAvailable();
  */
 const char* hiprandGetErrorString(hiprandStatus_t error);
 
-#if 0 // ashish TBD: Fix this when integrating rocblas and rocrand
 /**
  * Return a human readable cublas error string.
  */
-const char* cublasGetErrorString(cublasStatus_t error);
-
-/**
- * Return a human readable curand error string.
- */
-const char* curandGetErrorString(curandStatus_t error);
-#endif
+const char* rocblasGetErrorString(rocblas_status error);
 
 // HIP: various checks for different function calls.
 #define HIP_ENFORCE(condition, ...)     \
@@ -210,48 +185,28 @@ const char* curandGetErrorString(curandStatus_t error);
                  << msg;                                                \
     }                                                                   \
   } while (0)
+#endif
 
-#define CUBLAS_ENFORCE(condition)                \
+#define ROCBLAS_ENFORCE(condition)                \
   do {                                           \
-    cublasStatus_t status = condition;           \
+    rocblas_status status = condition;           \
     CAFFE_ENFORCE_EQ(                            \
         status,                                  \
-        CUBLAS_STATUS_SUCCESS,                   \
-        "Error at: ",                            \
-        __FILE__,                                \
-        ":",                                     \
-        __LINE__,                                \
-        i": ",                                    \
-        ::caffe2::cublasGetErrorString(status)); \
-  } while (0)
-#define CUBLAS_CHECK(condition)                    \
-  do {                                             \
-    cublasStatus_t status = condition;             \
-    CHECK(status == CUBLAS_STATUS_SUCCESS)         \
-        << ::caffe2::cublasGetErrorString(status); \
-  } while (0)
-
-#define CURAND_ENFORCE(condition)                \
-  do {                                           \
-    curandStatus_t status = condition;           \
-    CAFFE_ENFORCE_EQ(                            \
-        status,                                  \
-        CURAND_STATUS_SUCCESS,                   \
+        rocblas_status_success,                   \
         "Error at: ",                            \
         __FILE__,                                \
         ":",                                     \
         __LINE__,                                \
         ": ",                                    \
-        ::caffe2::curandGetErrorString(status)); \
+        ::caffe2::rocblasGetErrorString(status)); \
   } while (0)
-#define CURAND_CHECK(condition)                    \
-  do {                                             \
-    curandStatus_t status = condition;             \
-    CHECK(status == CURAND_STATUS_SUCCESS)         \
-        << ::caffe2::curandGetErrorString(status); \
-  } while (0)
-#endif
 
+#define ROCBLAS_CHECK(condition)                    \
+  do {                                             \
+    rocblas_status status = condition;             \
+    CHECK(status == rocblas_status_success)         \
+        << ::caffe2::rocblasGetErrorString(status); \
+  } while (0)
 
 #define HIPRAND_ENFORCE(condition)                \
   do {                                           \

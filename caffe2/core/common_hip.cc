@@ -248,38 +248,26 @@ bool TensorCoreAvailable() {
 }
 #endif
 
-#if 0 // Ashish TBD: Fix this when integrating rocblas and rocrand
-const char* cublasGetErrorString(cublasStatus_t error) {
+const char* rocblasGetErrorString(rocblas_status error) {
   switch (error) {
-  case CUBLAS_STATUS_SUCCESS:
-    return "CUBLAS_STATUS_SUCCESS";
-  case CUBLAS_STATUS_NOT_INITIALIZED:
-    return "CUBLAS_STATUS_NOT_INITIALIZED";
-  case CUBLAS_STATUS_ALLOC_FAILED:
-    return "CUBLAS_STATUS_ALLOC_FAILED";
-  case CUBLAS_STATUS_INVALID_VALUE:
-    return "CUBLAS_STATUS_INVALID_VALUE";
-  case CUBLAS_STATUS_ARCH_MISMATCH:
-    return "CUBLAS_STATUS_ARCH_MISMATCH";
-  case CUBLAS_STATUS_MAPPING_ERROR:
-    return "CUBLAS_STATUS_MAPPING_ERROR";
-  case CUBLAS_STATUS_EXECUTION_FAILED:
-    return "CUBLAS_STATUS_EXECUTION_FAILED";
-  case CUBLAS_STATUS_INTERNAL_ERROR:
-    return "CUBLAS_STATUS_INTERNAL_ERROR";
-#if CUDA_VERSION >= 6000
-  case CUBLAS_STATUS_NOT_SUPPORTED:
-    return "CUBLAS_STATUS_NOT_SUPPORTED";
-#if CUDA_VERSION >= 6050
-  case CUBLAS_STATUS_LICENSE_ERROR:
-    return "CUBLAS_STATUS_LICENSE_ERROR";
-#endif  // CUDA_VERSION >= 6050
-#endif  // CUDA_VERSION >= 6000
+  case rocblas_status_success:
+    return "rocblas_status_success";
+  case rocblas_status_invalid_handle:
+    return "rocblas_status_invalid_handle";
+  case rocblas_status_not_implemented:
+    return "rocblas_status_not_implemented";
+  case rocblas_status_invalid_pointer:
+    return "rocblas_status_invalid_pointer";
+  case rocblas_status_invalid_size:
+    return "rocblas_status_invalid_size";
+  case rocblas_status_memory_error:
+    return "rocblas_status_memory_error";
+  case rocblas_status_internal_error:
+    return "rocblas_status_internal_error";
   }
   // To suppress compiler warning.
-  return "Unrecognized cublas error string";
+  return "Unrecognized rocblas error string";
 }
-#endif
 
 const char* hiprandGetErrorString(hiprandStatus_t error) {
   switch (error) {
