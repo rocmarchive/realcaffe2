@@ -98,12 +98,10 @@ TEST(HIPContextTest, TestSameThreadSameObject) {
   HIPContext context_b(0);
   EXPECT_EQ(context_a.hip_stream(), context_b.hip_stream());
   EXPECT_EQ(context_a.get_rocblas_handle(), context_b.get_rocblas_handle());
-#if 0 // ashish TBD: rocrand
   EXPECT_EQ(
-      context_a.cuda_stream(), getStreamForHandle(context_b.cublas_handle()));
-  // CuRAND generators are context-local.
-  EXPECT_NE(context_a.curand_generator(), context_b.curand_generator());
-#endif
+      context_a.hip_stream(), getStreamForHandle(context_b.get_rocblas_handle()));
+  // hipRAND generators are context-local.
+  EXPECT_NE(context_a.hiprand_generator(), context_b.hiprand_generator());
 }
 
 TEST(HIPContextTest, TestSameThreadDifferntObjectIfDifferentDevices) {
@@ -112,11 +110,9 @@ TEST(HIPContextTest, TestSameThreadDifferntObjectIfDifferentDevices) {
     HIPContext context_b(1);
     EXPECT_NE(context_a.hip_stream(), context_b.hip_stream());
     EXPECT_NE(context_a.get_rocblas_handle(), context_b.get_rocblas_handle());
-#if 0 // ashish TBD: rocrand
     EXPECT_NE(
-        context_a.cuda_stream(), getStreamForHandle(context_b.cublas_handle()));
-    EXPECT_NE(context_a.curand_generator(), context_b.curand_generator());
-#endif
+        context_a.hip_stream(), getStreamForHandle(context_b.get_rocblas_handle()));
+    EXPECT_NE(context_a.hiprand_generator(), context_b.hiprand_generator());
   }
 }
 
