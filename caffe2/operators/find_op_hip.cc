@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include <cub/block/block_reduce.cuh>
+//#include <cub/block/block_reduce.cuh>
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/find_op.h"
 
@@ -37,12 +37,12 @@ __global__ void FindKernel(
       res = max(res, j);
     }
   }
-  typedef cub::BlockReduce<int, CAFFE_HIP_NUM_THREADS> BlockReduce;
+ /* typedef cub::BlockReduce<int, CAFFE_HIP_NUM_THREADS> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   int min_res = BlockReduce(temp_storage).Reduce(res, cub::Max());
   if (threadIdx.x == 0) {
     out[needle_idx] = min_res == (-1) ? missing_value : min_res;
-  }
+  } */
 }
 
 template <>
@@ -57,8 +57,7 @@ bool FindOp<HIPContext>::DoRunWithType() {
   const T* needles_data = needles.data<T>();
   int* res_data = res_indices->mutable_data<int>();
 
-  FindKernel<
-      T><<<needles.size(), CAFFE_HIP_NUM_THREADS, 0, context_.hip_stream()>>>(
+  hipLaunchKernelGGL(FindKernel<T>, needles.size(), CAFFE_HIP_NUM_THREADS, 0, context_.hip_stream(),
       needles.size(),
       idx.size(),
       idx_data,
@@ -68,6 +67,6 @@ bool FindOp<HIPContext>::DoRunWithType() {
   return true;
 }
 
-REGISTER_HIP_OPERATOR(Find, FindOp<HIPContext>)
+REGISTER_HIP_OPERATOR(Find, FindOp<HIPContext>);
 
 } // namespace caffe2

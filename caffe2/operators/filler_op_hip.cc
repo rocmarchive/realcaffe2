@@ -21,7 +21,7 @@
 
 namespace caffe2 {
 
-namespace {
+namespace hip_ops {
 __global__ void FillRangeKernel(const int n, float* data) {
   HIP_1D_KERNEL_LOOP(index, n) {
     data[index] = index;
@@ -41,15 +41,15 @@ __global__ void FillDiagonalKernel(
 }
 
 template <>
-bool RangeFillOp<float, HIPContext>::Fill(TensorCUDA* output) {
+bool RangeFillOp<float, HIPContext>::Fill(TensorHIP* output) {
   int N = output->size();
-  hipLaunchKernelGGL((FillRangeKernel), dim3(CAFFE_GET_BLOCKS(N)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), N, output->mutable_data<float>());
+  hipLaunchKernelGGL((hip_ops::FillRangeKernel), dim3(CAFFE_GET_BLOCKS(N)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), N, output->mutable_data<float>());
   return true;
 }
 
 template <>
 template <typename T>
-bool DiagonalFillOp<HIPContext>::FillWithType(TensorCUDA* output) {
+bool DiagonalFillOp<HIPContext>::FillWithType(TensorHIP* output) {
   VerifyOutputShape(output);
   auto* data = output->template mutable_data<T>();
   int size = output->size();
@@ -60,7 +60,7 @@ bool DiagonalFillOp<HIPContext>::FillWithType(TensorCUDA* output) {
   TIndex step_size = GetStepSize(output);
   int num_diagonal_elements = ceil((float)size / step_size);
 
-  hipLaunchKernelGGL((FillDiagonalKernel), dim3(CAFFE_GET_BLOCKS(num_diagonal_elements)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), num_diagonal_elements, step_size, value, data);
+  hipLaunchKernelGGL((hip_ops::FillDiagonalKernel), dim3(CAFFE_GET_BLOCKS(num_diagonal_elements)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), num_diagonal_elements, step_size, value, data);
   return true;
 }
 
