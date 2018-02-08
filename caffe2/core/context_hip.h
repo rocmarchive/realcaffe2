@@ -3,6 +3,7 @@
 
 #include <ctime>
 #include <mutex>
+#include <hiprand.h>
 
 //#include "caffe2/core/common_cudnn.h"
 #include "caffe2/core/common_hip.h"
@@ -132,11 +133,9 @@ class HIPContext final {
   explicit HIPContext(const DeviceOption& option);
 
   ~HIPContext() {
-#if 0 // Ashish TBD: rocrand destructor
-    if (curand_generator_) {
-      CURAND_ENFORCE(curandDestroyGenerator(curand_generator_));
+    if (hiprand_generator_) {
+      HIPRAND_ENFORCE(hiprandDestroyGenerator(hiprand_generator_));
     }
-#endif
     FinishDeviceComputation();
   }
 
@@ -189,20 +188,19 @@ class HIPContext final {
   cudnnHandle_t cudnn_handle() {
     return cuda_objects_.GetCudnnHandle(gpu_id_, stream_id_);
   }
-
-  curandGenerator_t& curand_generator() {
-    if (!curand_generator_) {
-      DeviceGuard guard(gpu_id_);
-      CURAND_ENFORCE(
-          curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
-      CURAND_ENFORCE(
-          curandSetPseudoRandomGeneratorSeed(curand_generator_, random_seed_));
-      CHECK_NOTNULL(curand_generator_);
-    }
-    CURAND_ENFORCE(curandSetStream(curand_generator_, cuda_stream()));
-    return curand_generator_;
-  }
 #endif
+  hiprandGenerator_t& hiprand_generator() {
+    if (!hiprand_generator_) {
+      DeviceGuard guard(gpu_id_);
+      HIPRAND_ENFORCE(
+          hiprandCreateGenerator(&hiprand_generator_, HIPRAND_RNG_PSEUDO_DEFAULT));
+      HIPRAND_ENFORCE(
+          hiprandSetPseudoRandomGeneratorSeed(hiprand_generator_, random_seed_));
+      CHECK_NOTNULL(hiprand_generator_);
+    }
+    HIPRAND_ENFORCE(hiprandSetStream(hiprand_generator_, hip_stream()));
+    return hiprand_generator_;
+  }
 
   static std::pair<void*, MemoryDeleter> New(size_t nbytes);
 
@@ -263,9 +261,7 @@ class HIPContext final {
   int gpu_id_;
   int stream_id_ = 0;
   int random_seed_;
-#if 0 // Ashish TBD: rocrand
-  curandGenerator_t curand_generator_{nullptr};
-#endif
+  hiprandGenerator_t hiprand_generator_{nullptr};
   static thread_local ThreadLocalHIPObjects hip_objects_;
 };
 

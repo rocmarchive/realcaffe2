@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_runtime.h>
+#include <hiprand.h>
 #include <rocblas.h>
 
 #include "caffe2/core/logging.h"
@@ -135,16 +136,14 @@ bool GetHipPeerAccessPattern(vector<vector<bool> >* pattern);
 bool TensorCoreAvailable();
 
 /**
+ * Return a human readable curand error string.
+ */
+const char* hiprandGetErrorString(hiprandStatus_t error);
+
+/**
  * Return a human readable cublas error string.
  */
 const char* rocblasGetErrorString(rocblas_status error);
-
-#if 0 // ashish TBD: Fix this when integrating rocrand
-/**
- * Return a human readable curand error string.
- */
-const char* curandGetErrorString(curandStatus_t error);
-#endif
 
 // HIP: various checks for different function calls.
 #define HIP_ENFORCE(condition, ...)     \
@@ -201,6 +200,7 @@ const char* curandGetErrorString(curandStatus_t error);
         ": ",                                    \
         ::caffe2::rocblasGetErrorString(status)); \
   } while (0)
+
 #define ROCBLAS_CHECK(condition)                    \
   do {                                             \
     rocblas_status status = condition;             \
@@ -208,27 +208,19 @@ const char* curandGetErrorString(curandStatus_t error);
         << ::caffe2::rocblasGetErrorString(status); \
   } while (0)
 
-#if 0 // ashish TBD: curand
-#define CURAND_ENFORCE(condition)                \
+#define HIPRAND_ENFORCE(condition)                \
   do {                                           \
-    curandStatus_t status = condition;           \
+    hiprandStatus_t status = condition;           \
     CAFFE_ENFORCE_EQ(                            \
         status,                                  \
-        CURAND_STATUS_SUCCESS,                   \
+        HIPRAND_STATUS_SUCCESS,                   \
         "Error at: ",                            \
         __FILE__,                                \
         ":",                                     \
         __LINE__,                                \
         ": ",                                    \
-        ::caffe2::curandGetErrorString(status)); \
+        ::caffe2::hiprandGetErrorString(status)); \
   } while (0)
-#define CURAND_CHECK(condition)                    \
-  do {                                             \
-    curandStatus_t status = condition;             \
-    CHECK(status == CURAND_STATUS_SUCCESS)         \
-        << ::caffe2::curandGetErrorString(status); \
-  } while (0)
-#endif
 
 #define HIP_1D_KERNEL_LOOP(i, n)                                 \
   for (size_t i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x; i < (n); \
