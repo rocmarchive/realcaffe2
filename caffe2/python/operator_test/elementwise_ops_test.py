@@ -168,3 +168,8 @@ class TestElementwiseOps(hu.HypothesisTestCase):
 
         self.assertGradientChecks(
             gc, op, [X], 0, [0], stepsize=1e-4, threshold=1e-2)
+
+
+if __name__ == "__main__":
+    import unittest
+    unittest.main()
