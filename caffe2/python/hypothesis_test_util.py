@@ -263,14 +263,13 @@ def tensors1d(n, min_len=1, max_len=64, dtype=np.float32, elements=None):
         n, 1, 1, dtype, elements, min_value=min_len, max_value=max_len
     )
 
-
 cpu_do = caffe2_pb2.DeviceOption()
-gpu_do = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
+gpu_do = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.HIP)
 device_options = [cpu_do] + ([gpu_do] if workspace.has_gpu_support else [])
 # Include device option for each GPU
 expanded_device_options = [cpu_do] + (
-    [caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA, cuda_gpu_id=i)
-     for i in range(workspace.NumCudaDevices())]
+    [caffe2_pb2.DeviceOption(device_type=caffe2_pb2.HIP, hip_gpu_id=i)
+     for i in range(workspace.NumHipDevices())]
     if workspace.has_gpu_support else [])
 
 
@@ -364,6 +363,7 @@ class HypothesisTestCase(test_util.TestCase):
         self.assertTrue(
             dc.CheckSimple(op, inputs, outputs_to_check, input_device_options)
         )
+
 
     def assertGradientChecks(
         self,
