@@ -373,7 +373,6 @@ class HypothesisTestCase(test_util.TestCase):
             dc.CheckSimple(op, inputs, outputs_to_check, input_device_options)
         )
 
-
     def assertGradientChecks(
         self,
         device_option,
