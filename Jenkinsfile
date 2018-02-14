@@ -1,6 +1,6 @@
 
 def rocmtestnode(variant, name, body) {
-    def image = 'miopen'
+    def image = 'rocm_caffe2'
     def cmake_build = { compiler, flags ->
         def cmd = """
             echo \$HSA_ENABLE_SDMA
