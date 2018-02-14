@@ -23,19 +23,18 @@ def rocmtestnode(variant, name, body) {
             env.WINEPREFIX="/jenkins/.wine"
             checkout scm
         }
-        stage("image ${variant}") {
-            try {
-//                docker.build("${image}", "--build-arg PREFIX=/usr/local .")
-            } catch(Exception ex) {
-//                docker.build("${image}", "--build-arg PREFIX=/usr/local --no-cache .")
-
-            }
-        }
-//        withDockerContainer(image: image, args: '--device=/dev/kfd --device=/dev/dri --group-add video') {
-//            timeout(time: 1, unit: 'HOURS') {
-//                body(cmake_build)
-//            }
-//        }
+   //   stage("image ${variant}") {
+   //       try {
+   //             docker.build("${image}", "--build-arg PREFIX=/usr/local .")
+   //       } catch(Exception ex) {
+   //             docker.build("${image}", "--build-arg PREFIX=/usr/local --no-cache .")
+   //       }
+   //   }
+   //     withDockerContainer(image: image, args: '--device=/dev/kfd --device=/dev/dri --group-add video') {
+   //         timeout(time: 1, unit: 'HOURS') {
+   //             body(cmake_build)
+   //         }
+   //     }
     }
 }
 @NonCPS
