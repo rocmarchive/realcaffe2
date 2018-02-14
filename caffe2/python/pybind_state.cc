@@ -601,6 +601,10 @@ void addObjectMethods(py::module& m) {
           DefinitionGetter(CUDAOperatorRegistry()),
           py::return_value_policy::reference)
       .def_static(
+          "get_hip_impl",
+          DefinitionGetter(HIPOperatorRegistry()),
+          py::return_value_policy::reference)
+      .def_static(
           "get_gradient_impl",
           DefinitionGetter(GradientRegistry()),
           py::return_value_policy::reference);
@@ -711,6 +715,8 @@ void addGlobalMethods(py::module& m) {
 #endif // CAFFE2_HAS_MKL_DNN
       );
 
+  m.attr("has_hip") = (g_caffe2_has_hip_linked == true) ? py::bool_(true) : py::bool_(false);
+
   m.attr("define_caffe2_no_operator_schema") = py::bool_(
 #ifdef CAFFE2_NO_OPERATOR_SCHEMA
       true
@@ -764,6 +770,10 @@ void addGlobalMethods(py::module& m) {
     }
     // CUDA operators
     for (const auto& name : caffe2::CUDAOperatorRegistry()->Keys()) {
+      all_keys.insert(name);
+    }
+    // HIP operators
+    for (const auto& name : caffe2::HIPOperatorRegistry()->Keys()) {
       all_keys.insert(name);
     }
     // Ensure we are lexicographically ordered.
