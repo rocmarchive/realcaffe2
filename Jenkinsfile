@@ -8,8 +8,8 @@ def rocmtestnode(variant, name, body) {
             rm -rf build
             mkdir build
             cd build
-            CXX=${compiler} CXXFLAGS='-Werror' cmake -DMIOPEN_GPU_SYNC=On -DCMAKE_CXX_FLAGS_DEBUG='-g -fno-omit-frame-pointer -fsanitize=undefined -fno-sanitize-recover=undefined' ${flags} .. 
-            CTEST_PARALLEL_LEVEL=4 dumb-init make -j32 check doc MIOpenDriver
+            CXX=${compiler} CXXFLAGS='-Werror' cmake -DUSE_HIP=On -DCMAKE_CXX_FLAGS_DEBUG='-g -fno-omit-frame-pointer -fsanitize=undefined -fno-sanitize-recover=undefined' ${flags} ..
+            CTEST_PARALLEL_LEVEL=4 dumb-init make -j32
         """
         echo cmd
         sh cmd
