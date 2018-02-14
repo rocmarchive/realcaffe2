@@ -263,15 +263,23 @@ def tensors1d(n, min_len=1, max_len=64, dtype=np.float32, elements=None):
         n, 1, 1, dtype, elements, min_value=min_len, max_value=max_len
     )
 
-
 cpu_do = caffe2_pb2.DeviceOption()
-gpu_do = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
-device_options = [cpu_do] + ([gpu_do] if workspace.has_gpu_support else [])
-# Include device option for each GPU
-expanded_device_options = [cpu_do] + (
-    [caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA, cuda_gpu_id=i)
-     for i in range(workspace.NumCudaDevices())]
-    if workspace.has_gpu_support else [])
+if(workspace.C.has_hip):
+    gpu_do = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.HIP)
+    device_options = [cpu_do] + ([gpu_do] if workspace.has_gpu_support else [])
+    # Include device option for each GPU
+    expanded_device_options = [cpu_do] + (
+        [caffe2_pb2.DeviceOption(device_type=caffe2_pb2.HIP, hip_gpu_id=i)
+         for i in range(workspace.NumHipDevices())]
+        if workspace.has_gpu_support else [])
+else:
+    gpu_do = caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA)
+    device_options = [cpu_do] + ([gpu_do] if workspace.has_gpu_support else [])
+    # Include device option for each GPU
+    expanded_device_options = [cpu_do] + (
+        [caffe2_pb2.DeviceOption(device_type=caffe2_pb2.CUDA, cuda_gpu_id=i)
+         for i in range(workspace.NumCudaDevices())]
+        if workspace.has_gpu_support else [])
 
 
 def device_checker_device_options():
