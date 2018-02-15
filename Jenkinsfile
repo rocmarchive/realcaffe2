@@ -1,6 +1,6 @@
 
 def rocmtestnode(variant, name, body) {
-    def image = 'miopen'
+    def image = 'rocm_caffe2'
     def cmake_build = { compiler, flags ->
         def cmd = """
             echo \$HSA_ENABLE_SDMA
@@ -8,34 +8,39 @@ def rocmtestnode(variant, name, body) {
             rm -rf build
             mkdir build
             cd build
-            CXX=${compiler} CXXFLAGS='-Werror' cmake -DMIOPEN_GPU_SYNC=On -DCMAKE_CXX_FLAGS_DEBUG='-g -fno-omit-frame-pointer -fsanitize=undefined -fno-sanitize-recover=undefined' ${flags} .. 
-            CTEST_PARALLEL_LEVEL=4 dumb-init make -j32 check doc MIOpenDriver
+            CXX=${compiler} CXXFLAGS='-Werror' cmake -DUSE_HIP=On -DCMAKE_CXX_FLAGS_DEBUG='-g -fno-omit-frame-pointer -fsanitize=undefined -fno-sanitize-recover=undefined' ${flags} ..
+            CTEST_PARALLEL_LEVEL=4 dumb-init make -j32
         """
         echo cmd
         sh cmd
     }
     node(name) {
+        stage("Build") {
+          sh '.jenkins/build.sh'
+        }
+        stage("Test") {
+          sh '.jenkins/test.sh'
+        }
         stage("checkout ${variant}") {
             // env.HCC_SERIALIZE_KERNEL=3
             // env.HCC_SERIALIZE_COPY=3
-            env.HSA_ENABLE_SDMA=0 
+            env.HSA_ENABLE_SDMA=0
             // env.HSA_ENABLE_INTERRUPT=0
             env.WINEPREFIX="/jenkins/.wine"
             checkout scm
         }
-        stage("image ${variant}") {
-            try {
-                docker.build("${image}", "--build-arg PREFIX=/usr/local .")
-            } catch(Exception ex) {
-                docker.build("${image}", "--build-arg PREFIX=/usr/local --no-cache .")
-
-            }
-        }
-        withDockerContainer(image: image, args: '--device=/dev/kfd --device=/dev/dri --group-add video') {
-            timeout(time: 1, unit: 'HOURS') {
-                body(cmake_build)
-            }
-        }
+   //   stage("image ${variant}") {
+   //       try {
+   //             docker.build("${image}", "--build-arg PREFIX=/usr/local .")
+   //       } catch(Exception ex) {
+   //             docker.build("${image}", "--build-arg PREFIX=/usr/local --no-cache .")
+   //       }
+   //   }
+   //     withDockerContainer(image: image, args: '--device=/dev/kfd --device=/dev/dri --group-add video') {
+   //         timeout(time: 1, unit: 'HOURS') {
+   //             body(cmake_build)
+   //         }
+   //     }
     }
 }
 @NonCPS
@@ -78,7 +83,7 @@ rocmtest opencl_tidy: rocmnode('rocm') { cmake_build ->
             rm -rf build
             mkdir build
             cd build
-            CXX='clang++-3.8' cmake -DBUILD_DEV=On .. 
+            CXX='clang++-3.8' cmake -DBUILD_BINARY=On .. 
             make -j8 -k analyze
         '''
     }
@@ -102,7 +107,7 @@ rocmtest opencl_tidy: rocmnode('rocm') { cmake_build ->
             rm -rf build
             mkdir build
             cd build
-            CXX='hcc' cmake -DBUILD_DEV=On .. 
+            CXX='hcc' cmake -DBUILD_BINARY=On .. 
             make -j8 -k analyze
         '''
     }
@@ -111,27 +116,27 @@ rocmtest opencl_tidy: rocmnode('rocm') { cmake_build ->
 // Quick tests
 rocmtest opencl: rocmnode('vega') { cmake_build ->
     stage('Clang Debug') {
-        cmake_build('clang++-3.8', '-DBUILD_DEV=On -DCMAKE_BUILD_TYPE=debug')
+        cmake_build('clang++-3.8', '-DBUILD_BINARY=On -DCMAKE_BUILD_TYPE=debug')
     }
     stage('Clang Release') {
-        cmake_build('clang++-3.8', '-DBUILD_DEV=On -DCMAKE_BUILD_TYPE=release')
+        cmake_build('clang++-3.8', '-DBUILD_BINARY=On -DCMAKE_BUILD_TYPE=release')
     }
     stage('GCC Debug') {
-        cmake_build('g++-5', '-DBUILD_DEV=On -DCMAKE_BUILD_TYPE=debug')
+        cmake_build('g++-5', '-DBUILD_BINARY=On -DCMAKE_BUILD_TYPE=debug')
     }
     stage('GCC Release') {
-        cmake_build('g++-5', '-DBUILD_DEV=On -DCMAKE_BUILD_TYPE=release')
+        cmake_build('g++-5', '-DBUILD_BINARY=On -DCMAKE_BUILD_TYPE=release')
     }
 }, fiji: rocmnode('fiji') { cmake_build ->
     stage('Fiji GCC Debug') {
-        cmake_build('g++-5', '-DBUILD_DEV=On -DCMAKE_BUILD_TYPE=debug')
+        cmake_build('g++-5', '-DBUILD_BINARY=On -DCMAKE_BUILD_TYPE=debug')
     }
 }, hip: rocmnode('vega') { cmake_build ->
     // stage('Hip Debug') {
-    //     cmake_build('hcc', '-DBUILD_DEV=On -DCMAKE_BUILD_TYPE=debug')
+    //     cmake_build('hcc', '-DBUILD_BINARY=On -DCMAKE_BUILD_TYPE=debug')
     // }
     stage('Hip Release') {
-        cmake_build('hcc', '-DBUILD_DEV=On -DCMAKE_BUILD_TYPE=release')
+        cmake_build('hcc', '-DBUILD_BINARY=On -DCMAKE_BUILD_TYPE=release')
     }
 // }, windows: rocmnode('fiji') { cmake_build ->
 //     stage('Windows Release') {
@@ -142,10 +147,10 @@ rocmtest opencl: rocmnode('vega') { cmake_build ->
 // All tests
 rocmtest opencl_all: rocmnode('vega') { cmake_build ->
     stage('GCC Release All') {
-        cmake_build('g++-5', '-DBUILD_DEV=On -DMIOPEN_TEST_ALL=On -DCMAKE_BUILD_TYPE=release')
+        cmake_build('g++-5', '-DBUILD_BINARY=On -DCMAKE_BUILD_TYPE=release')
     }
 }, hip_all: rocmnode('vega') { cmake_build ->
     stage('Hip Release All') {
-        cmake_build('hcc', '-DBUILD_DEV=On -DMIOPEN_TEST_ALL=On -DCMAKE_BUILD_TYPE=release')
+        cmake_build('hcc', '-DBUILD_BINARY=On -DCMAKE_BUILD_TYPE=release')
     }
 }
