@@ -16,10 +16,10 @@ def rocmtestnode(variant, name, body) {
     }
     node(name) {
         stage("Build") {
-          sh .jenkins/build.sh
+          sh '.jenkins/build.sh'
         }
         stage("Test") {
-          sh .jenkins/test.sh
+          sh '.jenkins/test.sh'
         }
         stage("checkout ${variant}") {
             // env.HCC_SERIALIZE_KERNEL=3
