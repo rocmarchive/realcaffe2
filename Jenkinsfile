@@ -21,14 +21,14 @@ def rocmtestnode(variant, name, body) {
         stage("Test") {
           sh .jenkins/test.sh
         }
-        //stage("checkout ${variant}") {
-        //    // env.HCC_SERIALIZE_KERNEL=3
-        //    // env.HCC_SERIALIZE_COPY=3
-        //    env.HSA_ENABLE_SDMA=0
-        //    // env.HSA_ENABLE_INTERRUPT=0
-        //    env.WINEPREFIX="/jenkins/.wine"
-        //    checkout scm
-        //}
+        stage("checkout ${variant}") {
+            // env.HCC_SERIALIZE_KERNEL=3
+            // env.HCC_SERIALIZE_COPY=3
+            env.HSA_ENABLE_SDMA=0
+            // env.HSA_ENABLE_INTERRUPT=0
+            env.WINEPREFIX="/jenkins/.wine"
+            checkout scm
+        }
    //   stage("image ${variant}") {
    //       try {
    //             docker.build("${image}", "--build-arg PREFIX=/usr/local .")
@@ -83,7 +83,7 @@ rocmtest opencl_tidy: rocmnode('rocm') { cmake_build ->
             rm -rf build
             mkdir build
             cd build
-            CXX='clang++-3.8' cmake -DBUILD_DEV=On .. 
+            CXX='clang++-3.8' cmake -DBUILD_BINARY=On .. 
             make -j8 -k analyze
         '''
     }
