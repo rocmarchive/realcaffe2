@@ -15,6 +15,12 @@ def rocmtestnode(variant, name, body) {
         sh cmd
     }
     node(name) {
+        stage("Build") {
+           .jenkins/build.sh
+        }
+        stage("Test") {
+           .jenkins/test.sh
+        }
         stage("checkout ${variant}") {
             // env.HCC_SERIALIZE_KERNEL=3
             // env.HCC_SERIALIZE_COPY=3
