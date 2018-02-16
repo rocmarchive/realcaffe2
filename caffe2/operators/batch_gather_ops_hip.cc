@@ -63,8 +63,8 @@ bool BatchGatherOp<HIPContext>::DoRunWithType() {
       idxs,
       M,
       N,
-      data_batch_size,
-      gathered_batch_size,
+      static_cast<const int>(data_batch_size),
+      static_cast<const int>(gathered_batch_size),
       block_size);
   return true;
 }
@@ -136,8 +136,8 @@ bool BatchGatherGradientOp<HIPContext>::DoRunWithType2() {
       idxs,
       M,
       N,
-      data_batch_size,
-      gathered_batch_size,
+      static_cast<const int>(data_batch_size),
+      static_cast<const int>(gathered_batch_size),
       block_size);
 
   return true;
