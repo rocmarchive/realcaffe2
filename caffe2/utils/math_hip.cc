@@ -318,7 +318,7 @@ void GemmBatched<float, HIPContext>(
         A_batches));
 }
 
-//namespace {
+namespace {
 
 __global__ void FloatToHalfKernel(const int N, const float* X, half* Y) {
   HIP_1D_KERNEL_LOOP(i, N) {
@@ -332,7 +332,7 @@ __global__ void HalfToFloatKernel(const int N, const half* X, float* Y) {
   }
 }
 
-//};
+};
 
 template <>
 void GemmBatched<float16, HIPContext>(
@@ -470,7 +470,7 @@ void Gemv<float, HIPContext>(
 }
 
 // Batched Add variants
-//namespace {
+namespace {
 
 template <typename T>
 __global__ void AddStripedBatchKernel(
@@ -488,7 +488,7 @@ __global__ void AddStripedBatchKernel(
     }
   }
 }
-//} // namespace
+} // namespace
 
 #define CAFFE2_SPECIALIZED_HIP_ADD_STRIPED_BATCH(T)           \
   template <>                                                  \
@@ -580,14 +580,14 @@ void Gemv<float16, HIPContext>(
 }
 
 
-//namespace {
+namespace {
 template <typename T>
 __global__ void SetKernel(const int N, const T alpha, T* Y) {
   HIP_1D_KERNEL_LOOP(i, N) {
     Y[i] = alpha;
   }
 }
-//} // namespace
+} // namespace
 
 #define CAFFE2_SPECIALIZED_HIP_SET(T)                             \
   template <>                                                      \
@@ -598,7 +598,7 @@ __global__ void SetKernel(const int N, const T alpha, T* Y) {
         CAFFE_HIP_NUM_THREADS,                                    \
         0,                                                         \
         context->hip_stream(),                                    \
-        N, alpha, Y);                                             \
+        static_cast<const int>(N), alpha, Y);                                             \
   }
 
 CAFFE2_SPECIALIZED_HIP_SET(float);
@@ -615,7 +615,7 @@ CAFFE2_SPECIALIZED_HIP_SET(uint16_t);
 #undef CAFFE2_SPECIALIZED_HIP_SET
 
 
-//namespace {
+namespace {
 template <typename T>
 __global__ void
 UniformShift(const size_t N, const float min, const float max, T* x) {
@@ -633,7 +633,7 @@ UniformIntFit(const size_t N, const int min, const int max, unsigned int* x) {
     x_int[i] = min + static_cast<int>(x[i] % range);
   }
 }
-//} // namespace
+} // namespace
 
 template <>
 void RandUniform<float, HIPContext>(
@@ -805,7 +805,7 @@ __global__ void SumKernel(const int N, const T* X, T* Y, bool square) {
 // device reduce is slower for N <= 10000.
 #define DEVICE_REDUCE_SIZE_THRESHOLD 10000
 
-//namespace {
+namespace {
 
 template <typename T>
 __global__ void SumConvertKernel(float* sum, T* dest) {
@@ -842,7 +842,7 @@ void SumFloatIter(
       context->hip_stream());
 #endif
 }
-//} // namespace
+} // namespace
 
 template <>
 void Sum<float, HIPContext>(
@@ -892,14 +892,14 @@ struct FloatTransform {
 CAFFE2_MATH_SUM_FUNC(float16)
 #undef CAFFE2_MATH_SUM_FUNC
 
-//namespace {
+namespace {
 template <typename T>
 struct SqrTransform {
   inline __host__ __device__ T operator()(const T v) const {
     return v * v;
   }
 };
-//} //  namespace
+} //  namespace
 
 template <>
 void SumSqr<float, HIPContext>(
@@ -953,7 +953,7 @@ CAFFE2_MATH_SUMSQR_FUNC(float16)
 #undef CAFFE2_MATH_SUMSQR_FUNC
 #undef DEVICE_REDUCE_SIZE_THRESHOLD
 
-//namespace {
+namespace {
 template <typename T>
 __global__ void SelectKernel(
     const int N, const int D, const T* x, const int* idx, T* y) {
@@ -961,7 +961,7 @@ __global__ void SelectKernel(
     y[i] = x[i * D + idx[i]];
   }
 }
-//}  // namespace
+}  // namespace
 
 template <>
 void Select<float, HIPContext>(
@@ -981,7 +981,7 @@ void Select<float16, HIPContext>(
   hipLaunchKernelGGL((SelectKernel<float16>), dim3(CAFFE_GET_BLOCKS(N)), dim3(CAFFE_HIP_NUM_THREADS), 0, context->hip_stream(), N, D, x, idx, y);
 }
 
-//namespace {
+namespace {
 template <typename T>
 __global__ void ScaleKernel(const int n, const float alpha, const T* x, T* y) {
   HIP_1D_KERNEL_LOOP(i, n) {
@@ -1018,7 +1018,7 @@ __global__ void ScaleKernelDeviceAlpha(
   }
 }
 
-//}  // namespace
+}  // namespace
 
 template <>
 void Powx<float, HIPContext>(
@@ -1104,7 +1104,7 @@ void Axpy<float16, HIPContext>(
   ROCBLAS_CHECK(rocblas_haxpy(context->get_rocblas_handle(), N, alpha_h, X_h, 1, Y_h, 1));
 }
 
-//namespace {
+namespace {
 template <typename T>
 __global__ void AxpyKernel(const int n, const float* a, const T* x, T* y) {
   HIP_1D_KERNEL_LOOP(index, n) {
@@ -1112,7 +1112,7 @@ __global__ void AxpyKernel(const int n, const float* a, const T* x, T* y) {
         convert::Get<float>(x[index]) * (*a) + convert::Get<float>(y[index]));
   }
 }
-//}  // namespace
+}  // namespace
 
 template <>
 void Axpy<float, HIPContext>(
@@ -1131,7 +1131,7 @@ void Axpy<float16, HIPContext>(
   hipLaunchKernelGGL((AxpyKernel<float16>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context->hip_stream(), n, alpha, X, Y);
 }
 
-//namespace {
+namespace {
 template <typename T>
 __global__ void AxpbyKernel(const int n, const T a, const T* x,
                              const T b, T* y) {
@@ -1139,7 +1139,7 @@ __global__ void AxpbyKernel(const int n, const T a, const T* x,
     y[index] = x[index] * a + y[index] * b;
   }
 }
-//}  // namespace
+}  // namespace
 
 template <>
 void Axpby<float, HIPContext>(
@@ -1148,7 +1148,7 @@ void Axpby<float, HIPContext>(
   hipLaunchKernelGGL((AxpbyKernel<float>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context->hip_stream(), n, a, x, b, y);
 }
 
-//namespace {
+namespace {
 
 template <typename T>
 __global__ void im2col_gpu_kernel_nchw(const int n, const T* data_im,
@@ -1507,7 +1507,7 @@ __global__ void col2im_nd_gpu_kernel(
   } // CUDA_KERNEL_LOOP(index, n)
 }
 
-//}  // namespace
+}  // namespace
 
 template <>
 void Im2col<float, HIPContext, StorageOrder::NCHW>(
@@ -1747,7 +1747,7 @@ void CopyVector<float, HIPContext>(
   }
 }
 
-//namespace {
+namespace {
 __global__ void rowwise_max_kernel(
     const int rows,
     const int cols,
@@ -1797,7 +1797,7 @@ __global__ void colwise_max_kernel(
 #endif
 }
 
-//} // namespace
+} // namespace
 
 template <>
 void RowwiseMax(
@@ -1819,14 +1819,14 @@ void ColwiseMax(
   hipLaunchKernelGGL((colwise_max_kernel), dim3(std::min(D, CAFFE_MAXIMUM_NUM_BLOCKS)), dim3(CAFFE_HIP_NUM_THREADS), 0, context->hip_stream(), N, D, x, y);
 }
 
-//namespace {
+namespace {
 __global__ void
 maximum_kernel(const int N, const float alpha, const float* x, float* y) {
   HIP_1D_KERNEL_LOOP(i, N) {
     y[i] = fmaxf(x[i], alpha);
   }
 }
-//} // namespace
+} // namespace
 
 template <>
 void Maximum(

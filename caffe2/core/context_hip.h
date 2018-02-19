@@ -216,6 +216,8 @@ class HIPContext final {
 
   template <class SrcContext, class DstContext>
   inline void CopyBytes(size_t nbytes, const void* src, void* dst) {
+    if(nbytes == 0)
+      return;
     HIP_ENFORCE(hipMemcpyAsync(
         dst,
         src,
