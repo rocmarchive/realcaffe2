@@ -177,19 +177,21 @@ if(USE_HIP)
   set(Caffe2_HIP_GCC_COMPILE_FLAGS "-D__HIP_PLATFORM_HCC__=1")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Caffe2_HIP_GCC_COMPILE_FLAGS}")
   set(HIP_HIPCC_FLAGS "${HIP_HIPCC_FLAGS} -fPIC")
-  INCLUDE_DIRECTORIES(/opt/rocm/include)
-  LINK_DIRECTORIES(/opt/rocm/lib)
+  INCLUDE_DIRECTORIES(/opt/rocm/include /opt/rocm/hiprand/include /opt/rocm/rocrand/include)
+  LINK_DIRECTORIES(/opt/rocm/lib /opt/rocm/hiprand/lib /opt/rocm/rocrand/lib)
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fPIC -Wl,-Bsymbolic")
   set_source_files_properties(${Caffe2_HIP_SRCS} PROPERTIES HIP_SOURCE_PROPERTY_FORMAT 1)
   HIP_ADD_LIBRARY(caffe2_hip ${Caffe2_HIP_SRCS})
   set( CMAKE_HIP_CREATE_SHARED_LIBRARY "${HIP_HIPCC_EXECUTABLE} <CMAKE_SHARED_LIBRARY_CXX_FLAGS> ${CMAKE_CXX_FLAGS} <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <SONAME_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
   set_target_properties(caffe2_hip PROPERTIES LINKER_LANGUAGE HIP)
 
+  list(APPEND Caffe2_HIP_DEPENDENCY_LIBS rocblas)
   target_include_directories(
       caffe2_hip INTERFACE $<INSTALL_INTERFACE:include>)
   target_compile_options(caffe2 INTERFACE "-std=c++11")
   list(APPEND Caffe2_MAIN_LIBS_ORDER caffe2_hip)
   add_dependencies(caffe2_hip Caffe2_PROTO)
+    list(APPEND Caffe2_HIP_DEPENDENCY_LIBS rocrand hiprand)
   if (BUILD_SHARED_LIBS)
     target_link_libraries(
         caffe2_hip
