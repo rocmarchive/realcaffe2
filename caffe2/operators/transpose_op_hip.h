@@ -22,7 +22,7 @@
 namespace caffe2 {
 
 template <typename T>
-bool TransposeCUDA(
+bool TransposeHIP(
     vector<int>& axes,
     HIPContext& context,
     const Tensor<HIPContext>& input,
