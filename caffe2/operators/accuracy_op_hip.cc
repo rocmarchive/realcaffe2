@@ -23,7 +23,7 @@
 
 namespace caffe2 {
 
-namespace hip_ops {
+namespace {
 __global__ void AccuracyKernel(
     const int N,
     const int D,
@@ -73,11 +73,11 @@ bool AccuracyOp<float, HIPContext>::RunOnDevice() {
   Y->Resize(vector<TIndex>());
   float* Ydata = Y->mutable_data<float>();
   math::Set<float, HIPContext>(1, 0, Ydata, &context_);
-  hipLaunchKernelGGL((hip_ops::AccuracyKernel), dim3(std::min(CAFFE_MAXIMUM_NUM_BLOCKS, N)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
+  hipLaunchKernelGGL((AccuracyKernel), dim3(std::min(CAFFE_MAXIMUM_NUM_BLOCKS, N)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
       N, D, top_k_, X.data<float>(), label.data<int>(), Ydata);
   // This is going to be executed only in one single kernel. Not very beautiful,
   // but probably we have to do this?
-  hipLaunchKernelGGL((hip_ops::AccuracyDivideKernel), dim3(1), dim3(1), 0, context_.hip_stream(),
+  hipLaunchKernelGGL((AccuracyDivideKernel), dim3(1), dim3(1), 0, context_.hip_stream(),
       N, Ydata);
   return true;
 }
