@@ -85,38 +85,36 @@ TEST(HIPContextTest, MemoryPoolAllocateDealloc) {
   }
 }
 
-#if 0 // Ashish TBD: For rocblas, rocrand
-hipStream_t getStreamForHandle(cublasHandle_t handle) {
+hipStream_t getStreamForHandle(rocblas_handle handle) {
   hipStream_t stream = nullptr;
-  CUBLAS_ENFORCE(cublasGetStream(handle, &stream));
+  ROCBLAS_ENFORCE(rocblas_get_stream(handle, &stream));
   CHECK_NOTNULL(stream);
   return stream;
 }
 
-TEST(CUDAContextTest, TestSameThreadSameObject) {
-  if (!HasCudaGPU()) return;
-  CUDAContext context_a(0);
-  CUDAContext context_b(0);
-  EXPECT_EQ(context_a.cuda_stream(), context_b.cuda_stream());
-  EXPECT_EQ(context_a.cublas_handle(), context_b.cublas_handle());
+TEST(HIPContextTest, TestSameThreadSameObject) {
+  if (!HasHipGPU()) return;
+  HIPContext context_a(0);
+  HIPContext context_b(0);
+  EXPECT_EQ(context_a.hip_stream(), context_b.hip_stream());
+  EXPECT_EQ(context_a.get_rocblas_handle(), context_b.get_rocblas_handle());
   EXPECT_EQ(
-      context_a.cuda_stream(), getStreamForHandle(context_b.cublas_handle()));
-  // CuRAND generators are context-local.
-  EXPECT_NE(context_a.curand_generator(), context_b.curand_generator());
+      context_a.hip_stream(), getStreamForHandle(context_b.get_rocblas_handle()));
+  // hipRAND generators are context-local.
+  EXPECT_NE(context_a.hiprand_generator(), context_b.hiprand_generator());
 }
 
-TEST(CUDAContextTest, TestSameThreadDifferntObjectIfDifferentDevices) {
-  if (NumCudaDevices() > 1) {
-    CUDAContext context_a(0);
-    CUDAContext context_b(1);
-    EXPECT_NE(context_a.cuda_stream(), context_b.cuda_stream());
-    EXPECT_NE(context_a.cublas_handle(), context_b.cublas_handle());
+TEST(HIPContextTest, TestSameThreadDifferntObjectIfDifferentDevices) {
+  if (NumHipDevices() > 1) {
+    HIPContext context_a(0);
+    HIPContext context_b(1);
+    EXPECT_NE(context_a.hip_stream(), context_b.hip_stream());
+    EXPECT_NE(context_a.get_rocblas_handle(), context_b.get_rocblas_handle());
     EXPECT_NE(
-        context_a.cuda_stream(), getStreamForHandle(context_b.cublas_handle()));
-    EXPECT_NE(context_a.curand_generator(), context_b.curand_generator());
+        context_a.hip_stream(), getStreamForHandle(context_b.get_rocblas_handle()));
+    EXPECT_NE(context_a.hiprand_generator(), context_b.hiprand_generator());
   }
 }
-#endif
 
 namespace {
 // A test function to return a stream address from a temp CUDA context. You
