@@ -16,7 +16,7 @@
  */
 
 #include "caffe2/operators/transpose_op.h"
-#include "caffe2/operators/transpose_op_gpu.h"
+#include "caffe2/operators/transpose_op_hip.h"
 #include <limits>
 
 #include "caffe2/core/context_hip.h"
@@ -24,7 +24,7 @@
 namespace caffe2 {
 
 // Cuda memory is precious so let's do a lower ndim limit.
-#define COMPILE_TIME_CUDA_MAX_TRANSPOSE_DIMS 6
+#define COMPILE_TIME_HIP_MAX_TRANSPOSE_DIMS 6
 
 namespace {
 // TODO(jiayq): one possible optimization is to copy the buffer into a shared
@@ -32,7 +32,7 @@ namespace {
 template <typename Dtype>
 __global__ void transpose_gpu(const int nthreads, const Dtype* from_data,
   Dtype* to_data, const int* buffer, const int num_axes) {
-  int from_inds[COMPILE_TIME_CUDA_MAX_TRANSPOSE_DIMS];
+  int from_inds[COMPILE_TIME_HIP_MAX_TRANSPOSE_DIMS];
   const int* from_counts = buffer;
   const int* to_counts = buffer + num_axes;
   const int* axes = buffer + num_axes * 2;
@@ -56,11 +56,11 @@ template <typename T>
 bool TransposeOp<HIPContext>::DoRunWithType() {
   const auto& input = Input(0);
   auto* output = Output(0);
-  return TransposeCUDA<T>(axes_, context_, input, output, buffer_cpu_, buffer_);
+  return TransposeHIP<T>(axes_, context_, input, output, buffer_cpu_, buffer_);
 }
 
 template <typename T>
-bool TransposeCUDA(
+bool TransposeHIP(
     vector<int>& axes,
     HIPContext& context,
     const Tensor<HIPContext>& input,
@@ -73,7 +73,7 @@ bool TransposeCUDA(
       count < std::numeric_limits<int>::max(),
       "Transpose op on GPU only supports int32");
   CAFFE_ENFORCE(
-      ndim <= COMPILE_TIME_CUDA_MAX_TRANSPOSE_DIMS,
+      ndim <= COMPILE_TIME_HIP_MAX_TRANSPOSE_DIMS,
       "Input ndim exceeds compile time max.");
 
   // Buffer contains the following data:
