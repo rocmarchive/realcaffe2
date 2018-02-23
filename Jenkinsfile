@@ -1,6 +1,6 @@
 
-def rocmtestnode(variant, name, body) {
-    def image = 'miopen'
+def rocmtestnode(name, body) {
+    def image = 'docker/jenkins/ubuntu-hip'
     def cmake_build = { compiler, flags ->
         def cmd = """
             echo \$HSA_ENABLE_SDMA
@@ -8,22 +8,22 @@ def rocmtestnode(variant, name, body) {
             rm -rf build
             mkdir build
             cd build
-            CXX=${compiler} CXXFLAGS='-Werror' cmake -DMIOPEN_GPU_SYNC=On -DCMAKE_CXX_FLAGS_DEBUG='-g -fno-omit-frame-pointer -fsanitize=undefined -fno-sanitize-recover=undefined' ${flags} .. 
-            CTEST_PARALLEL_LEVEL=4 dumb-init make -j32 check doc MIOpenDriver
+            //CXX=${compiler} CXXFLAGS='-Werror' cmake -DMIOPEN_GPU_SYNC=On -DCMAKE_CXX_FLAGS_DEBUG='-g -fno-omit-frame-pointer -fsanitize=undefined -fno-sanitize-recover=undefined' ${flags} .. 
+            //CTEST_PARALLEL_LEVEL=4 dumb-init make -j32 check doc MIOpenDriver
         """
         echo cmd
         sh cmd
     }
     node(name) {
-        stage("checkout ${variant}") {
+        stage("checkout") {
             // env.HCC_SERIALIZE_KERNEL=3
             // env.HCC_SERIALIZE_COPY=3
-            env.HSA_ENABLE_SDMA=0 
+            //env.HSA_ENABLE_SDMA=0 
             // env.HSA_ENABLE_INTERRUPT=0
-            env.WINEPREFIX="/jenkins/.wine"
+            //env.WINEPREFIX="/jenkins/.wine"
             checkout scm
         }
-        stage("image ${variant}") {
+        stage("image") {
             try {
                 docker.build("${image}", "--build-arg PREFIX=/usr/local .")
             } catch(Exception ex) {
