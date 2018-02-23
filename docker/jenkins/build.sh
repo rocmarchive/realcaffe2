@@ -11,6 +11,7 @@ valid_images=(
   py3-cuda9.0-cudnn7-ubuntu16.04
   py2-mkl-ubuntu16.04
   py3-mkl-ubuntu16.04
+  py2-hip-ubuntu16.04
 
   # Compiler compatibility
   py2-gcc5-ubuntu16.04
