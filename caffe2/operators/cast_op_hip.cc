@@ -24,7 +24,6 @@ namespace caffe2 {
 template <typename DstType, typename SrcType>
 __global__ void CastKernel(const int N, const SrcType* X, DstType* Y) {
   HIP_1D_KERNEL_LOOP(i, N) {
-    // Y[i] = static_cast<DstType>(X[i]);
     Y[i] = convert::To<SrcType, DstType>(X[i]);
   }
 }
