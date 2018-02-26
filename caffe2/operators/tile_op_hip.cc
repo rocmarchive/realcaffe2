@@ -15,7 +15,9 @@
  * limitations under the License.
  */
 
-//#include <cub/block/block_reduce.cuh>
+#ifdef ROCPRIM_READY
+#include <cub/block/block_reduce.cuh>
+#endif
 
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/tile_op.h"
@@ -45,9 +47,12 @@ __global__ void TileGradientAxpyKernel(
     int tiles,
     const T* input_data,
     T* output_data) {
-  //typedef cub::BlockReduce<T, CAFFE_HIP_NUM_THREADS> BlockReduce;
 
-  for (int idx = blockIdx.x; idx < outer_dim * inner_dim; idx += gridDim.x) {
+#ifdef ROCPRIM_READY
+    typedef cub::BlockReduce<T, CAFFE_HIP_NUM_THREADS> BlockReduce;
+#endif
+
+    for (int idx = blockIdx.x; idx < outer_dim * inner_dim; idx += gridDim.x) {
     int i = idx / inner_dim;
     int j = idx % inner_dim;
     T* output_ptr = output_data + inner_dim * i;
@@ -57,10 +62,15 @@ __global__ void TileGradientAxpyKernel(
       const T* input_ptr = input_data + (i * tiles + t) * inner_dim;
       x += input_ptr[j];
     }
-    //__shared__ typename BlockReduce::TempStorage temp_storage;
-    //T totx = BlockReduce(temp_storage).Sum(x);
+#ifdef ROCPRIM_READY
+    __shared__ typename BlockReduce::TempStorage temp_storage;
+    T totx = BlockReduce(temp_storage).Sum(x);
+#endif
     if (threadIdx.x == 0) {
-      output_ptr[j] = totx;
+#ifdef ROCPRIM_READY
+        output_ptr[j] = totx;
+#endif
+        output_ptr[j] = x;
     }
     __syncthreads();
   }
