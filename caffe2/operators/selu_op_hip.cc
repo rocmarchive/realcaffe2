@@ -1,5 +1,5 @@
 #include "hip/hip_runtime.h"
-#include "caffe2/core/common_gpu.h"
+#include "caffe2/core/common_hip.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/selu_op.h"
 
@@ -34,8 +34,8 @@ bool SeluOp<float, HIPContext>::RunOnDevice() {
   auto* Y = Output(0);
   CAFFE_ENFORCE_GT(X.size(), 0);
   Y->ResizeLike(X);
-  hipLaunchKernelGGL((SeluKernel), dim3(CAFFE_GET_BLOCKS(X.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-      X.size(), X.data<float>(), Y->mutable_data<float>(), alpha_, lambda_);
+  hipLaunchKernelGGL((SeluKernel), dim3(CAFFE_GET_BLOCKS(X.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
+      static_cast<const int>(X.size()), static_cast<const float*>(X.data<float>()), static_cast<float*>(Y->mutable_data<float>()), static_cast<float>(alpha_), static_cast<float>(lambda_));
   return true;
 }
 
@@ -47,13 +47,13 @@ bool SeluGradientOp<float, HIPContext>::RunOnDevice() {
   CAFFE_ENFORCE_GT(Y.size(), 0);
   CAFFE_ENFORCE_EQ(dY.size(), Y.size());
   dX->ResizeLike(Y);
-  hipLaunchKernelGGL((SeluGradientKernel), dim3(CAFFE_GET_BLOCKS(Y.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-      Y.size(),
-      Y.data<float>(),
-      dY.data<float>(),
-      dX->mutable_data<float>(),
-      alpha_,
-      lambda_);
+  hipLaunchKernelGGL((SeluGradientKernel), dim3(CAFFE_GET_BLOCKS(Y.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
+     static_cast<const int> (Y.size()),
+     static_cast<const float*> (Y.data<float>()),
+     static_cast<const float*> (dY.data<float>()),
+     static_cast<float*> (dX->mutable_data<float>()),
+     static_cast<float> (alpha_),
+     static_cast<float> (lambda_));
   return true;
 }
 

@@ -43,8 +43,8 @@ bool SoftplusOp<float, HIPContext>::RunOnDevice() {
   auto* Y = Output(0);
   DCHECK_GT(X.size(), 0);
   Y->ResizeLike(X);
-  hipLaunchKernelGGL((SoftplusKernel), dim3(CAFFE_GET_BLOCKS(X.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-      X.size(), X.data<float>(), Y->mutable_data<float>());
+  hipLaunchKernelGGL((SoftplusKernel), dim3(CAFFE_GET_BLOCKS(X.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
+                     static_cast<const int>(X.size()), static_cast<const float*>(X.data<float>()), static_cast<float*>(Y->mutable_data<float>()));
   return true;
 }
 
@@ -56,8 +56,9 @@ bool SoftplusGradientOp<float, HIPContext>::RunOnDevice() {
   DCHECK_GT(Y.size(), 0);
   DCHECK_EQ(dY.size(), Y.size());
   dX->ResizeLike(Y);
-  hipLaunchKernelGGL((SoftplusGradientKernel), dim3(CAFFE_GET_BLOCKS(Y.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-      Y.size(), Y.data<float>(), dY.data<float>(), dX->mutable_data<float>());
+  hipLaunchKernelGGL((SoftplusGradientKernel), dim3(CAFFE_GET_BLOCKS(Y.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
+                     static_cast<const int>(Y.size()), static_cast<const float*>(Y.data<float>()), static_cast<const float*>(dY.data<float>()),
+                     static_cast<float*>(dX->mutable_data<float>()));
   return true;
 }
 
