@@ -17,7 +17,7 @@
 
 #include "sparse_to_dense_op.h"
 
-#include "caffe2/core/common_gpu.h"
+#include "caffe2/core/common_hip.h"
 #include "caffe2/core/context_hip.h"
 
 namespace caffe2 {
