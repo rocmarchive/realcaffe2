@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "caffe2/core/common_gpu.h"
+#include "caffe2/core/common_hip.h"
 #ifdef CAFFE_HAS_CUDA_FP16
 
 #include "caffe2/core/context_hip.h"
@@ -67,12 +67,12 @@ bool ReluOp<float16, HIPContext>::RunOnDevice() {
   CAFFE_ENFORCE_GT(X.size(), 0);
   Y->ResizeLike(X);
   if (X.size() % 2 == 0) {
-    hipLaunchKernelGGL((ReluKernelHalf2), dim3(CAFFE_GET_BLOCKS(X.size() / 2)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
+    hipLaunchKernelGGL((ReluKernelHalf2), dim3(CAFFE_GET_BLOCKS(X.size() / 2)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
         X.size() / 2, reinterpret_cast<const half2*>(X.data<float16>()),
         reinterpret_cast<half2*>(Y->mutable_data<float16>()));
     return true;
   } else {
-    hipLaunchKernelGGL((ReluKernelHalf), dim3(CAFFE_GET_BLOCKS(X.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
+    hipLaunchKernelGGL((ReluKernelHalf), dim3(CAFFE_GET_BLOCKS(X.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
         X.size(), reinterpret_cast<const half*>(X.data<float16>()),
         reinterpret_cast<half*>(Y->mutable_data<float16>()));
     return true;
@@ -87,7 +87,7 @@ bool ReluGradientOp<float16, HIPContext>::RunOnDevice() {
   CAFFE_ENFORCE_GT(Y.size(), 0);
   CAFFE_ENFORCE_EQ(dY.size(), Y.size());
   dX->ResizeLike(Y);
-  hipLaunchKernelGGL((ReluGradientKernelHalf), dim3(CAFFE_GET_BLOCKS(Y.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
+  hipLaunchKernelGGL((ReluGradientKernelHalf), dim3(CAFFE_GET_BLOCKS(Y.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
       Y.size(), reinterpret_cast<const half*>(Y.data<float16>()),
       reinterpret_cast<const half*>(dY.data<float16>()),
       reinterpret_cast<half*>(dX->mutable_data<float16>()));
