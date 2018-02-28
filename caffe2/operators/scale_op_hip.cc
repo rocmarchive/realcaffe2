@@ -14,24 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef CAFFE2_OPERATORS_SOFTMAX_SHARED_H_
-#define CAFFE2_OPERATORS_SOFTMAX_SHARED_H_
-
-#include "caffe2/core/context.h"
-#include "caffe2/core/operator.h"
+#include "caffe2/core/context_hip.h"
+#include "caffe2/operators/scale_op.h"
 
 namespace caffe2 {
 
-void SoftmaxCPU(
-    CPUContext& context,
-    const int N,
-    const int D,
-    const float* Xdata,
-    float* Ydata,
-    float* scale,
-    const float* sum_multiplier,
-    bool logarithmic,
-    float* rowmax);
-} // namespace caffe2
+template <>
+bool ScaleOp<CUDAContext>::RunOnDevice() {
+  return DispatchHelper<TensorTypes<float16, float>>::call(this, Input(0));
+}
 
-#endif // #define CAFFE2_OPERATORS_SOFTMAX_SHARED_H_
+REGISTER_HIP_OPERATOR(Scale, ScaleOp<HIPContext>);
+
+}  // namespace caffe2
