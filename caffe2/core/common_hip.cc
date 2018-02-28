@@ -248,71 +248,61 @@ bool TensorCoreAvailable() {
 }
 #endif
 
-#if 0 // Ashish TBD: Fix this when integrating rocblas and rocrand
-const char* cublasGetErrorString(cublasStatus_t error) {
+const char* rocblasGetErrorString(rocblas_status error) {
   switch (error) {
-  case CUBLAS_STATUS_SUCCESS:
-    return "CUBLAS_STATUS_SUCCESS";
-  case CUBLAS_STATUS_NOT_INITIALIZED:
-    return "CUBLAS_STATUS_NOT_INITIALIZED";
-  case CUBLAS_STATUS_ALLOC_FAILED:
-    return "CUBLAS_STATUS_ALLOC_FAILED";
-  case CUBLAS_STATUS_INVALID_VALUE:
-    return "CUBLAS_STATUS_INVALID_VALUE";
-  case CUBLAS_STATUS_ARCH_MISMATCH:
-    return "CUBLAS_STATUS_ARCH_MISMATCH";
-  case CUBLAS_STATUS_MAPPING_ERROR:
-    return "CUBLAS_STATUS_MAPPING_ERROR";
-  case CUBLAS_STATUS_EXECUTION_FAILED:
-    return "CUBLAS_STATUS_EXECUTION_FAILED";
-  case CUBLAS_STATUS_INTERNAL_ERROR:
-    return "CUBLAS_STATUS_INTERNAL_ERROR";
-#if CUDA_VERSION >= 6000
-  case CUBLAS_STATUS_NOT_SUPPORTED:
-    return "CUBLAS_STATUS_NOT_SUPPORTED";
-#if CUDA_VERSION >= 6050
-  case CUBLAS_STATUS_LICENSE_ERROR:
-    return "CUBLAS_STATUS_LICENSE_ERROR";
-#endif  // CUDA_VERSION >= 6050
-#endif  // CUDA_VERSION >= 6000
+  case rocblas_status_success:
+    return "rocblas_status_success";
+  case rocblas_status_invalid_handle:
+    return "rocblas_status_invalid_handle";
+  case rocblas_status_not_implemented:
+    return "rocblas_status_not_implemented";
+  case rocblas_status_invalid_pointer:
+    return "rocblas_status_invalid_pointer";
+  case rocblas_status_invalid_size:
+    return "rocblas_status_invalid_size";
+  case rocblas_status_memory_error:
+    return "rocblas_status_memory_error";
+  case rocblas_status_internal_error:
+    return "rocblas_status_internal_error";
   }
   // To suppress compiler warning.
-  return "Unrecognized cublas error string";
+  return "Unrecognized rocblas error string";
 }
 
-const char* curandGetErrorString(curandStatus_t error) {
+const char* hiprandGetErrorString(hiprandStatus_t error) {
   switch (error) {
-  case CURAND_STATUS_SUCCESS:
-    return "CURAND_STATUS_SUCCESS";
-  case CURAND_STATUS_VERSION_MISMATCH:
-    return "CURAND_STATUS_VERSION_MISMATCH";
-  case CURAND_STATUS_NOT_INITIALIZED:
-    return "CURAND_STATUS_NOT_INITIALIZED";
-  case CURAND_STATUS_ALLOCATION_FAILED:
-    return "CURAND_STATUS_ALLOCATION_FAILED";
-  case CURAND_STATUS_TYPE_ERROR:
-    return "CURAND_STATUS_TYPE_ERROR";
-  case CURAND_STATUS_OUT_OF_RANGE:
-    return "CURAND_STATUS_OUT_OF_RANGE";
-  case CURAND_STATUS_LENGTH_NOT_MULTIPLE:
-    return "CURAND_STATUS_LENGTH_NOT_MULTIPLE";
-  case CURAND_STATUS_DOUBLE_PRECISION_REQUIRED:
-    return "CURAND_STATUS_DOUBLE_PRECISION_REQUIRED";
-  case CURAND_STATUS_LAUNCH_FAILURE:
-    return "CURAND_STATUS_LAUNCH_FAILURE";
-  case CURAND_STATUS_PREEXISTING_FAILURE:
-    return "CURAND_STATUS_PREEXISTING_FAILURE";
-  case CURAND_STATUS_INITIALIZATION_FAILED:
-    return "CURAND_STATUS_INITIALIZATION_FAILED";
-  case CURAND_STATUS_ARCH_MISMATCH:
-    return "CURAND_STATUS_ARCH_MISMATCH";
-  case CURAND_STATUS_INTERNAL_ERROR:
-    return "CURAND_STATUS_INTERNAL_ERROR";
+  case HIPRAND_STATUS_SUCCESS:
+    return "HIPRAND_STATUS_SUCCESS";
+  case HIPRAND_STATUS_VERSION_MISMATCH:
+    return "HIPRAND_STATUS_VERSION_MISMATCH";
+  case HIPRAND_STATUS_NOT_INITIALIZED:
+    return "HIPRAND_STATUS_NOT_INITIALIZED";
+  case HIPRAND_STATUS_ALLOCATION_FAILED:
+    return "HIPRAND_STATUS_ALLOCATION_FAILED";
+  case HIPRAND_STATUS_TYPE_ERROR:
+    return "HIPRAND_STATUS_TYPE_ERROR";
+  case HIPRAND_STATUS_OUT_OF_RANGE:
+    return "HIPRAND_STATUS_OUT_OF_RANGE";
+  case HIPRAND_STATUS_LENGTH_NOT_MULTIPLE:
+    return "HIPRAND_STATUS_LENGTH_NOT_MULTIPLE";
+  case HIPRAND_STATUS_DOUBLE_PRECISION_REQUIRED:
+    return "HIPRAND_STATUS_DOUBLE_PRECISION_REQUIRED";
+  case HIPRAND_STATUS_LAUNCH_FAILURE:
+    return "HIPRAND_STATUS_LAUNCH_FAILURE";
+  case HIPRAND_STATUS_PREEXISTING_FAILURE:
+    return "HIPRAND_STATUS_PREEXISTING_FAILURE";
+  case HIPRAND_STATUS_INITIALIZATION_FAILED:
+    return "HIPRAND_STATUS_INITIALIZATION_FAILED";
+  case HIPRAND_STATUS_ARCH_MISMATCH:
+    return "HIPRAND_STATUS_ARCH_MISMATCH";
+  case HIPRAND_STATUS_INTERNAL_ERROR:
+    return "HIPRAND_STATUS_INTERNAL_ERROR";
+  case HIPRAND_STATUS_NOT_IMPLEMENTED:
+    return "HIPRAND_STATUS_NOT_IMPLEMENTED";
   }
   // To suppress compiler warning.
-  return "Unrecognized curand error string";
+  return "Unrecognized HIPRAND error string";
 }
-#endif
 
 // Turn on the flag g_caffe2_has_hip_linked to true for HasHipRuntime()
 // function.
