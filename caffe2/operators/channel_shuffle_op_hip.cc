@@ -52,7 +52,7 @@ bool ChannelShuffleOp<HIPContext>::RunOnDeviceWithOrderNCHW() {
   const auto S = X.dim32(2) * X.dim32(3);
   const auto G = this->group_;
   hipLaunchKernelGGL((ChannelShuffleKernel), dim3(CAFFE_GET_BLOCKS(X.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-      X.size(), S, C, G, K, X.data<float>(), Y->mutable_data<float>());
+      static_cast<const int>(X.size()), S, C, G, K, X.data<float>(), Y->mutable_data<float>());
   return true;
 }
 
@@ -67,7 +67,7 @@ bool ChannelShuffleGradientOp<HIPContext>::RunOnDeviceWithOrderNCHW() {
   const auto S = dY.dim32(2) * dY.dim32(3);
   const auto G = this->group_;
   hipLaunchKernelGGL((ChannelShuffleKernel), dim3(CAFFE_GET_BLOCKS(dY.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-      dY.size(), S, C, K, G, dY.data<float>(), dX->mutable_data<float>());
+      static_cast<const int>(dY.size()), S, C, K, G, dY.data<float>(), dX->mutable_data<float>());
   return true;
 }
 
