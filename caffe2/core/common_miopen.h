@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/*
-#ifndef CAFFE2_CORE_COMMON_CUDNN_H_
-#define CAFFE2_CORE_COMMON_CUDNN_H_
+#ifndef CAFFE2_CORE_COMMON_MIOPEN_H_
+#define CAFFE2_CORE_COMMON_MIOPEN_H_
 
 #include <array>
 #include <mutex>
 
-#include <cudnn.h>
+#include <miopen.h>
 
 #include "caffe2/core/common.h"
 #include "caffe2/core/context.h"
@@ -28,108 +27,86 @@
 #include "caffe2/core/types.h"
 #include "caffe2/proto/caffe2.pb.h"
 
-static_assert(
-    CUDNN_VERSION >= 5000,
-    "Caffe2 requires cudnn version 5.0 or above.");
-
-#if CUDNN_VERSION < 6000
-#pragma message "CUDNN version under 6.0 is supported at best effort."
-#pragma message "We strongly encourage you to move to 6.0 and above."
-#pragma message "This message is intended to annoy you enough to update."
-#endif // CUDNN_VERSION < 6000
-
-#define CUDNN_VERSION_MIN(major, minor, patch) \
-  (CUDNN_VERSION >= ((major) * 1000 + (minor) * 100 + (patch)))
-
 namespace caffe2 {
 
 namespace internal {
 /**
- * A helper function to obtain cudnn error strings.
+ * A helper function to obtain miopen error strings.
  */
-inline const char* cudnnGetErrorString(cudnnStatus_t status) {
+inline const char* miopenGetErrorString(miopenStatus_t status) {
   switch (status) {
-    case CUDNN_STATUS_SUCCESS:
-      return "CUDNN_STATUS_SUCCESS";
-    case CUDNN_STATUS_NOT_INITIALIZED:
-      return "CUDNN_STATUS_NOT_INITIALIZED";
-    case CUDNN_STATUS_ALLOC_FAILED:
-      return "CUDNN_STATUS_ALLOC_FAILED";
-    case CUDNN_STATUS_BAD_PARAM:
-      return "CUDNN_STATUS_BAD_PARAM";
-    case CUDNN_STATUS_INTERNAL_ERROR:
-      return "CUDNN_STATUS_INTERNAL_ERROR";
-    case CUDNN_STATUS_INVALID_VALUE:
-      return "CUDNN_STATUS_INVALID_VALUE";
-    case CUDNN_STATUS_ARCH_MISMATCH:
-      return "CUDNN_STATUS_ARCH_MISMATCH";
-    case CUDNN_STATUS_MAPPING_ERROR:
-      return "CUDNN_STATUS_MAPPING_ERROR";
-    case CUDNN_STATUS_EXECUTION_FAILED:
-      return "CUDNN_STATUS_EXECUTION_FAILED";
-    case CUDNN_STATUS_NOT_SUPPORTED:
-      return "CUDNN_STATUS_NOT_SUPPORTED";
-    case CUDNN_STATUS_LICENSE_ERROR:
-      return "CUDNN_STATUS_LICENSE_ERROR";
+    case MIOPEN_STATUS_SUCCESS:
+      return "MIOPEN_STATUS_SUCCESS";
+    case MIOPEN_STATUS_NOT_INITIALIZED:
+      return "MIOPEN_STATUS_NOT_INITIALIZED";
+    case MIOPEN_STATUS_ALLOC_FAILED:
+      return "MIOPEN_STATUS_ALLOC_FAILED";
+    case MIOPEN_STATUS_BAD_PARAM:
+      return "MIOPEN_STATUS_BAD_PARAM";
+    case MIOPEN_STATUS_INTERNAL_ERROR:
+      return "MIOPEN_STATUS_INTERNAL_ERROR";
+    case MIOPEN_STATUS_INVALID_VALUE:
+      return "MIOPEN_STATUS_INVALID_VALUE";
+    case MIOPEN_STATUS_ARCH_MISMATCH:
+      return "MIOPEN_STATUS_ARCH_MISMATCH";
+    case MIOPEN_STATUS_MAPPING_ERROR:
+      return "MIOPEN_STATUS_MAPPING_ERROR";
+    case MIOPEN_STATUS_EXECUTION_FAILED:
+      return "MIOPEN_STATUS_EXECUTION_FAILED";
+    case MIOPEN_STATUS_NOT_SUPPORTED:
+      return "MIOPEN_STATUS_NOT_SUPPORTED";
+    case MIOPEN_STATUS_LICENSE_ERROR:
+      return "MIOPEN_STATUS_LICENSE_ERROR";
     default:
-      return "Unknown cudnn error number";
+      return "Unknown miopen error number";
   }
 }
 } // namespace internal
 
-// A macro that wraps around a cudnn statement so we can check if the cudnn
+// A macro that wraps around a miopen statement so we can check if the miopen
 // execution finishes or not.
-#define CUDNN_ENFORCE(condition)                          \
+#define MIOPEN_ENFORCE(condition)                          \
   do {                                                    \
-    cudnnStatus_t status = condition;                     \
+    miopenStatus_t status = condition;                     \
     CAFFE_ENFORCE_EQ(                                     \
         status,                                           \
-        CUDNN_STATUS_SUCCESS,                             \
+        MIOPEN_STATUS_SUCCESS,                             \
         ", Error at: ",                                   \
         __FILE__,                                         \
         ":",                                              \
         __LINE__,                                         \
         ": ",                                             \
-        ::caffe2::internal::cudnnGetErrorString(status)); \
+        ::caffe2::internal::miopenGetErrorString(status)); \
   } while (0)
-#define CUDNN_CHECK(condition)                              \
+#define MIOPEN_CHECK(condition)                              \
   do {                                                      \
-    cudnnStatus_t status = condition;                       \
-    CHECK(status == CUDNN_STATUS_SUCCESS)                   \
-        << ::caffe2::internal::cudnnGetErrorString(status); \
+    miopenStatus_t status = condition;                       \
+    CHECK(status == MIOPEN_STATUS_SUCCESS)                   \
+        << ::caffe2::internal::miopenGetErrorString(status); \
   } while (0)
 
 // report the version of cuDNN Caffe2 was compiled with
-inline size_t cudnnCompiledVersion() {
-  return CUDNN_VERSION;
+inline size_t miopenCompiledVersion() {
+  return MIOPEN_VERSION;
 }
 // report the runtime version of cuDNN
-inline size_t cudnnRuntimeVersion() {
-  return cudnnGetVersion();
+inline size_t miopenRuntimeVersion() {
+  return miopenGetVersion();
 }
-
-// Check compatibility of compiled and runtime cuDNN versions
-inline void CheckCuDNNVersions() {
-  // Version format is major*1000 + minor*100 + patch
-  // Major, minor and patch versions must all match
-  bool version_match = cudnnCompiledVersion() == cudnnRuntimeVersion();
-  CAFFE_ENFORCE(version_match,
-                "cuDNN compiled (", cudnnCompiledVersion(), ") and "
-                "runtime (", cudnnRuntimeVersion(), ") versions mismatch");
 }
 
 /**
- * cudnnTypeWrapper is a wrapper class that allows us to refer to the cudnn type
+ * miopenTypeWrapper is a wrapper class that allows us to refer to the miopen type
  * in a template function. The class is specialized explicitly for different
  * data types below.
  */
 template <typename T>
-class cudnnTypeWrapper;
+class miopenTypeWrapper;
 
 template <>
-class cudnnTypeWrapper<float> {
+class miopenTypeWrapper<float> {
  public:
-  static const cudnnDataType_t type = CUDNN_DATA_FLOAT;
+  static const miopenDataType_t type = MIOPEN_DATA_FLOAT;
   typedef const float ScalingParamType;
   typedef float BNParamType;
   static ScalingParamType* kOne() {
@@ -142,28 +119,10 @@ class cudnnTypeWrapper<float> {
   }
 };
 
-#if CUDNN_VERSION_MIN(6, 0, 0)
 template <>
-class cudnnTypeWrapper<int> {
+class miopenTypeWrapper<double> {
  public:
-  static const cudnnDataType_t type = CUDNN_DATA_INT32;
-  typedef const int ScalingParamType;
-  typedef int BNParamType;
-  static ScalingParamType* kOne() {
-    static ScalingParamType v = 1;
-    return &v;
-  }
-  static const ScalingParamType* kZero() {
-    static ScalingParamType v = 0;
-    return &v;
-  }
-};
-#endif // CUDNN_VERSION_MIN(6, 0, 0)
-
-template <>
-class cudnnTypeWrapper<double> {
- public:
-  static const cudnnDataType_t type = CUDNN_DATA_DOUBLE;
+  static const miopenDataType_t type = MIOPEN_DATA_DOUBLE;
   typedef const double ScalingParamType;
   typedef double BNParamType;
   static ScalingParamType* kOne() {
@@ -177,9 +136,9 @@ class cudnnTypeWrapper<double> {
 };
 
 template <>
-class cudnnTypeWrapper<float16> {
+class miopenTypeWrapper<float16> {
  public:
-  static const cudnnDataType_t type = CUDNN_DATA_HALF;
+  static const miopenDataType_t type = MIOPEN_DATA_HALF;
   typedef const float ScalingParamType;
   typedef float BNParamType;
   static ScalingParamType* kOne() {
@@ -193,39 +152,37 @@ class cudnnTypeWrapper<float16> {
 };
 
 /**
- * A wrapper function to convert the Caffe storage order to cudnn storage order
+ * A wrapper function to convert the Caffe storage order to miopen storage order
  * enum values.
  */
-inline cudnnTensorFormat_t GetCudnnTensorFormat(const StorageOrder& order) {
+inline miopenTensorFormat_t GetCudnnTensorFormat(const StorageOrder& order) {
   switch (order) {
-    case StorageOrder::NHWC:
-      return CUDNN_TENSOR_NHWC;
     case StorageOrder::NCHW:
-      return CUDNN_TENSOR_NCHW;
+      return MIOPEN_TENSOR_NCHW;
     default:
-      LOG(FATAL) << "Unknown cudnn equivalent for order: " << order;
+      LOG(FATAL) << "Unknown miopen equivalent for order: " << order;
   }
   // Just to suppress compiler warnings
-  return CUDNN_TENSOR_NCHW;
+  return MIOPEN_TENSOR_NCHW;
 }
 
 /**
- * cudnnTensorDescWrapper is the placeholder that wraps around a
- * cudnnTensorDescriptor_t, allowing us to do descriptor change as-needed during
+ * miopenTensorDescWrapper is the placeholder that wraps around a
+ * miopenTensorDescriptor_t, allowing us to do descriptor change as-needed during
  * runtime.
  */
-class cudnnTensorDescWrapper {
+class miopenTensorDescWrapper {
  public:
-  cudnnTensorDescWrapper() {
-    CUDNN_ENFORCE(cudnnCreateTensorDescriptor(&desc_));
+  miopenTensorDescWrapper() {
+    MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&desc_));
   }
-  ~cudnnTensorDescWrapper() noexcept {
-    CUDNN_CHECK(cudnnDestroyTensorDescriptor(desc_));
+  ~miopenTensorDescWrapper() noexcept {
+    MIOPEN_CHECK(miopenDestroyTensorDescriptor(desc_));
   }
 
-  inline cudnnTensorDescriptor_t Descriptor(
-      const cudnnTensorFormat_t format,
-      const cudnnDataType_t type,
+  inline miopenTensorDescriptor_t Descriptor(
+      const miopenTensorFormat_t format,
+      const miopenDataType_t type,
       const vector<int>& dims,
       bool* changed) {
     if (type_ == type && format_ == format && dims_ == dims) {
@@ -239,47 +196,47 @@ class cudnnTensorDescWrapper {
     format_ = format;
     type_ = type;
     dims_ = dims;
-    CUDNN_ENFORCE(cudnnSetTensor4dDescriptor(
+    MIOPEN_ENFORCE(miopenSetTensor4dDescriptor(
         desc_,
         format,
         type,
         dims_[0],
-        (format == CUDNN_TENSOR_NCHW ? dims_[1] : dims_[3]),
-        (format == CUDNN_TENSOR_NCHW ? dims_[2] : dims_[1]),
-        (format == CUDNN_TENSOR_NCHW ? dims_[3] : dims_[2])));
+        (format == MIOPEN_TENSOR_NCHW ? dims_[1] : dims_[3]),
+        (format == MIOPEN_TENSOR_NCHW ? dims_[2] : dims_[1]),
+        (format == MIOPEN_TENSOR_NCHW ? dims_[3] : dims_[2])));
     if (changed)
       *changed = true;
     return desc_;
   }
 
   template <typename T>
-  inline cudnnTensorDescriptor_t Descriptor(
+  inline miopenTensorDescriptor_t Descriptor(
       const StorageOrder& order,
       const vector<int>& dims) {
     return Descriptor(
-        GetCudnnTensorFormat(order), cudnnTypeWrapper<T>::type, dims, nullptr);
+        GetMIOPENTensorFormat(order), miopenTypeWrapper<T>::type, dims, nullptr);
   }
 
  private:
-  cudnnTensorDescriptor_t desc_;
-  cudnnTensorFormat_t format_;
-  cudnnDataType_t type_;
+  miopenTensorDescriptor_t desc_;
+  miopenTensorFormat_t format_;
+  miopenDataType_t type_;
   vector<int> dims_;
-  DISABLE_COPY_AND_ASSIGN(cudnnTensorDescWrapper);
+  DISABLE_COPY_AND_ASSIGN(miopenTensorDescWrapper);
 };
 
-class cudnnFilterDescWrapper {
+class miopenFilterDescWrapper {
  public:
-  cudnnFilterDescWrapper() {
-    CUDNN_ENFORCE(cudnnCreateFilterDescriptor(&desc_));
+  miopenFilterDescWrapper() {
+    MIOPEN_ENFORCE(miopenCreateFilterDescriptor(&desc_));
   }
-  ~cudnnFilterDescWrapper() noexcept {
-    CUDNN_CHECK(cudnnDestroyFilterDescriptor(desc_));
+  ~miopenFilterDescWrapper() noexcept {
+    MIOPEN_CHECK(miopenDestroyFilterDescriptor(desc_));
   }
 
-  inline cudnnFilterDescriptor_t Descriptor(
+  inline miopenFilterDescriptor_t Descriptor(
       const StorageOrder& order,
-      const cudnnDataType_t type,
+      const miopenDataType_t type,
       const vector<int>& dims,
       bool* changed) {
     if (type_ == type && order_ == order && dims_ == dims) {
@@ -293,10 +250,10 @@ class cudnnFilterDescWrapper {
     order_ = order;
     type_ = type;
     dims_ = dims;
-    CUDNN_ENFORCE(cudnnSetFilter4dDescriptor(
+    MIOPEN_ENFORCE(miopenSetFilter4dDescriptor(
         desc_,
         type,
-        GetCudnnTensorFormat(order),
+        GetMIOPENTensorFormat(order),
         dims_[0],
         // TODO - confirm that this is correct for NHWC
         (order == StorageOrder::NCHW ? dims_[1] : dims_[3]),
@@ -308,21 +265,21 @@ class cudnnFilterDescWrapper {
   }
 
   template <typename T>
-  inline cudnnFilterDescriptor_t Descriptor(
+  inline miopenFilterDescriptor_t Descriptor(
       const StorageOrder& order,
       const vector<int>& dims) {
-    return Descriptor(order, cudnnTypeWrapper<T>::type, dims, nullptr);
+    return Descriptor(order, miopenTypeWrapper<T>::type, dims, nullptr);
   }
 
  private:
-  cudnnFilterDescriptor_t desc_;
+  miopenFilterDescriptor_t desc_;
   StorageOrder order_;
-  cudnnDataType_t type_;
+  miopenDataType_t type_;
   vector<int> dims_;
-  DISABLE_COPY_AND_ASSIGN(cudnnFilterDescWrapper);
+  DISABLE_COPY_AND_ASSIGN(miopenFilterDescWrapper);
 };
 
 
 } // namespace caffe2
 
-#endif // CAFFE2_CORE_COMMON_CUDNN_H_
+#endif // CAFFE2_CORE_COMMON_MIOPEN_H_
