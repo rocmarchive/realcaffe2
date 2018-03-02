@@ -26,7 +26,7 @@ __global__ void CECKernel(
     const int N, const float* S, const int* Y, const float margin,
     float* output) {
   HIP_1D_KERNEL_LOOP(i, N) {
-    output[i] = Y[i] == 1 ? (1. - S[i]) : max(0.f, S[i] - margin);
+    output[i] = Y[i] == 1 ? (1. - S[i]) : fmaxf(0.f, S[i] - margin);
   }
 }
 
