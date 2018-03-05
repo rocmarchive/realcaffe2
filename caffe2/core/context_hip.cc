@@ -4,8 +4,7 @@
 #include <string>
 #include <unordered_map>
 
-//#include "cub/util_allocator.cuh"
-
+#include "cub/util_allocator.cuh"
 #include "caffe2/core/asan.h"
 //#include "caffe2/core/common_cudnn.h"
 #include "caffe2/core/context_hip.h"
@@ -18,7 +17,6 @@ CAFFE2_DEFINE_string(caffe2_hip_memory_pool, "",
               "Sets the memory pool used by caffe2. Possible values are "
               "none, cnmen and cub.");
 
-#if 0 // We do not use CUB in HIP flow
 // For description of CUB caching allocator configuration, see
 // https://nvlabs.github.io/cub/structcub_1_1_caching_device_allocator.html
 CAFFE2_DEFINE_int(caffe2_cub_bin_growth, 8,
@@ -38,7 +36,6 @@ CAFFE2_DEFINE_bool(
     false,
     "If true CachingDeviceAllocator will print allocation and deallocation "
     "events to stdout.");
-#endif
 
 CAFFE2_DEFINE_bool(
     caffe2_gpu_memory_tracking,
@@ -62,7 +59,7 @@ thread_local ThreadLocalHIPObjects HIPContext::hip_objects_;
 // Static global variables for setting up the memory pool.
 HipMemoryPoolType g_hip_memory_pool_type;
 
-/*
+
 // For cub allocator
 unique_ptr<cub::CachingDeviceAllocator> g_cub_allocator;
 // an unordered map that holds the map from the cuda memory pointer to the
@@ -77,7 +74,6 @@ unique_ptr<cub::CachingDeviceAllocator> g_cub_allocator;
 // Ideally, a memory pool should already have the device id information, as
 // long as we are using UVA (as of CUDA 5 and later) so the addresses are
 // unique.
-*/
 static std::unordered_map<void*, uint8_t> g_hip_device_affiliation;
 
 // Data structures for optional memory tracking. Access to these structures
@@ -170,7 +166,7 @@ static void Caffe2InitializeHip() {
 #endif
 }
 
-/*static void SetUpCub() {
+static void SetUpCub() {
   VLOG(1) << "Setting up cub memory pool.";
   // Sets up the cub memory pool
   try {
@@ -185,7 +181,7 @@ static void Caffe2InitializeHip() {
     CAFFE_THROW("Some error happened at cub initialization.");
   }
   VLOG(1) << "Done setting up cub memory pool.";
-}*/
+}
 
 static void Caffe2SetHIPMemoryPool() {
   if (FLAGS_caffe2_hip_memory_pool == "" ||
@@ -194,11 +190,11 @@ static void Caffe2SetHIPMemoryPool() {
   } else if (FLAGS_caffe2_hip_memory_pool == "cnmem") {
     CAFFE_THROW("CNMEM is no longer used by Caffe2. Use cub instead. "
                 "This error message may go away in the future.");
-  } /*else if (FLAGS_caffe2_cuda_memory_pool == "cub") {
+  } else if (FLAGS_caffe2_hip_memory_pool == "cub") {
     // Sets up cub.
-    g_cuda_memory_pool_type = CudaMemoryPoolType::CUB;
+    g_hip_memory_pool_type = HipMemoryPoolType::CUB;
     SetUpCub();
-  }*/ 
+  } 
   else {
     CAFFE_THROW("Unrecognized HIP memory pool type: ",
                 FLAGS_caffe2_hip_memory_pool);
@@ -328,15 +324,15 @@ std::pair<void*, MemoryDeleter> HIPContext::New(size_t nbytes) {
       g_hip_device_affiliation[ptr] = CaffeHipGetDevice();
     }
     return {ptr, Delete};
-  /*case CudaMemoryPoolType::CUB:
-    CUDA_ENFORCE(g_cub_allocator->DeviceAllocate(&ptr, nbytes));
-    g_cuda_device_affiliation[ptr] = CaffeCudaGetDevice();
+  case HipMemoryPoolType::CUB:
+    HIP_ENFORCE(g_cub_allocator->DeviceAllocate(&ptr, nbytes));
+    g_hip_device_affiliation[ptr] = CaffeHipGetDevice();
     VLOG(2) << "CUB allocating pointer " << ptr << " on device "
-            << CaffeCudaGetDevice();
+            << CaffeHipGetDevice();
     if (FLAGS_caffe2_gpu_memory_tracking) {
       g_size_map[ptr] = nbytes;
     }
-    return {ptr, Delete};*/
+    return {ptr, Delete};
   }
   return {nullptr, Delete};
 }
@@ -375,14 +371,14 @@ void HIPContext::Delete(void* ptr) {
     }
 
     break; }
-  /*case CudaMemoryPoolType::CUB: {
-    auto it = g_cuda_device_affiliation.find(ptr);
-    DCHECK(it != g_cuda_device_affiliation.end());
+  case HipMemoryPoolType::CUB: {
+    auto it = g_hip_device_affiliation.find(ptr);
+    DCHECK(it != g_hip_device_affiliation.end());
     VLOG(2) << "CUB freeing pointer " << ptr << " on device " << it->second;
-    CUDA_ENFORCE(g_cub_allocator->DeviceFree(it->second, ptr));
-    g_cuda_device_affiliation.erase(it);
+    HIP_ENFORCE(g_cub_allocator->DeviceFree(it->second, ptr));
+    g_hip_device_affiliation.erase(it);
     break;
-  }*/
+  }
   }
 }
 
