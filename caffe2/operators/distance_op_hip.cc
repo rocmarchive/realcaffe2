@@ -138,7 +138,7 @@ __global__ void L1DistanceKernel(
     float sum = 0.0f;
     for (int j = hipThreadIdx_x; j < D; j += hipBlockDim_x) {
       sum +=
-          abs(convert::To<T, float>(X[i * D + j]) -
+          fabsf(convert::To<T, float>(X[i * D + j]) -
               convert::To<T, float>(Y[i * D + j]));
     }
 
