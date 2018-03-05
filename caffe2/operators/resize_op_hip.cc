@@ -77,11 +77,7 @@ __global__ void NearestNeighborGradientKernel(
     const int out_x = fminf(x / width_scale, output_width - 1);
     const int out_index =
         ((n * num_channels + c) * output_height + out_y) * output_width + out_x;
-#if __CUDA_ARCH__ >= 350
     atomicAdd(dX + out_index, __ldg(dY + index));
-#else
-    atomicAdd(dX + out_index, *(dY + index));
-#endif
   }
 }
 
@@ -101,7 +97,7 @@ bool ResizeNearestOp<float, HIPContext>::RunOnDevice() {
   Y->Resize(batch_size, num_channels, output_height, output_width);
 
   const auto size = Y->size();
-  hipLaunchKernelGGL((NearestNeighborKernel), dim3(CAFFE_GET_BLOCKS(size)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
+  hipLaunchKernelGGL((NearestNeighborKernel), dim3(CAFFE_GET_BLOCKS(size)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
       size,
       num_channels,
       input_height,
@@ -133,7 +129,7 @@ bool ResizeNearestGradientOp<float, HIPContext>::RunOnDevice() {
       dX->size(), 0.0f, dX->mutable_data<float>(), &context_);
 
   const auto size = dY.size();
-  hipLaunchKernelGGL((NearestNeighborGradientKernel), dim3(CAFFE_GET_BLOCKS(size)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
+  hipLaunchKernelGGL((NearestNeighborGradientKernel), dim3(CAFFE_GET_BLOCKS(size)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
       size,
       num_channels,
       input_height,
