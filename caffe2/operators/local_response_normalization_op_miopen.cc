@@ -30,7 +30,8 @@ class MIOPEN_LRNOP final : public Operator<HIPContext> {
         size_(OperatorBase::GetSingleArgument<int>("size", 0)),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0)),
-        bias_(OperatorBase::GetSingleArgument<float>("bias", 1)) {
+        bias_(OperatorBase::GetSingleArgument<float>("bias", 1)),
+        do_backward_(OperatorBase::GetSingleArgument<bool>("do_backward", false)) {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
 
     MIOPEN_ENFORCE(miopenCreateLRNDescriptor(&norm_desc_));
@@ -59,7 +60,7 @@ class MIOPEN_LRNOP final : public Operator<HIPContext> {
   const float alpha_;
   const float beta_;
   const float bias_;
-
+  const bool do_backward_;
   // Input: X, Output: Y
 };
 
@@ -72,7 +73,8 @@ class MIOPENLRNGradientOp final : public Operator<HIPContext> {
         size_(OperatorBase::GetSingleArgument<int>("size", 0)),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0)),
-        bias_(OperatorBase::GetSingleArgument<float>("bias", 1)) {
+        bias_(OperatorBase::GetSingleArgument<float>("bias", 1)),
+        do_backward_(OperatorBase::GetSingleArgument<bool>("do_backward", false)) {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
 
     MIOPEN_ENFORCE(miopenCreateLRNDescriptor(&norm_desc_));
@@ -101,7 +103,7 @@ class MIOPENLRNGradientOp final : public Operator<HIPContext> {
   const float alpha_;
   const float beta_;
   const float bias_;
-
+  const bool do_backward_;
   // Input: X, Y, dY
   // Output: dX
 };
@@ -131,16 +133,17 @@ bool MIOPEN_LRNOP::DoRunWithType() {
   }
 
   // now actually run the computation
-  MIOPEN_ENFORCE(miopenLRNCrossChannelForward(
+  MIOPEN_ENFORCE(miopenLRNForward(
       miopen_wrapper_.inline_miopen_handle(),
       norm_desc_,
-      MIOPEN_LRN_CROSS_CHANNEL_DIM1,
       miopenTypeWrapper<T>::kOne(),
       data_desc_,
       X.template data<T>(),
       miopenTypeWrapper<T>::kZero(),
       data_desc_,
-      Y->template mutable_data<T>()));
+      Y->template mutable_data<T>())
+      false,
+      nullptr);
 
   return true;
 }
@@ -187,10 +190,9 @@ bool MIOPENLRNGradientOp::DoRunWithType() {
   }
 
   // run the computation
-  MIOPEN_ENFORCE(miopenLRNCrossChannelBackward(
+  MIOPEN_ENFORCE(miopenLRNBackward(
       miopen_wrapper_.inline_miopen_handle(),
       norm_desc_,
-      MIOPEN_LRN_CROSS_CHANNEL_DIM1,
       miopenTypeWrapper<T>::kOne(),
       data_desc_,
       Y.template data<T>(),
@@ -200,7 +202,8 @@ bool MIOPENLRNGradientOp::DoRunWithType() {
       X.template data<T>(),
       miopenTypeWrapper<T>::kZero(),
       data_desc_,
-      dX->template mutable_data<T>()));
+      dX->template mutable_data<T>())
+      nullptr);
   return true;
 }
 
