@@ -44,24 +44,24 @@ struct MIOPENWorkspace {
 // MIOPENState is the owner of the MIOPENWorkspace, and serializes all
 // executions of operations that use the state onto it's own stream
 // (so multiple Net workers can reuse the same workspace from
-// different threads and CUDA streams).
+// different threads and HIP streams).
 class MIOPENState {
  public:
   explicit MIOPENState(size_t gpu_id) : gpu_id_(gpu_id) {
     DeviceGuard g(gpu_id_);
     MIOPEN_ENFORCE(miopenCreate(&miopen_handle_));
-    HIP_ENFORCE(cudaEventCreate(&before_));
-    HIP_ENFORCE(cudaEventCreate(&after_));
-    HIP_ENFORCE(cudaStreamCreate(&stream_));
+    HIP_ENFORCE(hipEventCreate(&before_));
+    HIP_ENFORCE(hipEventCreate(&after_));
+    HIP_ENFORCE(hipStreamCreate(&stream_));
     MIOPEN_ENFORCE(miopenSetStream(miopen_handle_, stream_));
   }
 
   ~MIOPENState() noexcept {
     DeviceGuard g(gpu_id_);
     MIOPEN_CHECK(miopenDestroy(miopen_handle_));
-    HIP_CHECK(cudaStreamDestroy(stream_));
-    HIP_CHECK(cudaEventDestroy(after_));
-    HIP_CHECK(cudaEventDestroy(before_));
+    HIP_CHECK(hipStreamDestroy(stream_));
+    HIP_CHECK(hipEventDestroy(after_));
+    HIP_CHECK(hipEventDestroy(before_));
   }
 
   miopenHandle_t& miopen_handle() {
@@ -73,12 +73,12 @@ class MIOPENState {
   }
 
   template <typename F>
-  void execute(cudaStream_t stream, F&& f) {
-    HIP_ENFORCE(cudaEventRecord(before_, stream));
-    HIP_ENFORCE(cudaStreamWaitEvent(stream_, before_, 0));
+  void execute(hipStream_t stream, F&& f) {
+    HIP_ENFORCE(hipEventRecord(before_, stream));
+    HIP_ENFORCE(hipStreamWaitEvent(stream_, before_, 0));
     f(this);
-    HIP_ENFORCE(cudaEventRecord(after_, stream_));
-    HIP_ENFORCE(cudaStreamWaitEvent(stream, after_, 0));
+    HIP_ENFORCE(hipEventRecord(after_, stream_));
+    HIP_ENFORCE(hipStreamWaitEvent(stream, after_, 0));
   }
 
  private:
@@ -96,21 +96,21 @@ class MIOPENState {
  *
  * The wrapper ensures that for each thread and each gpu, there is one
  * identical miopen handle, which is also associated with the thread-local
- * per-device cuda stream. The wrapper also hosts the device-specific miopen
+ * per-device hip stream. The wrapper also hosts the device-specific miopen
  * workspace (scratch space for some miopen functions).
  *
  */
 class MIOPENWrapper {
  public:
   /**
-   * Creates a miopen wrapper associated with a CUDAContext object. Note that
-   * the CUDAContext object should outlive the MIOPENWrapper.
+   * Creates a miopen wrapper associated with a HIPContext object. Note that
+   * the HIPContext object should outlive the MIOPENWrapper.
    */
   explicit MIOPENWrapper(HIPContext* context) : context_(context) {}
 
   /**
    * Returns the inline miopen handle that executes on the current
-   * thread's cuda_stream.
+   * thread's hip_stream.
    */
   miopenHandle_t inline_miopen_handle() {
     return context_->miopen_handle();
