@@ -64,7 +64,7 @@ inline const char* miopenGetErrorString(miopenStatus_t status) {
     miopenStatus_t status = condition;                     \
     CAFFE_ENFORCE_EQ(                                     \
         status,                                           \
-        MIOPEN_STATUS_SUCCESS,                             \
+        miopenStatusSuccess,                             \
         ", Error at: ",                                   \
         __FILE__,                                         \
         ":",                                              \
@@ -75,7 +75,7 @@ inline const char* miopenGetErrorString(miopenStatus_t status) {
 #define MIOPEN_CHECK(condition)                              \
   do {                                                      \
     miopenStatus_t status = condition;                       \
-    CHECK(status == MIOPEN_STATUS_SUCCESS)                   \
+    CHECK(status == miopenStatusSuccess)                   \
         << ::caffe2::internal::miopenGetErrorString(status); \
   } while (0)
 
@@ -143,7 +143,7 @@ class miopenTensorDescWrapper {
       const miopenDataType_t type,
       const vector<int>& dims,
       bool* changed) {
-    if (type_ == type && format_ == format && dims_ == dims) {
+    if (type_ == type && dims_ == dims) {
       // if not changed, simply return the current descriptor.
       if (changed)
         *changed = false;
@@ -152,15 +152,10 @@ class miopenTensorDescWrapper {
     CAFFE_ENFORCE_EQ(
         dims.size(), 4, "MIOPEN currently only support 4-dimensional tensor descriptor");
 
-    CAFFE_ENFORCE_EQ(
-        format, MIOPEN_TENSOR_NCHW, "MIOPEN currently only support tensor in NCHW format");
-
-    format_ = format;
     type_ = type;
     dims_ = dims;
-    MIOPEN_ENFORCE(miopenSetTensor4dDescriptor(
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
         desc_,
-        format,
         type,
         dims_[0],
         dims_[1],
@@ -176,7 +171,7 @@ class miopenTensorDescWrapper {
       const StorageOrder& order,
       const vector<int>& dims) {
     return Descriptor(
-        GetMIOPENTensorFormat(order), miopenTypeWrapper<T>::type, dims, nullptr);
+         miopenTypeWrapper<T>::type, dims, nullptr);
   }
 
  private:
@@ -186,62 +181,6 @@ class miopenTensorDescWrapper {
   DISABLE_COPY_AND_ASSIGN(miopenTensorDescWrapper);
 };
 
-class miopenFilterDescWrapper {
- public:
-  miopenFilterDescWrapper() {
-    MIOPEN_ENFORCE(miopenCreateFilterDescriptor(&desc_));
-  }
-  ~miopenFilterDescWrapper() noexcept {
-    MIOPEN_CHECK(miopenDestroyFilterDescriptor(desc_));
-  }
-
-  inline miopenFilterDescriptor_t Descriptor(
-      const StorageOrder& order,
-      const miopenDataType_t type,
-      const vector<int>& dims,
-      bool* changed) {
-    if (type_ == type && order_ == order && dims_ == dims) {
-      // if not changed, simply return the current descriptor.
-      if (changed)
-        *changed = false;
-      return desc_;
-    }
-    CAFFE_ENFORCE_EQ(
-        dims.size(), 4, "Currently only 4-dimensional descriptor supported.");
-
-    CAFFE_ENFORCE_EQ(
-        order, StorageOrder::NCHW , "MIOPEN currently only support tensor in NCHW format");
-
-    order_ = order;
-    type_ = type;
-    dims_ = dims;
-    MIOPEN_ENFORCE(miopenSetFilter4dDescriptor(
-        desc_,
-        type,
-        GetMIOPENTensorFormat(order),
-        dims_[0],
-        dims_[1],
-        dims_[2],
-        dims_[3]));
-    if (changed)
-      *changed = true;
-    return desc_;
-  }
-
-  template <typename T>
-  inline miopenFilterDescriptor_t Descriptor(
-      const StorageOrder& order,
-      const vector<int>& dims) {
-    return Descriptor(order, miopenTypeWrapper<T>::type, dims, nullptr);
-  }
-
- private:
-  miopenFilterDescriptor_t desc_;
-  StorageOrder order_;
-  miopenDataType_t type_;
-  vector<int> dims_;
-  DISABLE_COPY_AND_ASSIGN(miopenFilterDescWrapper);
-};
 } // namespace caffe2
 
 #endif // CAFFE2_CORE_COMMON_MIOPEN_H_
