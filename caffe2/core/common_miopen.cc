@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "caffe2/core/common_miopen.h"
-#include "caffe2/core/miopen_wrappers.h"
+#include "caffe2/core/miopen_wrapper.h"
 
 #include "caffe2/core/init.h"
 
