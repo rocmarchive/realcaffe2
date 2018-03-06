@@ -126,21 +126,6 @@ class miopenTypeWrapper<float16> {
 };
 
 /**
- * A wrapper function to convert the Caffe storage order to miopen storage order
- * enum values.
- */
-inline miopenTensorFormat_t GetCudnnTensorFormat(const StorageOrder& order) {
-  switch (order) {
-    case StorageOrder::NCHW:
-      return MIOPEN_TENSOR_NCHW;
-    default:
-      LOG(FATAL) << "Unknown miopen equivalent for order: " << order;
-  }
-  // Just to suppress compiler warnings
-  return MIOPEN_TENSOR_NCHW;
-}
-
-/**
  * miopenTensorDescWrapper is the placeholder that wraps around a
  * miopenTensorDescriptor_t, allowing us to do descriptor change as-needed during
  * runtime.
