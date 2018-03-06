@@ -25,6 +25,8 @@
 #include "caffe2/core/types.h"
 #include "caffe2/proto/caffe2.pb.h"
 
+#define MIOPEN_VERSION 1399
+
 namespace caffe2 {
 
 namespace internal {
@@ -33,30 +35,24 @@ namespace internal {
  */
 inline const char* miopenGetErrorString(miopenStatus_t status) {
   switch (status) {
-    case MIOPEN_STATUS_SUCCESS:
+    case miopenStatusSuccess:
       return "MIOPEN_STATUS_SUCCESS";
-    case MIOPEN_STATUS_NOT_INITIALIZED:
+    case miopenStatusNotInitialized:
       return "MIOPEN_STATUS_NOT_INITIALIZED";
-    case MIOPEN_STATUS_ALLOC_FAILED:
+    case miopenStatusAllocFailed:
       return "MIOPEN_STATUS_ALLOC_FAILED";
-    case MIOPEN_STATUS_BAD_PARAM:
+    case miopenStatusBadParm:
       return "MIOPEN_STATUS_BAD_PARAM";
-    case MIOPEN_STATUS_INTERNAL_ERROR:
+    case miopenStatusInternalError:
       return "MIOPEN_STATUS_INTERNAL_ERROR";
-    case MIOPEN_STATUS_INVALID_VALUE:
+    case miopenStatusInvalidValue:
       return "MIOPEN_STATUS_INVALID_VALUE";
-    case MIOPEN_STATUS_ARCH_MISMATCH:
-      return "MIOPEN_STATUS_ARCH_MISMATCH";
-    case MIOPEN_STATUS_MAPPING_ERROR:
-      return "MIOPEN_STATUS_MAPPING_ERROR";
-    case MIOPEN_STATUS_EXECUTION_FAILED:
-      return "MIOPEN_STATUS_EXECUTION_FAILED";
-    case MIOPEN_STATUS_NOT_SUPPORTED:
+    case miopenStatusNotImplemented:
       return "MIOPEN_STATUS_NOT_SUPPORTED";
-    case MIOPEN_STATUS_LICENSE_ERROR:
-      return "MIOPEN_STATUS_LICENSE_ERROR";
+    case miopenStatusUnknownError:
+      return "MIOPEN_STATUS_UNKNOWN_ERROR";
     default:
-      return "Unknown MIOPEN error number";
+      return "MIOPEN_STATUS_UNKNOWN_ERROR";
   }
 }
 } // namespace internal
@@ -83,13 +79,9 @@ inline const char* miopenGetErrorString(miopenStatus_t status) {
         << ::caffe2::internal::miopenGetErrorString(status); \
   } while (0)
 
-// report the version of cuDNN Caffe2 was compiled with
+// report the version of miopen Caffe2 was compiled with
 inline size_t miopenCompiledVersion() {
   return MIOPEN_VERSION;
-}
-// report the runtime version of cuDNN
-inline size_t miopenRuntimeVersion() {
-  return miopenGetVersion();
 }
 
 
