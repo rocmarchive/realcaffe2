@@ -18,9 +18,7 @@
 
 #include <array>
 #include <mutex>
-
 #include <miopen.h>
-
 #include "caffe2/core/common.h"
 #include "caffe2/core/context.h"
 #include "caffe2/core/logging.h"
@@ -58,7 +56,7 @@ inline const char* miopenGetErrorString(miopenStatus_t status) {
     case MIOPEN_STATUS_LICENSE_ERROR:
       return "MIOPEN_STATUS_LICENSE_ERROR";
     default:
-      return "Unknown miopen error number";
+      return "Unknown MIOPEN error number";
   }
 }
 } // namespace internal
@@ -192,7 +190,11 @@ class miopenTensorDescWrapper {
       return desc_;
     }
     CAFFE_ENFORCE_EQ(
-        dims.size(), 4, "Currently only 4-dimensional descriptor supported.");
+        dims.size(), 4, "MIOPEN currently only support 4-dimensional tensor descriptor");
+
+    CAFFE_ENFORCE_EQ(
+        format, MIOPEN_TENSOR_NCHW, "MIOPEN currently only support tensor in NCHW format");
+
     format_ = format;
     type_ = type;
     dims_ = dims;
@@ -201,9 +203,9 @@ class miopenTensorDescWrapper {
         format,
         type,
         dims_[0],
-        (format == MIOPEN_TENSOR_NCHW ? dims_[1] : dims_[3]),
-        (format == MIOPEN_TENSOR_NCHW ? dims_[2] : dims_[1]),
-        (format == MIOPEN_TENSOR_NCHW ? dims_[3] : dims_[2])));
+        dims_[1],
+        dims_[2],
+        dims_[3]);
     if (changed)
       *changed = true;
     return desc_;
@@ -247,6 +249,10 @@ class miopenFilterDescWrapper {
     }
     CAFFE_ENFORCE_EQ(
         dims.size(), 4, "Currently only 4-dimensional descriptor supported.");
+
+    CAFFE_ENFORCE_EQ(
+        order, StorageOrder::NCHW , "MIOPEN currently only support tensor in NCHW format");
+
     order_ = order;
     type_ = type;
     dims_ = dims;
@@ -255,10 +261,9 @@ class miopenFilterDescWrapper {
         type,
         GetMIOPENTensorFormat(order),
         dims_[0],
-        // TODO - confirm that this is correct for NHWC
-        (order == StorageOrder::NCHW ? dims_[1] : dims_[3]),
-        (order == StorageOrder::NCHW ? dims_[2] : dims_[1]),
-        (order == StorageOrder::NCHW ? dims_[3] : dims_[2])));
+        dims_[1],
+        dims_[2],
+        dims_[3]);
     if (changed)
       *changed = true;
     return desc_;
