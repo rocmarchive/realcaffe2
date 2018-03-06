@@ -96,7 +96,7 @@ class miopenTypeWrapper;
 template <>
 class miopenTypeWrapper<float> {
  public:
-  static const miopenDataType_t type = MIOPEN_DATA_FLOAT;
+  static const miopenDataType_t type = miopenFloat;
   typedef const float ScalingParamType;
   typedef float BNParamType;
   static ScalingParamType* kOne() {
@@ -110,25 +110,9 @@ class miopenTypeWrapper<float> {
 };
 
 template <>
-class miopenTypeWrapper<double> {
- public:
-  static const miopenDataType_t type = MIOPEN_DATA_DOUBLE;
-  typedef const double ScalingParamType;
-  typedef double BNParamType;
-  static ScalingParamType* kOne() {
-    static ScalingParamType v = 1.0;
-    return &v;
-  }
-  static ScalingParamType* kZero() {
-    static ScalingParamType v = 0.0;
-    return &v;
-  }
-};
-
-template <>
 class miopenTypeWrapper<float16> {
  public:
-  static const miopenDataType_t type = MIOPEN_DATA_HALF;
+  static const miopenDataType_t type = miopenHalf;
   typedef const float ScalingParamType;
   typedef float BNParamType;
   static ScalingParamType* kOne() {
