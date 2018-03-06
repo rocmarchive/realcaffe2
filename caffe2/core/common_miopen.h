@@ -18,7 +18,7 @@
 
 #include <array>
 #include <mutex>
-#include <miopen.h>
+#include "miopen/miopen.h"
 #include "caffe2/core/common.h"
 #include "caffe2/core/context.h"
 #include "caffe2/core/logging.h"
