@@ -91,7 +91,7 @@ inline size_t miopenCompiledVersion() {
 inline size_t miopenRuntimeVersion() {
   return miopenGetVersion();
 }
-}
+
 
 /**
  * miopenTypeWrapper is a wrapper class that allows us to refer to the miopen type
@@ -205,7 +205,7 @@ class miopenTensorDescWrapper {
         dims_[0],
         dims_[1],
         dims_[2],
-        dims_[3]);
+        dims_[3]));
     if (changed)
       *changed = true;
     return desc_;
@@ -263,7 +263,7 @@ class miopenFilterDescWrapper {
         dims_[0],
         dims_[1],
         dims_[2],
-        dims_[3]);
+        dims_[3]));
     if (changed)
       *changed = true;
     return desc_;
@@ -283,8 +283,6 @@ class miopenFilterDescWrapper {
   vector<int> dims_;
   DISABLE_COPY_AND_ASSIGN(miopenFilterDescWrapper);
 };
-
-
 } // namespace caffe2
 
 #endif // CAFFE2_CORE_COMMON_MIOPEN_H_
