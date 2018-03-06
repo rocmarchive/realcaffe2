@@ -1753,7 +1753,7 @@ __global__ void rowwise_max_kernel(
     // However, if we reduce the number of threads to take advantage of
     // warp-wide synchronization, this may become a problem again.
     for (int colIndex = hipThreadIdx_x; colIndex < cols; colIndex += hipBlockDim_x) {
-      maxval = max(data[rowIndex * cols + colIndex], maxval);
+      maxval = fmaxf(data[rowIndex * cols + colIndex], maxval);
     }
     maxval = BlockReduce(temp_storage).Reduce(maxval, cub::Max());
     if (hipThreadIdx_x == 0) {
@@ -1773,7 +1773,7 @@ __global__ void colwise_max_kernel(
   for (int colIndex = hipBlockIdx_x; colIndex < cols; colIndex += hipGridDim_x) {
     float maxval = -FLT_MAX;
     for (int rowIndex = hipThreadIdx_x; rowIndex < rows; rowIndex += hipBlockDim_x) {
-      maxval = max(data[rowIndex * cols + colIndex], maxval);
+      maxval = fmaxf(data[rowIndex * cols + colIndex], maxval);
     }
     maxval = BlockReduce(temp_storage).Reduce(maxval, cub::Max());
     if (hipThreadIdx_x == 0) {
