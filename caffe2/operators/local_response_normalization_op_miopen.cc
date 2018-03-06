@@ -136,10 +136,12 @@ bool MIOPEN_LRNOP::DoRunWithType() {
   MIOPEN_ENFORCE(miopenLRNForward(
       miopen_wrapper_.inline_miopen_handle(),
       norm_desc_,
-      miopenTypeWrapper<T>::kOne(),
+      //miopenTypeWrapper<T>::kOne(),
+      alpha_,
       data_desc_,
       X.template data<T>(),
-      miopenTypeWrapper<T>::kZero(),
+      //miopenTypeWrapper<T>::kZero(),
+      beta_,
       data_desc_,
       Y->template mutable_data<T>())
       false,
@@ -193,14 +195,16 @@ bool MIOPENLRNGradientOp::DoRunWithType() {
   MIOPEN_ENFORCE(miopenLRNBackward(
       miopen_wrapper_.inline_miopen_handle(),
       norm_desc_,
-      miopenTypeWrapper<T>::kOne(),
+      //miopenTypeWrapper<T>::kOne(),
+      alpha_,
       data_desc_,
       Y.template data<T>(),
       data_desc_,
       dY.template data<T>(),
       data_desc_,
       X.template data<T>(),
-      miopenTypeWrapper<T>::kZero(),
+      //miopenTypeWrapper<T>::kZero(),
+      beta_,
       data_desc_,
       dX->template mutable_data<T>())
       nullptr);
