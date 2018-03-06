@@ -140,7 +140,6 @@ class miopenTensorDescWrapper {
   }
 
   inline miopenTensorDescriptor_t Descriptor(
-      const miopenTensorFormat_t format,
       const miopenDataType_t type,
       const vector<int>& dims,
       bool* changed) {
@@ -182,7 +181,6 @@ class miopenTensorDescWrapper {
 
  private:
   miopenTensorDescriptor_t desc_;
-  miopenTensorFormat_t format_;
   miopenDataType_t type_;
   vector<int> dims_;
   DISABLE_COPY_AND_ASSIGN(miopenTensorDescWrapper);
