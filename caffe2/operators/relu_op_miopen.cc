@@ -32,7 +32,7 @@ class MiOPENReluOp final : public Operator<HIPContext> {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
     MIOPEN_ENFORCE(miopenCreateActivationDescriptor(&activ_desc_));
     MIOPEN_ENFORCE(miopenSetActivationDescriptor(
-        activ_desc_, MIOPEN_ACTIVATION_RELU, alpha_, beta_, power_));
+        activ_desc_, miopenActivationRELU, alpha_, beta_, power_));
   }
 
   ~MiOPENReluOp() {
@@ -131,7 +131,7 @@ class MiOPENReluGradientOp final : public Operator<HIPContext> {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
     MIOPEN_ENFORCE(miopenCreateActivationDescriptor(&activ_desc_));
     MIOPEN_ENFORCE(miopenSetActivationDescriptor(
-            activ_desc_, MIOPEN_ACTIVATION_RELU, alpha_, beta_, power_));
+            activ_desc_, miopenActivationRELU, alpha_, beta_, power_));
   }
 
   ~MiOPENReluGradientOp() {
