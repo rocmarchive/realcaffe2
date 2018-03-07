@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "caffe2/core/context_hip.h"
-#include "caffe2/core/miopen_wrappers.h"
+#include "caffe2/core/miopen_wrapper.h"
 #include "caffe2/core/operator.h"
 #include "caffe2/core/types.h"
 
@@ -27,16 +27,17 @@ class MIOPEN_LRNOP final : public Operator<HIPContext> {
   MIOPEN_LRNOP(const OperatorDef& operator_def, Workspace* ws)
       : Operator<HIPContext>(operator_def, ws),
         miopen_wrapper_(&context_),
+        mode_(OperatorBase::GetSingleArgument<miopenLRNMode_t>("mode", miopenLRNCrossChannel)),
         size_(OperatorBase::GetSingleArgument<int>("size", 0)),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0)),
-        bias_(OperatorBase::GetSingleArgument<float>("bias", 1)),
-        do_backward_(OperatorBase::GetSingleArgument<bool>("do_backward", false)) {
+        bias_(OperatorBase::GetSingleArgument<float>("bias", 1))
+  {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
 
     MIOPEN_ENFORCE(miopenCreateLRNDescriptor(&norm_desc_));
     MIOPEN_ENFORCE(
-        miopenSetLRNDescriptor(norm_desc_, size_, alpha_, beta_, bias_));
+        miopenSetLRNDescriptor(norm_desc_, mode_, size_, alpha_, beta_, bias_));
   }
 
   ~MIOPEN_LRNOP() {
@@ -56,11 +57,11 @@ class MIOPEN_LRNOP final : public Operator<HIPContext> {
 
   vector<TIndex> miopen_input_dims_;
 
+  const miopenLRNMode_t mode_;
   const int size_;
   const float alpha_;
   const float beta_;
   const float bias_;
-  const bool do_backward_;
   // Input: X, Output: Y
 };
 
@@ -70,6 +71,7 @@ class MIOPENLRNGradientOp final : public Operator<HIPContext> {
   MIOPENLRNGradientOp(const OperatorDef& operator_def, Workspace* ws)
       : Operator<HIPContext>(operator_def, ws),
         miopen_wrapper_(&context_),
+        mode_(OperatorBase::GetSingleArgument<miopenLRNMode_t>("mode", miopenLRNCrossChannel)),
         size_(OperatorBase::GetSingleArgument<int>("size", 0)),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0)),
@@ -79,7 +81,7 @@ class MIOPENLRNGradientOp final : public Operator<HIPContext> {
 
     MIOPEN_ENFORCE(miopenCreateLRNDescriptor(&norm_desc_));
     MIOPEN_ENFORCE(
-        miopenSetLRNDescriptor(norm_desc_, size_, alpha_, beta_, bias_));
+        miopenSetLRNDescriptor(norm_desc_, mode_, size_, alpha_, beta_, bias_));
   }
 
   ~MIOPENLRNGradientOp() {
@@ -99,6 +101,7 @@ class MIOPENLRNGradientOp final : public Operator<HIPContext> {
 
   vector<TIndex> miopen_input_dims_;
 
+  const miopenLRNMode_t mode_;
   const int size_;
   const float alpha_;
   const float beta_;
@@ -122,9 +125,8 @@ bool MIOPEN_LRNOP::DoRunWithType() {
     C = X.dim32(1);
     H = X.dim32(2);
     W = X.dim32(3);
-    MIOPEN_ENFORCE(miopenSetTensor4dDescriptor(
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
         data_desc_,
-        GetMIOPENTensorFormat(StorageOrder::NCHW),
         miopenTypeWrapper<T>::type,
         X.dim32(0),
         C,
@@ -137,15 +139,15 @@ bool MIOPEN_LRNOP::DoRunWithType() {
       miopen_wrapper_.inline_miopen_handle(),
       norm_desc_,
       //miopenTypeWrapper<T>::kOne(),
-      alpha_,
+      &alpha_,
       data_desc_,
       X.template data<T>(),
       //miopenTypeWrapper<T>::kZero(),
-      beta_,
+      &beta_,
       data_desc_,
-      Y->template mutable_data<T>())
+      Y->template mutable_data<T>(),
       false,
-      nullptr);
+      nullptr));
 
   return true;
 }
@@ -181,9 +183,8 @@ bool MIOPENLRNGradientOp::DoRunWithType() {
     C = dY.dim32(1);
     H = dY.dim32(2);
     W = dY.dim32(3);
-    MIOPEN_ENFORCE(miopenSetTensor4dDescriptor(
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
         data_desc_,
-        GetMIOPENTensorFormat(StorageOrder::NCHW),
         miopenTypeWrapper<T>::type,
         dY.dim32(0),
         C,
@@ -196,7 +197,7 @@ bool MIOPENLRNGradientOp::DoRunWithType() {
       miopen_wrapper_.inline_miopen_handle(),
       norm_desc_,
       //miopenTypeWrapper<T>::kOne(),
-      alpha_,
+      &alpha_,
       data_desc_,
       Y.template data<T>(),
       data_desc_,
@@ -204,10 +205,10 @@ bool MIOPENLRNGradientOp::DoRunWithType() {
       data_desc_,
       X.template data<T>(),
       //miopenTypeWrapper<T>::kZero(),
-      beta_,
+      &beta_,
       data_desc_,
-      dX->template mutable_data<T>())
-      nullptr);
+      dX->template mutable_data<T>(),
+      nullptr));
   return true;
 }
 
