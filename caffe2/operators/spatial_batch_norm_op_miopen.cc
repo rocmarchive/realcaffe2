@@ -16,41 +16,31 @@
 
 #include <cfloat>
 
-#include "caffe2/core/context_gpu.h"
-#include "caffe2/core/cudnn_wrappers.h"
+#include "caffe2/core/context_hip.h"
+#include "caffe2/core/miopen_wrapper.h"
 #include "caffe2/operators/spatial_batch_norm_op.h"
 #include "caffe2/utils/math.h"
 
-// Note: Instead of directly failing, we will choose to not build this operator
-// if cudnn version is not high enough.
-static_assert(CUDNN_VERSION >= 5000,
-             "CudnnSpatialBN requires cudnn version 5.0 or above.");
-
 namespace caffe2 {
 
-class CudnnSpatialBNOp final : public SpatialBNOp<CUDAContext> {
+class MiOpenSpatialBNOp final : public SpatialBNOp<HIPContext> {
  public:
-  USE_OPERATOR_FUNCTIONS(CUDAContext);
-  CudnnSpatialBNOp(const OperatorDef& operator_def, Workspace* ws)
-      : SpatialBNOp<CUDAContext>(operator_def, ws), cudnn_wrapper_(&context_) {
-    CUDNN_ENFORCE(cudnnCreateTensorDescriptor(&data_desc_));
-    CUDNN_ENFORCE(cudnnCreateTensorDescriptor(&bn_param_desc_));
-    if (epsilon_ <= CUDNN_BN_MIN_EPSILON - FLT_EPSILON) {
+  USE_OPERATOR_FUNCTIONS(HIPContext);
+  MiOpenSpatialBNOp(const OperatorDef& operator_def, Workspace* ws)
+      : SpatialBNOp<HIPContext>(operator_def, ws), miopen_wrapper_(&context_) {
+    MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
+    MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bn_param_desc_));
+    if (epsilon_ <= MIOPEN_BN_MIN_EPSILON - FLT_EPSILON) {
       LOG(ERROR) << "Provided epsilon is smaller than "
-                 << "CUDNN_BN_MIN_EPSILON. Setting it to "
-                 << "CUDNN_BN_MIN_EPSILON instead.";
+                 << "MIOPEN_BN_MIN_EPSILON. Setting it to "
+                 << "MIOPEN_BN_MIN_EPSILON instead.";
     }
-    epsilon_ = std::max(epsilon_, CUDNN_BN_MIN_EPSILON);
-#if CUDNN_VERSION_MIN(7,0,0)
-    mode_ = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
-#else
-    mode_ = CUDNN_BATCHNORM_SPATIAL;
-#endif
+    epsilon_ = std::max(epsilon_, MIOPEN_BN_MIN_EPSILON);
   }
 
-  ~CudnnSpatialBNOp() {
-    CUDNN_ENFORCE(cudnnDestroyTensorDescriptor(data_desc_));
-    CUDNN_ENFORCE(cudnnDestroyTensorDescriptor(bn_param_desc_));
+  ~MiOpenSpatialBNOp() {
+    MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(data_desc_));
+    MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bn_param_desc_));
   }
 
   template <typename T, typename M>
@@ -58,38 +48,33 @@ class CudnnSpatialBNOp final : public SpatialBNOp<CUDAContext> {
   bool RunOnDevice() override;
 
  protected:
-  CuDNNWrapper cudnn_wrapper_;
-  cudnnTensorDescriptor_t data_desc_;
-  cudnnTensorDescriptor_t bn_param_desc_;
-  vector<TIndex> cudnn_input_dims_;
+  MiOPENWrapper miopen_wrapper_;
+  miopenTensorDescriptor_t data_desc_;
+  miopenTensorDescriptor_t bn_param_desc_;
+  vector<TIndex> miopen_input_dims_;
 
-  cudnnBatchNormMode_t mode_;
+  miopenBatchNormMode_t mode_;
 };
 
-class CudnnSpatialBNGradientOp final : public SpatialBNGradientOp<CUDAContext> {
+class MiOpenSpatialBNGradientOp final : public SpatialBNGradientOp<HIPContext> {
  public:
-  USE_OPERATOR_FUNCTIONS(CUDAContext);
-  CudnnSpatialBNGradientOp(const OperatorDef& operator_def, Workspace* ws)
-      : SpatialBNGradientOp<CUDAContext>(operator_def, ws),
-        cudnn_wrapper_(&context_) {
-    CUDNN_ENFORCE(cudnnCreateTensorDescriptor(&data_desc_));
-    CUDNN_ENFORCE(cudnnCreateTensorDescriptor(&bn_param_desc_));
-    if (epsilon_ <= CUDNN_BN_MIN_EPSILON - FLT_EPSILON) {
+  USE_OPERATOR_FUNCTIONS(HIPContext);
+  MiOpenSpatialBNGradientOp(const OperatorDef& operator_def, Workspace* ws)
+      : SpatialBNGradientOp<HIPContext>(operator_def, ws),
+        miopen_wrapper_(&context_) {
+    MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
+    MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bn_param_desc_));
+    if (epsilon_ <= MIOPEN_BN_MIN_EPSILON - FLT_EPSILON) {
       LOG(ERROR) << "Provided epsilon is smaller than "
-                 << "CUDNN_BN_MIN_EPSILON. Setting it to "
-                 << "CUDNN_BN_MIN_EPSILON instead.";
+                 << "MIOPEN_BN_MIN_EPSILON. Setting it to "
+                 << "MIOPEN_BN_MIN_EPSILON instead.";
     }
-    epsilon_ = std::max(epsilon_, CUDNN_BN_MIN_EPSILON);
-#if CUDNN_VERSION_MIN(7,0,0)
-    mode_ = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
-#else
-    mode_ = CUDNN_BATCHNORM_SPATIAL;
-#endif
+    epsilon_ = std::max(epsilon_, MIOPEN_BN_MIN_EPSILON);
   }
 
-  ~CudnnSpatialBNGradientOp() {
-    CUDNN_ENFORCE(cudnnDestroyTensorDescriptor(data_desc_));
-    CUDNN_ENFORCE(cudnnDestroyTensorDescriptor(bn_param_desc_));
+  ~MiOpenSpatialBNGradientOp() {
+    MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(data_desc_));
+    MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bn_param_desc_));
   }
 
   template <typename T, typename M>
@@ -98,12 +83,12 @@ class CudnnSpatialBNGradientOp final : public SpatialBNGradientOp<CUDAContext> {
   bool RunOnDevice() override;
 
  protected:
-  CuDNNWrapper cudnn_wrapper_;
-  cudnnTensorDescriptor_t data_desc_;
-  cudnnTensorDescriptor_t bn_param_desc_;
-  vector<TIndex> cudnn_input_dims_;
+  MiOPENWrapper miopen_wrapper_;
+  miopenTensorDescriptor_t data_desc_;
+  miopenTensorDescriptor_t bn_param_desc_;
+  vector<TIndex> miopen_input_dims_;
 
-  cudnnBatchNormMode_t mode_;
+  miopenBatchNormMode_t mode_;
 };
 
 
@@ -112,10 +97,10 @@ class CudnnSpatialBNGradientOp final : public SpatialBNGradientOp<CUDAContext> {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T, typename M>
-bool CudnnSpatialBNOp::DoRunWithType() {
+bool MiOpenSpatialBNOp::DoRunWithType() {
 
   // QoL
-  typedef typename cudnnTypeWrapper<T>::BNParamType BNParamType;
+  typedef typename miopenTypeWrapper<T>::BNParamType BNParamType;
 
   const auto& X = Input(INPUT);
   const auto& scale = Input(SCALE);
@@ -123,44 +108,29 @@ bool CudnnSpatialBNOp::DoRunWithType() {
 
   CAFFE_ENFORCE_GE(X.ndim(), 3);
   const int N = X.dim32(0);
-  const int C = X.ndim() > 3
-      ? (order_ == StorageOrder::NCHW ? X.dim32(1) : X.dim32(X.ndim() - 1))
-      : (order_ == StorageOrder::NCHW ? X.dim32(1) : X.dim32(2));
-  const int H = (order_ == StorageOrder::NCHW ? X.dim32(2) : X.dim32(1));
-  const int W = X.ndim() > 3
-      ? (order_ == StorageOrder::NCHW ? X.dim32(3) : X.dim32(2))
-      : 1;
-  const int D = X.ndim() > 4
-      ? (order_ == StorageOrder::NCHW ? X.dim32(4) : X.dim32(3))
-      : 1;
+  const int C = X.dim32(1);
+  const int H = X.dim32(2);
+  const int W = X.ndim() > 3 ? X.dim32(3) : 1;
+  const int D = X.ndim() > 4 ? X.dim32(4) : 1;
   CAFFE_ENFORCE_EQ(scale.ndim(), 1);
   CAFFE_ENFORCE_EQ(bias.ndim(), 1);
   CAFFE_ENFORCE_EQ(scale.dim32(0), C);
   CAFFE_ENFORCE_EQ(bias.dim32(0), C);
   // See if we need to reshape.
-  if (X.dims() != cudnn_input_dims_) {
+  if (X.dims() != miopen_input_dims_) {
     VLOG(1) << "Setting descriptors.";
-    cudnn_input_dims_ = X.dims();
-    if (order_ == StorageOrder::NCHW) {
-      vector<int> dims = {N, C, H, W, D};
-      vector<int> strides = {C * H * W * D, H * W * D, W * D, D, 1};
-      CUDNN_ENFORCE(cudnnSetTensorNdDescriptor(
-          data_desc_,
-          cudnnTypeWrapper<T>::type,
-          X.ndim() > 3 ? X.ndim() : 4,
-          dims.data(),
-          strides.data()));
-    } else {
-      vector<int> dims = {N, C, H, W, D};
-      vector<int> strides = {H * W * D * C, 1, W * D * C, D * C, C};
-      CUDNN_ENFORCE(cudnnSetTensorNdDescriptor(
-          data_desc_,
-          cudnnTypeWrapper<T>::type,
-          X.ndim() > 3 ? X.ndim() : 4,
-          dims.data(),
-          strides.data()));
-    }
-    CUDNN_ENFORCE(cudnnDeriveBNTensorDescriptor(
+    miopen_input_dims_ = X.dims();
+    vector<int> dims = {N, C, H, W, D};
+    vector<int> strides = {C * H * W * D, H * W * D, W * D, D, 1};
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+        data_desc_,
+        miopenTypeWrapper<T>::type,
+        N,
+        C,
+        H,
+        W);
+
+    MIOPEN_ENFORCE(miopenDeriveBNTensorDescriptor(
         bn_param_desc_, data_desc_, mode_));
   }
 
@@ -176,12 +146,12 @@ bool CudnnSpatialBNOp::DoRunWithType() {
 
     auto* Y = Output(OUTPUT);
     Y->ResizeLike(X);
-    CUDNN_ENFORCE(cudnnBatchNormalizationForwardInference(
-        cudnn_wrapper_.inline_cudnn_handle(),
+    MIOPEN_ENFORCE(miopenBatchNormalizationForwardInference(
+        miopen_wrapper_.inline_miopen_handle(),
         // Note: PERSISTENT not implemented for inference
-        CUDNN_BATCHNORM_SPATIAL,
-        cudnnTypeWrapper<T>::kOne(),
-        cudnnTypeWrapper<T>::kZero(),
+        MIOPEN_BATCHNORM_SPATIAL,
+        miopenTypeWrapper<T>::kOne(),  //alpha
+        miopenTypeWrapper<T>::kZero(), //beta
         data_desc_,
         X.template data<T>(),
         data_desc_,
@@ -213,11 +183,11 @@ bool CudnnSpatialBNOp::DoRunWithType() {
       running_mean_data = running_mean->template mutable_data<BNParamType>();
       running_var_data = running_var->template mutable_data<BNParamType>();
       // In principle, setting this_momentum to 1 will wipe existing data.
-      // This has a caveat that if cudnn does not deal with 0*NaN cases we
+      // This has a caveat that if miopen does not deal with 0*NaN cases we
       // will be having an issue. Thus we choose a safe path by explicitly
       // setting zero.
-      math::Set<BNParamType, CUDAContext>(C, 0, running_mean_data, &context_);
-      math::Set<BNParamType, CUDAContext>(C, 0, running_var_data, &context_);
+      math::Set<BNParamType, HIPContext>(C, 0, running_mean_data, &context_);
+      math::Set<BNParamType, HIPContext>(C, 0, running_var_data, &context_);
     } else {
       // Does not need to do initialization.
       CAFFE_ENFORCE_EQ(running_mean->ndim(), 1);
@@ -235,11 +205,11 @@ bool CudnnSpatialBNOp::DoRunWithType() {
     void* save_mean_data = save_mean->template mutable_data<BNParamType>();
     void* save_var_data = save_var->template mutable_data<BNParamType>();
 
-    CUDNN_ENFORCE(cudnnBatchNormalizationForwardTraining(
-        cudnn_wrapper_.inline_cudnn_handle(),
-        mode_,
-        cudnnTypeWrapper<T>::kOne(),
-        cudnnTypeWrapper<T>::kZero(),
+    MIOPEN_ENFORCE(miopenBatchNormalizationForwardTraining(
+        miopen_wrapper_.inline_miopen_handle(),
+        MIOPEN_BATCHNORM_SPATIAL,
+        miopenTypeWrapper<T>::kOne(),
+        miopenTypeWrapper<T>::kZero(),
         data_desc_,
         X.template data<T>(),
         data_desc_,
@@ -257,7 +227,7 @@ bool CudnnSpatialBNOp::DoRunWithType() {
   return true;
 }
 
-bool CudnnSpatialBNOp::RunOnDevice() {
+bool MiOpenSpatialBNOp::RunOnDevice() {
   if (Input(0).IsType<float>()) {
     return DoRunWithType<float,float>();
   } else if (Input(0).IsType<float16>()) {
@@ -269,9 +239,9 @@ bool CudnnSpatialBNOp::RunOnDevice() {
 }
 
 template <typename T, typename M>
-bool CudnnSpatialBNGradientOp::DoRunWithType() {
+bool MiOpenSpatialBNGradientOp::DoRunWithType() {
   // QoL
-  typedef typename cudnnTypeWrapper<T>::BNParamType BNParamType;
+  typedef typename miopenTypeWrapper<T>::BNParamType BNParamType;
 
   const auto& X = Input(INPUT);
   const auto& scale = Input(SCALE);
@@ -279,40 +249,26 @@ bool CudnnSpatialBNGradientOp::DoRunWithType() {
 
   CAFFE_ENFORCE_GE(X.ndim(), 3);
   const int N = X.dim32(0);
-  const int C = X.ndim() > 3
-      ? (order_ == StorageOrder::NCHW ? X.dim32(1) : X.dim32(X.ndim() - 1))
-      : (order_ == StorageOrder::NCHW ? X.dim32(1) : X.dim32(2));
-  const int H = (order_ == StorageOrder::NCHW ? X.dim32(2) : X.dim32(1));
-  const int W = X.ndim() > 3
-      ? (order_ == StorageOrder::NCHW ? X.dim32(3) : X.dim32(2))
-      : 1;
-  const int D = X.ndim() > 4
-      ? (order_ == StorageOrder::NCHW ? X.dim32(4) : X.dim32(3))
-      : 1;
+  const int C = X.dim32(1);
+  const int H = X.dim32(2);
+  const int W = X.ndim() > 3 ? X.dim32(3) : 1;
+  const int D = X.ndim() > 4 ? X.dim32(4) : 1;
   CAFFE_ENFORCE_EQ(scale.ndim(), 1);
   CAFFE_ENFORCE_EQ(scale.dim32(0), C);
   // See if we need to reshape.
-  if (X.dims() != cudnn_input_dims_) {
-    if (order_ == StorageOrder::NCHW) {
+  if (X.dims() != miopen_input_dims_) {
       vector<int> dims = {N, C, H, W, D};
       vector<int> strides = {C * H * W * D, H * W * D, W * D, D, 1};
-      CUDNN_ENFORCE(cudnnSetTensorNdDescriptor(
+      MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
           data_desc_,
-          cudnnTypeWrapper<T>::type,
+          miopenTypeWrapper<T>::type,
           X.ndim() > 3 ? X.ndim() : 4,
-          dims.data(),
-          strides.data()));
-    } else {
-      vector<int> dims = {N, C, H, W, D};
-      vector<int> strides = {H * W * C * D, 1, W * D * C, D * C, C};
-      CUDNN_ENFORCE(cudnnSetTensorNdDescriptor(
-          data_desc_,
-          cudnnTypeWrapper<T>::type,
-          X.ndim() > 3 ? X.ndim() : 4,
-          dims.data(),
-          strides.data()));
-    }
-    CUDNN_ENFORCE(cudnnDeriveBNTensorDescriptor(
+          N,
+          C,
+          H,
+          W));
+
+    MIOPEN_ENFORCE(miopenDeriveBNTensorDescriptor(
         bn_param_desc_, data_desc_, mode_));
   }
 
@@ -328,13 +284,13 @@ bool CudnnSpatialBNGradientOp::DoRunWithType() {
   const void* saved_mean_data = saved_mean.template data<BNParamType>();
   const void* saved_var_data = saved_var.template data<BNParamType>();
 
-  CUDNN_ENFORCE(cudnnBatchNormalizationBackward(
-      cudnn_wrapper_.inline_cudnn_handle(),
+  MIOPEN_ENFORCE(miopenBatchNormalizationBackward(
+      miopen_wrapper_.inline_miopen_handle(),
       mode_,
-      cudnnTypeWrapper<T>::kOne(),
-      cudnnTypeWrapper<T>::kZero(),
-      cudnnTypeWrapper<T>::kOne(),
-      cudnnTypeWrapper<T>::kZero(),
+      miopenTypeWrapper<T>::kOne(),
+      miopenTypeWrapper<T>::kZero(),
+      miopenTypeWrapper<T>::kOne(),
+      miopenTypeWrapper<T>::kZero(),
       data_desc_,
       X.template data<T>(),
       data_desc_,
@@ -351,7 +307,7 @@ bool CudnnSpatialBNGradientOp::DoRunWithType() {
   return true;
 }
 
-bool CudnnSpatialBNGradientOp::RunOnDevice() {
+bool MiOpenSpatialBNGradientOp::RunOnDevice() {
   if (Input(0).IsType<float>()) {
     return DoRunWithType<float,float>();
   } else if (Input(0).IsType<float16>()) {
@@ -363,10 +319,10 @@ bool CudnnSpatialBNGradientOp::RunOnDevice() {
 }
 
 // Since there is no default implementation for spatial batch normalization,
-// we will register the cudnn version as the default as well.
-REGISTER_CUDA_OPERATOR(SpatialBN, CudnnSpatialBNOp);
-REGISTER_CUDA_OPERATOR(SpatialBNGradient, CudnnSpatialBNGradientOp);
+// we will register the miopen version as the default as well.
+REGISTER_HIP_OPERATOR(SpatialBN, MiOpenSpatialBNOp);
+REGISTER_HIP_OPERATOR(SpatialBNGradient, MiOpenSpatialBNGradientOp);
 
-REGISTER_CUDNN_OPERATOR(SpatialBN, CudnnSpatialBNOp);
-REGISTER_CUDNN_OPERATOR(SpatialBNGradient, CudnnSpatialBNGradientOp);
+REGISTER_MIOPEN_OPERATOR(SpatialBN, MiOpenSpatialBNOp);
+REGISTER_MIOPEN_OPERATOR(SpatialBNGradient, MiOpenSpatialBNGradientOp);
 }  // namespace caffe2
