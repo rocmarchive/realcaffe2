@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "caffe2/core/context_gpu.h"
-#include "caffe2/core/cudnn_wrappers.h"
+#include "caffe2/core/context_hip.h"
+#include "caffe2/core/miopen_wrappers.h"
 #include "caffe2/core/types.h"
 #include "caffe2/operators/softmax_op.h"
 
@@ -29,17 +29,18 @@ constexpr int TOP_DESC_ID = 1;
 constexpr int TOP_GRADIENT_DESC_ID = 2;
 }  // namespace
 
-class CuDNNSoftmaxOp final : public Operator<CUDAContext> {
+class MiOpenSoftmaxOp final : public Operator<HIPContext> {
  public:
-  explicit CuDNNSoftmaxOp(const OperatorDef& def, Workspace* ws)
-      : Operator<CUDAContext>(def, ws),
-        cudnn_wrapper_(&context_),
-        axis_(OperatorBase::GetSingleArgument<int>("axis", 1)) {
-    CUDNN_ENFORCE(cudnnCreateTensorDescriptor(&desc_));
+  explicit MiOpenSoftmaxOp(const OperatorDef& def, Workspace* ws)
+      : Operator<HIPContext>(def, ws),
+        miopen_wrapper_(&context_),
+        alpha_(OperatorBase::GetSingleArgument<int>("alpha", 1)),
+        beta_(OperatorBase::GetSingleArgument<int>("beta", 0)) {
+    MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&desc_));
   }
 
   ~CuDNNSoftmaxOp() {
-    CUDNN_ENFORCE(cudnnDestroyTensorDescriptor(desc_));
+    MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(desc_));
   }
 
   template <typename T>
@@ -52,24 +53,23 @@ class CuDNNSoftmaxOp final : public Operator<CUDAContext> {
 
     Y->ResizeLike(X);
     if (dims_ != X.dims()) {
-      CUDNN_ENFORCE(cudnnSetTensor4dDescriptor(
+      MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
           desc_,
-          GetCudnnTensorFormat(StorageOrder::NCHW),
-          cudnnTypeWrapper<T>::type,
+          miopenTypeWrapper<T>::type,
           N,
           D,
           1,
           1));
       dims_ = X.dims();
     }
-    CUDNN_ENFORCE(cudnnSoftmaxForward(
-        cudnn_wrapper_.inline_cudnn_handle(),
-        CUDNN_SOFTMAX_ACCURATE,
-        CUDNN_SOFTMAX_MODE_INSTANCE,
-        cudnnTypeWrapper<T>::kOne(),
+    MIOPEN_ENFORCE(miopenSoftmaxForward(
+        miopen_wrapper_.inline_miopen_handle(),
+        //miopenTypeWrapper<T>::kOne(),
+        &alpha_,
         desc_,
         X.template data<T>(),
-        cudnnTypeWrapper<T>::kZero(),
+        //miopenTypeWrapper<T>::kZero(),
+        &beta_,
         desc_,
         Y->template mutable_data<T>()));
     return true;
@@ -80,24 +80,26 @@ class CuDNNSoftmaxOp final : public Operator<CUDAContext> {
   }
 
  protected:
-  CuDNNWrapper cudnn_wrapper_;
-  int axis_;
-  cudnnTensorDescriptor_t desc_;
+  MIOPENWrapper miopen_wrapper_;
+  miopenTensorDescriptor_t desc_;
   vector<TIndex> dims_;
+  const float alpha_;
+  const float beta_;
 };
 
 
-class CuDNNSoftmaxGradientOp final : public Operator<CUDAContext> {
+class MiOpenSoftmaxGradientOp final : public Operator<HIPContext> {
  public:
-  explicit CuDNNSoftmaxGradientOp(const OperatorDef& def, Workspace* ws)
-      : Operator<CUDAContext>(def, ws),
-        cudnn_wrapper_(&context_),
-        axis_(OperatorBase::GetSingleArgument<int>("axis", 1)) {
-    CUDNN_ENFORCE(cudnnCreateTensorDescriptor(&desc_));
+  explicit MiOpenSoftmaxGradientOp(const OperatorDef& def, Workspace* ws)
+      : Operator<HIPContext>(def, ws),
+        miopen_wrapper_(&context_),
+        alpha_(OperatorBase::GetSingleArgument<int>("alpha", 1)),
+        beta_(OperatorBase::GetSingleArgument<int>("beta", 0)) {
+    MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&desc_));
   }
 
-  ~CuDNNSoftmaxGradientOp() {
-    CUDNN_ENFORCE(cudnnDestroyTensorDescriptor(desc_));
+  ~MiOpenSoftmaxGradientOp() {
+    MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(desc_));
   }
 
   template <typename T>
@@ -112,26 +114,23 @@ class CuDNNSoftmaxGradientOp final : public Operator<CUDAContext> {
     CHECK_EQ(Y.dims(), dY.dims());
     dX->ResizeLike(Y);
     if (dims_ != Y.dims()) {
-      CUDNN_ENFORCE(cudnnSetTensor4dDescriptor(
+      MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
           desc_,
-          GetCudnnTensorFormat(StorageOrder::NCHW),
-          cudnnTypeWrapper<T>::type,
+          miopenTypeWrapper<T>::type,
           N,
           D,
           1,
           1));
       dims_ = Y.dims();
     }
-    CUDNN_ENFORCE(cudnnSoftmaxBackward(
-        cudnn_wrapper_.inline_cudnn_handle(),
-        CUDNN_SOFTMAX_ACCURATE,
-        CUDNN_SOFTMAX_MODE_INSTANCE,
-        cudnnTypeWrapper<T>::kOne(),
+    MIOPEN_ENFORCE(miopenSoftmaxBackward(
+        miopen_wrapper_.inline_miopen_handle(),
+        &alpha_,
         desc_,
         Y.template data<T>(),
         desc_,
         dY.template data<T>(),
-        cudnnTypeWrapper<T>::kZero(),
+        &beta_,
         desc_,
         dX->template mutable_data<T>()));
     return true;
@@ -142,14 +141,15 @@ class CuDNNSoftmaxGradientOp final : public Operator<CUDAContext> {
   }
 
  protected:
-  CuDNNWrapper cudnn_wrapper_;
-  int axis_;
-  cudnnTensorDescriptor_t desc_;
+  MIOPENWrapper miopen_wrapper_;
+  const float alpha_;
+  const float beta_;
+  miopenTensorDescriptor_t desc_;
   vector<TIndex> dims_;
 };
 
 namespace {
-REGISTER_CUDNN_OPERATOR(Softmax, CuDNNSoftmaxOp);
-REGISTER_CUDNN_OPERATOR(SoftmaxGradient, CuDNNSoftmaxGradientOp);
+REGISTER_MIOPEN_OPERATOR(Softmax, MiOpenSoftmaxOp);
+REGISTER_MIOPEN_OPERATOR(SoftmaxGradient, MiOpenSoftmaxGradientOp);
 }  // namespace
 }  // namespace caffe2
