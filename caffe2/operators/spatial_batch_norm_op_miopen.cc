@@ -155,6 +155,7 @@ bool MiOpenSpatialBNOp::DoRunWithType() {
     Y->ResizeLike(X);
     MIOPEN_ENFORCE(miopenBatchNormalizationForwardInference(
         miopen_wrapper_.inline_miopen_handle(),
+        // Note: PERSISTENT not implemented for inference
         miopenBNSpatial,
         &alpha_,
         &beta_,
@@ -163,10 +164,10 @@ bool MiOpenSpatialBNOp::DoRunWithType() {
         data_desc_,
         Y->template mutable_data<T>(),
         bn_param_desc_,
-        scale.template data<BNParamType>(),
-        bias.template data<BNParamType>(),
-        est_mean.template data<BNParamType>(),
-        est_var.template data<BNParamType>(),
+        const_cast<float *>(scale.template data<BNParamType>()),
+        const_cast<float *>(bias.template data<BNParamType>()),
+        const_cast<float *>(est_mean.template data<BNParamType>()),
+        const_cast<float *>(est_var.template data<BNParamType>()),
         epsilon_));
   } else {
     // Run training mode.
@@ -221,11 +222,11 @@ bool MiOpenSpatialBNOp::DoRunWithType() {
         data_desc_,
         Y->template mutable_data<T>(),
         bn_param_desc_,
-        scale.template data<BNParamType>(),
-        bias.template data<BNParamType>(),
+        const_cast<float *>(scale.template data<BNParamType>()),
+        const_cast<float *>(bias.template data<BNParamType>()),
         this_factor,
-        running_mean_data,
-        running_var_data,
+        const_cast<float *>(running_mean_data),
+        const_cast<float *>(running_var_data),
         epsilon_,
         save_mean_data,
         save_var_data));
@@ -284,10 +285,10 @@ bool MiOpenSpatialBNGradientOp::DoRunWithType() {
   dScale->ResizeLike(scale);
   dBias->ResizeLike(scale);
 
-  auto& saved_mean = Input(SAVED_MEAN);
-  auto& saved_var = Input(SAVED_INV_VAR);
-  void* saved_mean_data = saved_mean.template data<BNParamType>();
-  void* saved_var_data = saved_var.template data<BNParamType>();
+  const auto& saved_mean = Input(SAVED_MEAN);
+  const auto& saved_var = Input(SAVED_INV_VAR);
+  const void* saved_mean_data = saved_mean.template data<BNParamType>();
+  const void* saved_var_data = saved_var.template data<BNParamType>();
 
   MIOPEN_ENFORCE(miopenBatchNormalizationBackward(
       miopen_wrapper_.inline_miopen_handle(),
