@@ -752,11 +752,8 @@ CAFFE_DECLARE_REGISTRY(
   CAFFE_REGISTER_CLASS(                                       \
       HIPOperatorRegistry, name##_ENGINE_##engine, __VA_ARGS__)
 
-#if 0 // Ashish TBD: MIOpen operators go here
-// Macros for cudnn since we use it often
-#define REGISTER_CUDNN_OPERATOR(name, ...) \
-  REGISTER_CUDA_OPERATOR_WITH_ENGINE(name, CUDNN, __VA_ARGS__)
-#endif
+#define REGISTER_MIOPEN_OPERATOR(name, ...) \
+  REGISTER_HIP_OPERATOR_WITH_ENGINE(name, MIOPEN, __VA_ARGS__)
 
 // StaticLinkingProtector is a helper class that ensures that the Caffe2
 // library is linked correctly with whole archives (in the case of static
