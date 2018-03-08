@@ -27,7 +27,8 @@ class MIOPEN_LRNOP final : public Operator<HIPContext> {
   MIOPEN_LRNOP(const OperatorDef& operator_def, Workspace* ws)
       : Operator<HIPContext>(operator_def, ws),
         miopen_wrapper_(&context_),
-        mode_(OperatorBase::GetSingleArgument<miopenLRNMode_t>("mode", miopenLRNCrossChannel)),
+        //mode_(OperatorBase::GetSingleArgument<miopenLRNMode_t>("mode", miopenLRNCrossChannel)),
+        mode_(miopenLRNCrossChannel),
         size_(OperatorBase::GetSingleArgument<int>("size", 0)),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0)),
@@ -71,7 +72,8 @@ class MIOPENLRNGradientOp final : public Operator<HIPContext> {
   MIOPENLRNGradientOp(const OperatorDef& operator_def, Workspace* ws)
       : Operator<HIPContext>(operator_def, ws),
         miopen_wrapper_(&context_),
-        mode_(OperatorBase::GetSingleArgument<miopenLRNMode_t>("mode", miopenLRNCrossChannel)),
+        //mode_(OperatorBase::GetSingleArgument<miopenLRNMode_t>("mode", miopenLRNCrossChannel)),
+        mode_(miopenLRNCrossChannel),
         size_(OperatorBase::GetSingleArgument<int>("size", 0)),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0)),

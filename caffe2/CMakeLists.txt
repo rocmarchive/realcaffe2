@@ -185,13 +185,12 @@ if(USE_HIP)
   set( CMAKE_HIP_CREATE_SHARED_LIBRARY "${HIP_HIPCC_EXECUTABLE} <CMAKE_SHARED_LIBRARY_CXX_FLAGS> ${CMAKE_CXX_FLAGS} <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <SONAME_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
   set_target_properties(caffe2_hip PROPERTIES LINKER_LANGUAGE HIP)
 
-  list(APPEND Caffe2_HIP_DEPENDENCY_LIBS rocblas)
   target_include_directories(
       caffe2_hip INTERFACE $<INSTALL_INTERFACE:include>)
   target_compile_options(caffe2 INTERFACE "-std=c++11")
   list(APPEND Caffe2_MAIN_LIBS_ORDER caffe2_hip)
   add_dependencies(caffe2_hip Caffe2_PROTO)
-    list(APPEND Caffe2_HIP_DEPENDENCY_LIBS rocrand hiprand)
+  list(APPEND Caffe2_HIP_DEPENDENCY_LIBS rocrand hiprand rocblas MIOpen)
   if (BUILD_SHARED_LIBS)
     target_link_libraries(
         caffe2_hip
