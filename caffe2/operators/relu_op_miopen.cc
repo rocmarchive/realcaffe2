@@ -103,7 +103,7 @@ class MiOPENReluOp final : public Operator<HIPContext> {
   }
 
  protected:
-  MiOPENWrapper miopen_wrapper_;
+  MIOPENWrapper miopen_wrapper_;
   miopenTensorDescriptor_t data_desc_;
   miopenActivationDescriptor_t activ_desc_;
   vector<TIndex> miopen_input_dims_;
@@ -212,7 +212,7 @@ class MiOPENReluGradientOp final : public Operator<HIPContext> {
   }
 
  protected:
-  MiOPENWrapper miopen_wrapper_;
+  MIOPENWrapper miopen_wrapper_;
   miopenTensorDescriptor_t data_desc_;
   miopenActivationDescriptor_t activ_desc_;
   vector<TIndex> miopen_input_dims_;
