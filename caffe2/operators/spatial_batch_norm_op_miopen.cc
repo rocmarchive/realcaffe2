@@ -21,16 +21,20 @@
 #include "caffe2/operators/spatial_batch_norm_op.h"
 #include "caffe2/utils/math.h"
 
+const double MIOPEN_BN_MIN_EPSILON = 1e-5;
+
 namespace caffe2 {
 
 class MiOpenSpatialBNOp final : public SpatialBNOp<HIPContext> {
  public:
   USE_OPERATOR_FUNCTIONS(HIPContext);
   MiOpenSpatialBNOp(const OperatorDef& operator_def, Workspace* ws)
-      : SpatialBNOp<HIPContext>(operator_def, ws), miopen_wrapper_(&context_) {
+      : SpatialBNOp<HIPContext>(operator_def, ws), miopen_wrapper_(&context_),
+        alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
+        beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)) {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bn_param_desc_));
-    if (epsilon_ <= MIOPEN_BN_MIN_EPSILON - FLT_EPSILON) {
+    if (epsilon_ <= MIOPEN_BN_MIN_EPSILON) {
       LOG(ERROR) << "Provided epsilon is smaller than "
                  << "MIOPEN_BN_MIN_EPSILON. Setting it to "
                  << "MIOPEN_BN_MIN_EPSILON instead.";
@@ -48,11 +52,12 @@ class MiOpenSpatialBNOp final : public SpatialBNOp<HIPContext> {
   bool RunOnDevice() override;
 
  protected:
-  MiOPENWrapper miopen_wrapper_;
+  MIOPENWrapper miopen_wrapper_;
   miopenTensorDescriptor_t data_desc_;
   miopenTensorDescriptor_t bn_param_desc_;
   vector<TIndex> miopen_input_dims_;
-
+  float alpha_;
+  float beta_;
   miopenBatchNormMode_t mode_;
 };
 
@@ -60,11 +65,12 @@ class MiOpenSpatialBNGradientOp final : public SpatialBNGradientOp<HIPContext> {
  public:
   USE_OPERATOR_FUNCTIONS(HIPContext);
   MiOpenSpatialBNGradientOp(const OperatorDef& operator_def, Workspace* ws)
-      : SpatialBNGradientOp<HIPContext>(operator_def, ws),
-        miopen_wrapper_(&context_) {
+      : SpatialBNGradientOp<HIPContext>(operator_def, ws), miopen_wrapper_(&context_),
+        alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
+        beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)) {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bn_param_desc_));
-    if (epsilon_ <= MIOPEN_BN_MIN_EPSILON - FLT_EPSILON) {
+    if (epsilon_ <= MIOPEN_BN_MIN_EPSILON) {
       LOG(ERROR) << "Provided epsilon is smaller than "
                  << "MIOPEN_BN_MIN_EPSILON. Setting it to "
                  << "MIOPEN_BN_MIN_EPSILON instead.";
@@ -83,11 +89,12 @@ class MiOpenSpatialBNGradientOp final : public SpatialBNGradientOp<HIPContext> {
   bool RunOnDevice() override;
 
  protected:
-  MiOPENWrapper miopen_wrapper_;
+  MIOPENWrapper miopen_wrapper_;
   miopenTensorDescriptor_t data_desc_;
   miopenTensorDescriptor_t bn_param_desc_;
   vector<TIndex> miopen_input_dims_;
-
+  float alpha_;
+  float beta_;
   miopenBatchNormMode_t mode_;
 };
 
@@ -102,9 +109,9 @@ bool MiOpenSpatialBNOp::DoRunWithType() {
   // QoL
   typedef typename miopenTypeWrapper<T>::BNParamType BNParamType;
 
-  const auto& X = Input(INPUT);
-  const auto& scale = Input(SCALE);
-  const auto& bias = Input(BIAS);
+  auto& X = Input(INPUT);
+  auto& scale = Input(SCALE);
+  auto& bias = Input(BIAS);
 
   CAFFE_ENFORCE_GE(X.ndim(), 3);
   const int N = X.dim32(0);
@@ -128,7 +135,7 @@ bool MiOpenSpatialBNOp::DoRunWithType() {
         N,
         C,
         H,
-        W);
+        W));
 
     MIOPEN_ENFORCE(miopenDeriveBNTensorDescriptor(
         bn_param_desc_, data_desc_, mode_));
@@ -137,8 +144,8 @@ bool MiOpenSpatialBNOp::DoRunWithType() {
   // Now, depending on whether we are running test or not, we have two paths.
   if (is_test_) {
     // Run inference mode.
-    const auto& est_mean = Input(EST_MEAN);
-    const auto& est_var = Input(EST_VAR);
+    auto& est_mean = Input(EST_MEAN);
+    auto& est_var = Input(EST_VAR);
     CAFFE_ENFORCE_EQ(est_mean.ndim(), 1);
     CAFFE_ENFORCE_EQ(est_var.ndim(), 1);
     CAFFE_ENFORCE_EQ(est_mean.dim32(0), C);
@@ -148,10 +155,9 @@ bool MiOpenSpatialBNOp::DoRunWithType() {
     Y->ResizeLike(X);
     MIOPEN_ENFORCE(miopenBatchNormalizationForwardInference(
         miopen_wrapper_.inline_miopen_handle(),
-        // Note: PERSISTENT not implemented for inference
-        MIOPEN_BATCHNORM_SPATIAL,
-        miopenTypeWrapper<T>::kOne(),  //alpha
-        miopenTypeWrapper<T>::kZero(), //beta
+        miopenBNSpatial,
+        &alpha_,
+        &beta_,
         data_desc_,
         X.template data<T>(),
         data_desc_,
@@ -207,9 +213,9 @@ bool MiOpenSpatialBNOp::DoRunWithType() {
 
     MIOPEN_ENFORCE(miopenBatchNormalizationForwardTraining(
         miopen_wrapper_.inline_miopen_handle(),
-        MIOPEN_BATCHNORM_SPATIAL,
-        miopenTypeWrapper<T>::kOne(),
-        miopenTypeWrapper<T>::kZero(),
+        miopenBNSpatial,
+        &alpha_,
+        &beta_,
         data_desc_,
         X.template data<T>(),
         data_desc_,
@@ -243,9 +249,9 @@ bool MiOpenSpatialBNGradientOp::DoRunWithType() {
   // QoL
   typedef typename miopenTypeWrapper<T>::BNParamType BNParamType;
 
-  const auto& X = Input(INPUT);
-  const auto& scale = Input(SCALE);
-  const auto& dY = Input(OUTPUT_GRAD);
+  auto& X = Input(INPUT);
+  auto& scale = Input(SCALE);
+  auto& dY = Input(OUTPUT_GRAD);
 
   CAFFE_ENFORCE_GE(X.ndim(), 3);
   const int N = X.dim32(0);
@@ -262,7 +268,6 @@ bool MiOpenSpatialBNGradientOp::DoRunWithType() {
       MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
           data_desc_,
           miopenTypeWrapper<T>::type,
-          X.ndim() > 3 ? X.ndim() : 4,
           N,
           C,
           H,
@@ -279,18 +284,18 @@ bool MiOpenSpatialBNGradientOp::DoRunWithType() {
   dScale->ResizeLike(scale);
   dBias->ResizeLike(scale);
 
-  const auto& saved_mean = Input(SAVED_MEAN);
-  const auto& saved_var = Input(SAVED_INV_VAR);
-  const void* saved_mean_data = saved_mean.template data<BNParamType>();
-  const void* saved_var_data = saved_var.template data<BNParamType>();
+  auto& saved_mean = Input(SAVED_MEAN);
+  auto& saved_var = Input(SAVED_INV_VAR);
+  void* saved_mean_data = saved_mean.template data<BNParamType>();
+  void* saved_var_data = saved_var.template data<BNParamType>();
 
   MIOPEN_ENFORCE(miopenBatchNormalizationBackward(
       miopen_wrapper_.inline_miopen_handle(),
       mode_,
-      miopenTypeWrapper<T>::kOne(),
-      miopenTypeWrapper<T>::kZero(),
-      miopenTypeWrapper<T>::kOne(),
-      miopenTypeWrapper<T>::kZero(),
+      &alpha_,
+      &beta_,
+      &alpha_,
+      &beta_,
       data_desc_,
       X.template data<T>(),
       data_desc_,
