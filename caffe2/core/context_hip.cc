@@ -164,7 +164,7 @@ static void Caffe2InitializeHip() {
   RegisterTensorInfoFunction(
       TypeMeta::Id<Tensor<HIPContext>>(), GetHipTensorInfo);
 
-  CheckMiOpenVersions();
+  //CheckMiOpenVersions();
 }
 
 /*static void SetUpCub() {
