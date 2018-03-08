@@ -34,12 +34,13 @@ class MiOpenSoftmaxOp final : public Operator<HIPContext> {
   explicit MiOpenSoftmaxOp(const OperatorDef& def, Workspace* ws)
       : Operator<HIPContext>(def, ws),
         miopen_wrapper_(&context_),
-        alpha_(OperatorBase::GetSingleArgument<int>("alpha", 1)),
-        beta_(OperatorBase::GetSingleArgument<int>("beta", 0)) {
+        axis_(OperatorBase::GetSingleArgument<int>("axis", 1)),
+        alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
+        beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)) {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&desc_));
   }
 
-  ~CuDNNSoftmaxOp() {
+  ~MiOpenSoftmaxOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(desc_));
   }
 
@@ -83,6 +84,7 @@ class MiOpenSoftmaxOp final : public Operator<HIPContext> {
   MIOPENWrapper miopen_wrapper_;
   miopenTensorDescriptor_t desc_;
   vector<TIndex> dims_;
+  const int axis_;
   const float alpha_;
   const float beta_;
 };
@@ -93,8 +95,9 @@ class MiOpenSoftmaxGradientOp final : public Operator<HIPContext> {
   explicit MiOpenSoftmaxGradientOp(const OperatorDef& def, Workspace* ws)
       : Operator<HIPContext>(def, ws),
         miopen_wrapper_(&context_),
-        alpha_(OperatorBase::GetSingleArgument<int>("alpha", 1)),
-        beta_(OperatorBase::GetSingleArgument<int>("beta", 0)) {
+        axis_(OperatorBase::GetSingleArgument<int>("axis", 1)),
+        alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
+        beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)) {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&desc_));
   }
 
@@ -142,6 +145,7 @@ class MiOpenSoftmaxGradientOp final : public Operator<HIPContext> {
 
  protected:
   MIOPENWrapper miopen_wrapper_;
+  const int axis_;
   const float alpha_;
   const float beta_;
   miopenTensorDescriptor_t desc_;
