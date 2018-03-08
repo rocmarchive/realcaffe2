@@ -397,13 +397,15 @@ if(USE_CUDA)
   else()
     caffe2_include_directories(${PROJECT_SOURCE_DIR}/third_party/cub)
   endif()
-elseif(USE_HIP)
-  find_package(CUBHIP)
-  if(CUBHIP_FOUND)
-    caffe2_include_directories(${CUBHIP_INCLUDE_DIRS})
-  else()
-    caffe2_include_directories(${PROJECT_SOURCE_DIR}/third_party/cub-hip)
-  endif()
+endif()
+
+# ---[ AMD Thrust
+if(USE_HIP)
+  caffe2_include_directories($ENV{THRUST_ROOT})
+  #For cub-hip
+  caffe2_include_directories($ENV{THRUST_ROOT}/thrust/system/cuda/detail/cub-hip)
+  message(STATUS "Found Thrust: $ENV{THRUST_ROOT}")
+  message(STATUS "Found cub-hip: $ENV{THRUST_ROOT}/thrust/system/cuda/detail/cub-hip")
 endif()
 
 if(USE_GLOO)
