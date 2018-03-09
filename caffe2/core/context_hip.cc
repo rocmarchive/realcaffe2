@@ -6,7 +6,7 @@
 
 #include "cub/util_allocator.cuh"
 #include "caffe2/core/asan.h"
-//#include "caffe2/core/common_cudnn.h"
+#include "caffe2/core/common_miopen.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/core/init.h"
 #include "caffe2/core/logging.h"
@@ -160,10 +160,7 @@ static void Caffe2InitializeHip() {
   RegisterTensorInfoFunction(
       TypeMeta::Id<Tensor<HIPContext>>(), GetHipTensorInfo);
 
-#if 0 // Ashish TBD: MIOpen version
-  // Check the versions of cuDNN that were compiled and linked with are compatible
-  CheckCuDNNVersions();
-#endif
+  //CheckMiOpenVersions();
 }
 
 static void SetUpCub() {
