@@ -24,7 +24,7 @@ namespace caffe2 {
 template <typename T>
 __global__ void ExpKernel(const int N, const T* X, T* Y) {
   HIP_1D_KERNEL_LOOP(i, N) {
-    Y[i] = __expf(X[i]);
+    Y[i] = expf(X[i]);
   }
 }
 
