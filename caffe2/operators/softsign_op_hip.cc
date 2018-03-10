@@ -25,7 +25,7 @@ namespace caffe2 {
 template <typename T>
 __global__ void SoftsignKernel(const int N, const T* X, T* Y) {
   HIP_1D_KERNEL_LOOP(i, N) {
-    Y[i] = X[i] / (1 + abs(X[i]));
+    Y[i] = X[i] / (1 + fabsf(X[i]));
   }
 }
 
@@ -33,7 +33,7 @@ template <typename T>
 __global__ void SoftsignGradientKernel(const int N, const T* x, const T* dy,
                               T* dx) {
   HIP_1D_KERNEL_LOOP(i, N) {
-    dx[i] = dy[i] / pow(1 + abs(x[i]), 2);
+    dx[i] = dy[i] / pow(1 + fabsf(x[i]), 2);
   }
 }
 
