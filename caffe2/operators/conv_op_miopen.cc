@@ -33,8 +33,8 @@ namespace caffe2 {
                   miopen_wrapper_(&context_),
                   miopen_ws_nbytes_limit_(OperatorBase::GetSingleArgument<size_t>("ws_nbytes_limit",
                                                                                   kCONV_MIOPEN_WORKSPACE_LIMIT_BYTES)),
-                  alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1)),
-                  beta_(OperatorBase::GetSingleArgument<float>("beta", 0)),
+                  alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)), //TODO get conv mode
+                  beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
                   exhaustive_search_(OperatorBase::GetSingleArgument<int>("exhaustive_search", 0)){
             MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bottom_desc_));
             MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bias_desc_));
@@ -42,6 +42,7 @@ namespace caffe2 {
             MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_));
             MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_for_bias_));
             MIOPEN_ENFORCE(miopenCreateConvolutionDescriptor(&conv_desc_));
+            mode_ = miopenConvolution;
         }
 
         ~MiopenConvOpBase() {
@@ -62,6 +63,7 @@ namespace caffe2 {
         miopenTensorDescriptor_t top_desc_;
         miopenTensorDescriptor_t top_desc_for_bias_;
         miopenConvolutionDescriptor_t conv_desc_;
+        miopenConvolutionMode_t mode_;
         const size_t miopen_ws_nbytes_limit_;
         bool exhaustive_search_;
         const float alpha_;
@@ -155,6 +157,16 @@ namespace caffe2 {
         W_out = Y->ndim() > 3 ? Y->dim32(3) : 1;
         D_out = Y->ndim() > 4 ? Y->dim32(4) : 1;
 
+        MIOPEN_ENFORCE(miopenInitConvolutionDescriptor(
+                conv_desc_,
+                mode_,
+                pad_t(),
+                pad_l(),
+                stride_h(),
+                stride_w(),
+                dilation_h(),
+                dilation_w()));
+
         MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(conv_desc_,
                                                             bottom_desc_,
                                                             weight_desc_,
@@ -170,7 +182,6 @@ namespace caffe2 {
                                                    H_out,
                                                    W_out));
 
-        //MIOPEN fwd get work space size
         MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(miopen_wrapper_.inline_miopen_handle(),
                                                                 weight_desc_,
                                                                 bottom_desc_,
@@ -180,7 +191,6 @@ namespace caffe2 {
 
         std::vector<char> fwdConvWs(fwdConvWsSize_);
 
-        // MIOPEN fwd find conv algorithm
         MIOPEN_ENFORCE(miopenFindConvolutionForwardAlgorithm(miopen_wrapper_.inline_miopen_handle(),
                                                              bottom_desc_,
                                                              X.template data<T_X>(),
@@ -196,19 +206,7 @@ namespace caffe2 {
                                                              fwdConvWsSize_,
                                                              exhaustive_search_));
 
-        // Set the convolution descriptor
-        MIOPEN_ENFORCE(miopenInitConvolutionDescriptor(
-                conv_desc_,
-                miopenConvolution,
-                pad_t(),
-                pad_l(),
-                stride_h(),
-                stride_w(),
-                dilation_h(),
-                dilation_w()));
 
-
-        // MIOPEN CONV fwd
         MIOPEN_ENFORCE(miopenConvolutionForward(miopen_wrapper_.inline_miopen_handle(),
                                                 &alpha_,
                                                 bottom_desc_,
@@ -223,7 +221,7 @@ namespace caffe2 {
                                                 &fwdConvWs,  // state->fwdConvWs().get(fwdConvWsSize_);
                                                 fwdConvWsSize_));
 
-        // Bias
+        //BIAS
         if (InputSize() == 3) {
             auto& bias = Input(BIAS);
 
@@ -288,6 +286,16 @@ namespace caffe2 {
         W_out = dY.ndim() > 3 ? dY.dim32(3) : 1;
         D_out = dY.ndim() > 4 ? dY.dim32(4) : 1;
 
+        MIOPEN_ENFORCE(miopenInitConvolutionDescriptor(
+                conv_desc_,
+                mode_,
+                pad_t(),
+                pad_l(),
+                stride_h(),
+                stride_w(),
+                dilation_h(),
+                dilation_w()));
+
         //TODO : see if we can share output dim from fwd pass.
         MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(conv_desc_,
                                                             bottom_desc_,
@@ -323,18 +331,6 @@ namespace caffe2 {
                                 &bwdDataWs,// state->workspace().get(fwdConvWsSize_);
                                 bwdDataWsSize,
                                 exhaustive_search_));
-
-
-        //TODO see if we can drop this.
-        MIOPEN_ENFORCE(miopenInitConvolutionDescriptor(
-                conv_desc_,
-                miopenConvolution,
-                pad_t(),
-                pad_l(),
-                stride_h(),
-                stride_w(),
-                dilation_h(),
-                dilation_w()));
 
 
         MIOPEN_ENFORCE(miopenConvolutionBackwardData(miopen_wrapper_.inline_miopen_handle(),
@@ -376,16 +372,6 @@ namespace caffe2 {
                                                                      &bwd_weight_workspace,// state->workspace().get(bwd_conv_ws_size);
                                                                      bwdWeightWsSize_,
                                                                      exhaustive_search_));
-        //TODO see if we can drop this.
-        MIOPEN_ENFORCE(miopenInitConvolutionDescriptor(
-                conv_desc_,
-                miopenConvolution,
-                pad_t(),
-                pad_l(),
-                stride_h(),
-                stride_w(),
-                dilation_h(),
-                dilation_w()));
 
         MIOPEN_ENFORCE(miopenConvolutionBackwardWeights(miopen_wrapper_.inline_miopen_handle(),
                                                         &alpha_,
@@ -418,8 +404,6 @@ namespace caffe2 {
         return true;
     }
 
-// TODO(Yangqing): a lot of the function contents are very similar. Consider
-// consolidating them.
     bool MiopenConvGradientOp::RunOnDevice() {
         if (Input(0).IsType<float>()) {
             return DoRunWithType<float,    //  X
