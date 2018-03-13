@@ -35,9 +35,7 @@ namespace caffe2 {
                                                                                   kCONV_MIOPEN_WORKSPACE_LIMIT_BYTES)),
                   alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1)),
                   beta_(OperatorBase::GetSingleArgument<float>("beta", 0)),
-                  exhaustive_search_(OperatorBase::GetSingleArgument<int>("exhaustive_search", 0)),
-                  miopen_state_(OperatorBase::GetSingleArgument<int>("miopen_state", 0)) {
-//TBD PYEH
+                  exhaustive_search_(OperatorBase::GetSingleArgument<int>("exhaustive_search", 0)){
             MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bottom_desc_));
             MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bias_desc_));
             MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&weight_desc_));
@@ -100,6 +98,7 @@ namespace caffe2 {
         MiopenConvGradientOp(const OperatorDef &operator_def, Workspace *ws)
                 : MiopenConvOpBase(operator_def, ws),
                   no_bias_(OperatorBase::GetSingleArgument<int>("no_bias", 0)),
+                  requestAlgoCount_(OperatorBase::GetSingleArgument<int>("requestAlgoCount_", 1)),
                   returnedAlgoCount_(OperatorBase::GetSingleArgument<int>("returnedAlgoCount_", 1)) {
             CAFFE_ENFORCE(
                     !(no_bias_ && OutputSize() == 3),
@@ -116,6 +115,7 @@ namespace caffe2 {
 
     private:
         bool no_bias_;
+        const int requestAlgoCount_;
         int returnedAlgoCount_;
         miopenConvAlgoPerf_t perf_;
         size_t bwdWeightWsSize_;
@@ -133,13 +133,13 @@ namespace caffe2 {
     template<typename T_X, typename T_W, typename T_B, typename MATH, typename T_Y>
     bool MiopenConvOp::DoRunWithType() {
         auto &X = Input(INPUT);
-        auto &W = Input(FILTER);
+        auto &Weight = Input(FILTER);
         auto *Y = Output(0);
 
         // Figure out the output shape
         CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
-        CAFFE_ENFORCE(W.ndim() >= 3 && W.ndim() <= 5);
-        const int M = W.dim32(0);
+        CAFFE_ENFORCE(Weight.ndim() >= 3 && Weight.ndim() <= 5);
+        const int M = Weight.dim32(0);
         ConvPoolOpBase<HIPContext>::SetOutputSize(X, Y, M);
         int N = 0, C = 0, H = 0, W = 0, D = 0, N_out = 0, C_out = 0, H_out = 0, W_out = 0, D_out = 0;
 
@@ -155,8 +155,6 @@ namespace caffe2 {
         W_out = Y->ndim() > 3 ? Y->dim32(3) : 1;
         D_out = Y->ndim() > 4 ? Y->dim32(4) : 1;
 
-        const int M = W.dim32(0);
-        //MIOPEN set output tensor
         MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(conv_desc_,
                                                             bottom_desc_,
                                                             weight_desc_,
@@ -166,7 +164,7 @@ namespace caffe2 {
                                                             &W_out));
 
         MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(top_desc_,
-                                                   miopenTypeWrapper<T>::type,
+                                                   miopenTypeWrapper<T_X>::type,
                                                    N_out,
                                                    C_out,
                                                    H_out,
@@ -187,10 +185,10 @@ namespace caffe2 {
                                                              bottom_desc_,
                                                              X.template data<T_X>(),
                                                              weight_desc_,
-                                                             W.template data<T_W>(),
+                                                             Weight.template data<T_W>(),
                                                              conv_desc_,
                                                              top_desc_,
-                                                             Y.template data<T_Y>(),
+                                                             Y->template mutable_data<T_Y>(),
                                                              requestAlgoCount_,
                                                              &returnedAlgoCount_,
                                                              &perf_,
@@ -216,12 +214,12 @@ namespace caffe2 {
                                                 bottom_desc_,
                                                 X.template data<T_X>(),
                                                 weight_desc_,
-                                                W.template data<T_W>(),
+                                                Weight.template data<T_W>(),
                                                 conv_desc_,
                                                 perf_.fwd_algo,
                                                 &beta_,
                                                 top_desc_,
-                                                Y.template data<T_Y>(),
+                                                Y->template mutable_data<T_Y>(),
                                                 &fwdConvWs,  // state->fwdConvWs().get(fwdConvWsSize_);
                                                 fwdConvWsSize_));
 
@@ -266,16 +264,16 @@ namespace caffe2 {
             typename T_DX, typename T_DW, typename T_DB>
     bool MiopenConvGradientOp::DoRunWithType() {
         auto &X = Input(INPUT);
-        auto &W = Input(FILTER);
+        auto &Weight = Input(FILTER);
         auto &dY = Input(OUTPUT_GRAD);
         auto *dW = Output(FILTER_GRAD);
         auto *dX = Output(no_bias_ ? BIAS_OR_INPUT_GRAD : INPUT_GRAD);
         dX->ResizeLike(X);
 
         CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
-        CAFFE_ENFORCE(W.ndim() >= 3 && W.ndim() <= 5);
+        CAFFE_ENFORCE(Weight.ndim() >= 3 && Weight.ndim() <= 5);
 
-        const int M = W.dim32(0);
+        const int M = Weight.dim32(0);
         int N = 0, C = 0, H = 0, W = 0, D = 0, N_out = 0, C_out = 0, H_out = 0, W_out = 0, D_out = 0;
 
         N = X.dim32(0);
@@ -315,10 +313,10 @@ namespace caffe2 {
                                 top_desc_,
                                 dY.template data<T_DY>(),
                                 weight_desc_,
-                                W.template data<T_W>(),
+                                Weight.template data<T_W>(),
                                 conv_desc_,
                                 bottom_desc_,
-                                dX.template data<T_DX>(),
+                                dX->template data<T_DX>(),
                                 requestAlgoCount_,
                                 &returnedAlgoCount_,
                                 &perf_,
@@ -344,12 +342,12 @@ namespace caffe2 {
                                                      top_desc_,
                                                      dY.template data<T_DY>(),
                                                      weight_desc_,
-                                                     W.template data<T_W>(),
+                                                     Weight.template data<T_W>(),
                                                      conv_desc_,
                                                      perf_.bwd_data_algo,
                                                      &beta_,
                                                      bottom_desc_,
-                                                     dX.template data<T_DX>(),
+                                                     dX->template mutable_data<T_DX>(),
                                                      &bwdDataWs,  // state->workspace().get(bwd_conv_ws_size);
                                                      bwdDataWsSize));
 
@@ -371,7 +369,7 @@ namespace caffe2 {
                                                                      X.template data<T_X>(),
                                                                      conv_desc_,
                                                                      weight_desc_,
-                                                                     dW.template data<T_DW>(),
+                                                                     dW->template mutable_data<T_DW>(),
                                                                      requestAlgoCount_,
                                                                      &returnedAlgoCount_,
                                                                      &perf_,
@@ -396,10 +394,10 @@ namespace caffe2 {
                                                         bottom_desc_,
                                                         X.template data<T_X>(),
                                                         conv_desc_,
-                                                        perf_.fwd_algo,
+                                                        perf_.bwd_weights_algo,
                                                         &beta_,
                                                         weight_desc_,
-                                                        dW.template data<T_DW>(),
+                                                        dW->template mutable_data<T_DW>(),
                                                         &bwd_weight_workspace,  // state->workspace().get(bwd_conv_ws_size);
                                                         bwdWeightWsSize_));
 
