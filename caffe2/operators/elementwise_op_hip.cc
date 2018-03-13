@@ -1,11 +1,9 @@
 #include "hip/hip_runtime.h"
 
-#if 0 // Ashish TBD: cub
 #define CUB_STDERR
 #include <cub/block/block_load.cuh>
 #include <cub/block/block_reduce.cuh>
 #include <cub/device/device_reduce.cuh>
-#endif
 #include "caffe2/core/common_hip.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/elementwise_op.h"
@@ -138,7 +136,7 @@ void ElementWiseDivide(
 
 REGISTER_HIP_OPERATOR(DivGradient, DivGradientOp<HIPContext>);
 
-//namespace {
+namespace {
 
 template <typename T>
 __global__ void
@@ -163,7 +161,6 @@ void device_reduce(
     int N,
     Tensor<HIPContext>* buffer,
     HIPContext* context) {
-#if 0 // Ashish TBD: cub
   // Determine temporary device storage requirements
   size_t temp_storage_bytes = 0;
   cub::DeviceReduce::Sum(
@@ -181,7 +178,6 @@ void device_reduce(
       d_out,
       N,
       context->hip_stream());
-#endif
 }
 
 template <>
@@ -222,7 +218,6 @@ void device_reduce<float16>(
 template <typename T, int BLOCK_THREADS>
 __global__ void
 reduce_sum_like(const T* g_idata, T* g_odata, int pre, int N, int post) {
-#if 0 // Ashish TBD: cub
   int n = hipBlockIdx_x;
   float sum = 0.0;
   int limit = pre * post;
@@ -240,9 +235,8 @@ reduce_sum_like(const T* g_idata, T* g_odata, int pre, int N, int post) {
   if (hipThreadIdx_x == 0) {
     g_odata[n] = convert::To<float, T>(aggregate);
   }
-#endif
 }
-//} // namespace
+} // namespace
 
 template <>
 template <typename T>
@@ -286,7 +280,7 @@ bool SumReduceLikeOp<HIPContext>::RunOnDevice() {
 
 REGISTER_HIP_OPERATOR(SumReduceLike, SumReduceLikeOp<HIPContext>);
 
-//namespace {
+namespace {
 
 template <bool is_scaler, typename T, typename M>
 __global__ void binary_add_kernel(const int N, const T* a, const T* b, T* r) {
@@ -311,7 +305,7 @@ __global__ void binary_add_kernel_broadcast(
         convert::To<T, M>(no_post ? b[idx % n] : b[(idx / post) % n]));
   }
 }
-//} // namespace
+} // namespace
 
 // Actual Add operator, because the above macros are read-only.
 class HIPAddOp final : public Operator<HIPContext> {
