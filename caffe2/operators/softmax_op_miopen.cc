@@ -65,11 +65,9 @@ class MiOpenSoftmaxOp final : public Operator<HIPContext> {
     }
     MIOPEN_ENFORCE(miopenSoftmaxForward(
         miopen_wrapper_.inline_miopen_handle(),
-        //miopenTypeWrapper<T>::kOne(),
         &alpha_,
         desc_,
         X.template data<T>(),
-        //miopenTypeWrapper<T>::kZero(),
         &beta_,
         desc_,
         Y->template mutable_data<T>()));
