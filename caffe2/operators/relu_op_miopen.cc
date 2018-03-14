@@ -91,11 +91,9 @@ class MiOPENReluOp final : public Operator<HIPContext> {
     const auto& X = Input(0);
     auto* Y = Output(0);
     Y->ResizeLike(X);
-
+//TODO enable fp16 support
     if (X.IsType<float>()) {
       return DoRunWithType<float>();
-    } else if (X.IsType<float16>()) {
-      return DoRunWithType<float16>();
     } else {
       LOG(FATAL) << "Unsupported input types";
     }
@@ -200,11 +198,9 @@ class MiOPENReluGradientOp final : public Operator<HIPContext> {
     const auto& Y = Input(0);
     auto* dX = Output(0);
     dX->ResizeLike(Y);
-
+//TODO enable fp16 suppot
     if (Y.IsType<float>()) {
       return DoRunWithType<float>();
-    } else if (Y.IsType<float16>()) {
-      return DoRunWithType<float16>();
     } else {
       LOG(FATAL) << "Unsupported input types";
     }
