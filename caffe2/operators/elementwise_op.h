@@ -388,7 +388,7 @@ bool DivGradientOp<Context>::RunOnDevice() {
   float* dXdata = dX->template mutable_data<float>();
   float* dYdata = dY->template mutable_data<float>();
 
-  ElementWiseDivide(context_, static_cast<const int>(Y.size()), dXdata, dYdata, dZdata, Ydata, Zdata);
+  ElementWiseDivide(context_, Y.size(), dXdata, dYdata, dZdata, Ydata, Zdata);
   return true;
 }
 
