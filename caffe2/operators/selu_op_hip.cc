@@ -8,7 +8,7 @@ namespace {
 template <typename T>
 __global__ void SeluKernel(const int N, const T* X, T* Y, T alpha_, T lambda_) {
   HIP_1D_KERNEL_LOOP(i, N) {
-    Y[i] = lambda_ * (X[i] > 0 ? X[i] : alpha_ * __expf(X[i]) - alpha_);
+    Y[i] = lambda_ * (X[i] > 0 ? X[i] : alpha_ * expf(X[i]) - alpha_);
   }
 }
 
