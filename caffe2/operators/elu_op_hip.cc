@@ -27,7 +27,7 @@ elu_kernel(const int N, const float alpha, const float* x, float* y) {
     if (x[i] > 0) {
       y[i] = x[i];
     } else {
-      y[i] = alpha * (__expf(x[i]) - 1);
+      y[i] = alpha * (expf(x[i]) - 1);
     }
   }
 }
