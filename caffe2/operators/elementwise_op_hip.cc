@@ -38,29 +38,29 @@ __global__ void name##Broadcast2Kernel( \
 struct Hip##name##Functor { \
   template <bool b_is_scalar, typename T, typename R> \
   inline void Run( \
-      int n, const T* a, const T* b, R* out, HIPContext* context) { \
+      size_t n, const T* a, const T* b, R* out, HIPContext* context) { \
     hipLaunchKernelGGL((name##Kernel<b_is_scalar, T, R>), CAFFE_GET_BLOCKS(n), \
                                       CAFFE_HIP_NUM_THREADS, \
                                       0, context->hip_stream(), \
-        a, b, out, n); \
+        a, b, out, static_cast<int>(n)); \
   } \
   template <typename T, typename R> \
   void RunWithBroadcast( \
-      const T* a, const T* b, R* out, int pre, int n, \
+      const T* a, const T* b, R* out, size_t pre, size_t n, \
       HIPContext* context) { \
     hipLaunchKernelGGL((name##BroadcastKernel<T, R>), CAFFE_GET_BLOCKS(pre * n), \
                                   CAFFE_HIP_NUM_THREADS, \
                                   0, context->hip_stream(), \
-        a, b, out, pre, n); \
+        a, b, out, static_cast<int>(pre), static_cast<int>(n)); \
   } \
   template <typename T, typename R> \
   void RunWithBroadcast2( \
-      const T* a, const T* b, R* out, int pre, int n, int post, \
+      const T* a, const T* b, R* out, size_t pre, size_t n, size_t post, \
       HIPContext* context) { \
     hipLaunchKernelGGL((name##Broadcast2Kernel<T, R>), CAFFE_GET_BLOCKS(pre * n * post), \
                                    CAFFE_HIP_NUM_THREADS, \
                                    0, context->hip_stream(), \
-        a, b, out, pre, n, post); \
+        a, b, out, static_cast<int>(pre), static_cast<int>(n), static_cast<int>(post)); \
   } \
 }; \
 REGISTER_HIP_OPERATOR( \
@@ -370,16 +370,16 @@ class HIPAddOp final : public Operator<HIPContext> {
           X0.dims(),
           X1.dims(),
           "Dimension mismatch - did you forget to set broadcast=1?");
-      hipLaunchKernelGGL((binary_add_kernel<false, T, M>), dim3(CAFFE_GET_BLOCKS(X0.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), static_cast<int>(X0.size()), X0data, X1data, outputData);
+      hipLaunchKernelGGL((binary_add_kernel<false, T, M>), dim3(CAFFE_GET_BLOCKS(X0.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), static_cast<const int>(X0.size()), X0data, X1data, outputData);
     } else if (X1.size() == 1) {
-      hipLaunchKernelGGL((binary_add_kernel<true, T, M>), dim3(CAFFE_GET_BLOCKS(X0.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), static_cast<int>(X0.size()), X0data, X1data, outputData);
+      hipLaunchKernelGGL((binary_add_kernel<true, T, M>), dim3(CAFFE_GET_BLOCKS(X0.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), static_cast<const int>(X0.size()), X0data, X1data, outputData);
     } else {
-      int pre, n, post;
+      size_t pre, n, post;
       std::tie(pre, n, post) = calculate_broadcast_sizes(X0, X1, axis_);
       if (post == 1) {
-        hipLaunchKernelGGL((binary_add_kernel_broadcast<true, T, M>), dim3(CAFFE_GET_BLOCKS(pre * n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), X0data, X1data, outputData, pre, post, n);
+        hipLaunchKernelGGL((binary_add_kernel_broadcast<true, T, M>), dim3(CAFFE_GET_BLOCKS(pre * n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), X0data, X1data, outputData, static_cast<const int>(pre), static_cast<const int>(post), static_cast<const int>(n));
       } else {
-        hipLaunchKernelGGL((binary_add_kernel_broadcast<false, T, M>), dim3(CAFFE_GET_BLOCKS(pre * post * n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), X0data, X1data, outputData, pre, post, n);
+        hipLaunchKernelGGL((binary_add_kernel_broadcast<false, T, M>), dim3(CAFFE_GET_BLOCKS(pre * post * n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), X0data, X1data, outputData, static_cast<const int>(pre), static_cast<const int>(post), static_cast<const int>(n));
       }
     }
     return true;
