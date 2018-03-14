@@ -233,12 +233,10 @@ bool MiOpenSpatialBNOp::DoRunWithType() {
   }
   return true;
 }
-
+//TODO enable fp16 mode
 bool MiOpenSpatialBNOp::RunOnDevice() {
   if (Input(0).IsType<float>()) {
     return DoRunWithType<float,float>();
-  } else if (Input(0).IsType<float16>()) {
-    return DoRunWithType<float16,float>();
   } else {
     LOG(FATAL) << "Unsupported input types";
   }
@@ -312,12 +310,10 @@ bool MiOpenSpatialBNGradientOp::DoRunWithType() {
       saved_var_data));
   return true;
 }
-
+//TODO enable fp16
 bool MiOpenSpatialBNGradientOp::RunOnDevice() {
   if (Input(0).IsType<float>()) {
     return DoRunWithType<float,float>();
-  } else if (Input(0).IsType<float16>()) {
-    return DoRunWithType<float16,float>();
   } else {
     LOG(FATAL) << "Unsupported input types";
   }
