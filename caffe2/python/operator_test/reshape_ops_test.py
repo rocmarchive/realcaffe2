@@ -123,9 +123,10 @@ class TestLengthsToShapeOps(TestCase):
 def _test_reshape(old_shape, new_shape, expected_shape=None, arg_shape=True,
                  in_place=False):
     devices = [core.DeviceOption(caffe2_pb2.CPU, 0)]
-    if workspace.NumCudaDevices() > 0:
+    if workspace.has_hip and workspace.NumHipDevices() > 0:
+        devices.append(core.DeviceOption(caffe2_pb2.HIP, 0))
+    elif workspace.NumCudaDevices() > 0:
         devices.append(core.DeviceOption(caffe2_pb2.CUDA, 0))
-
     for device_opt in devices:
         with core.DeviceScope(device_opt):
             if expected_shape is None:
