@@ -552,7 +552,7 @@ class TestDeviceOption(test_util.TestCase):
         self.assertTrue(core.device_option_equal(opt1, opt2))
         opt2.device_type = 0
         self.assertTrue(core.device_option_equal(opt1, opt2))
-        opt1.device_type = 5
+        opt1.device_type = 1
         self.assertFalse(core.device_option_equal(opt1, opt2))
 
 
@@ -852,9 +852,9 @@ external_input: "fc_b"
         with core.DeviceScope(device_option):
             net.Relu("data", "relu5")
         if workspace.has_hip:
-            device_option.hip_gpu_id = 0
+            device_option.hip_gpu_id = 1
         else:
-            device_option.cuda_gpu_id = 0
+            device_option.cuda_gpu_id = 1
         with core.DeviceScope(device_option):
             net.Relu("data", "relu6")
 
