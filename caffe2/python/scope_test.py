@@ -18,7 +18,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from caffe2.python import scope, core
+from caffe2.python import scope, core, workspace
 from caffe2.proto import caffe2_pb2
 
 import unittest
@@ -33,7 +33,7 @@ def thread_runner(idx, testobj):
     testobj.assertEquals(scope.CurrentNameScope(), "")
     testobj.assertEquals(scope.CurrentDeviceScope(), None)
     namescope = "namescope_{}".format(idx)
-    dsc = core.DeviceOption(caffe2_pb2.CUDA, idx)
+    dsc = core.DeviceOption(caffe2_pb2.HIP if workspace.has_hip else caffe2_pb2.CUDA, idx)
     with scope.DeviceScope(dsc):
         with scope.NameScope(namescope):
             testobj.assertEquals(scope.CurrentNameScope(), namescope + "/")
@@ -73,7 +73,7 @@ class TestScope(unittest.TestCase):
     def testDevicescopeBasic(self):
         self.assertEquals(scope.CurrentDeviceScope(), None)
 
-        dsc = core.DeviceOption(caffe2_pb2.CUDA, 9)
+        dsc = core.DeviceOption(caffe2_pb2.HIP if workspace.has_hip else caffe2_pb2.CUDA, 9)
         with scope.DeviceScope(dsc):
             self.assertEquals(scope.CurrentDeviceScope(), dsc)
 
@@ -82,7 +82,7 @@ class TestScope(unittest.TestCase):
     def testEmptyDevicescopeBasic(self):
         self.assertEquals(scope.CurrentDeviceScope(), None)
 
-        dsc = core.DeviceOption(caffe2_pb2.CUDA, 9)
+        dsc = core.DeviceOption(caffe2_pb2.HIP if workspace.has_hip else caffe2_pb2.CUDA, 9)
         with scope.DeviceScope(dsc):
             self.assertEquals(scope.CurrentDeviceScope(), dsc)
             with scope.EmptyDeviceScope():
@@ -93,7 +93,7 @@ class TestScope(unittest.TestCase):
     def testDevicescopeAssertion(self):
         self.assertEquals(scope.CurrentDeviceScope(), None)
 
-        dsc = core.DeviceOption(caffe2_pb2.CUDA, 9)
+        dsc = core.DeviceOption(caffe2_pb2.HIP if workspace.has_hip else caffe2_pb2.CUDA, 9)
 
         try:
             with scope.DeviceScope(dsc):
@@ -133,3 +133,7 @@ class TestScope(unittest.TestCase):
 
         # Ensure all threads succeeded
         self.assertEquals(SUCCESS_COUNT, 4)
+
+if __name__=="__main__":
+    import unittest
+    unittest.main()

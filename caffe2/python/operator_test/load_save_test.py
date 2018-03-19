@@ -30,8 +30,11 @@ from caffe2.proto import caffe2_pb2
 from caffe2.python import core, test_util, workspace
 
 if workspace.has_gpu_support:
-    DEVICES = [caffe2_pb2.CPU, caffe2_pb2.CUDA]
-    max_gpuid = workspace.NumCudaDevices() - 1
+    if workspace.has_hip:
+        DEVICES = [caffe2_pb2.CPU, caffe2_pb2.HIP]
+    else:
+        DEVICES = [caffe2_pb2.CPU, caffe2_pb2.CUDA]
+    max_gpuid = workspace.NumGpuDevices() - 1
 else:
     DEVICES = [caffe2_pb2.CPU]
     max_gpuid = 0
@@ -105,6 +108,9 @@ class TestLoadSaveBase(test_util.TestCase):
                                      device_type)
                     if device_type == caffe2_pb2.CUDA:
                         self.assertEqual(proto.tensor.device_detail.cuda_gpu_id,
+                                         gpu_id)
+                    if device_type == caffe2_pb2.HIP:
+                        self.assertEqual(proto.tensor.device_detail.hip_gpu_id,
                                          gpu_id)
 
             blobs = [str(i) for i in range(len(arrays))]
