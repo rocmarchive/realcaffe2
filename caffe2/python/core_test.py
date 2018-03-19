@@ -643,7 +643,7 @@ class TestInferDevice(test_util.TestCase):
             self.assertEqual(op.input[1], "fc_w_hip_1")
             self.assertEqual(op.input[2], "fc_b_hip_1")
             self.assertEqual(op.device_option.device_type, 4)
-            self.assertEqual(op.device_option.cuda_gpu_id, 1)
+            self.assertEqual(op.device_option.hip_gpu_id, 1)
 
         else:
             self.assertEqual(op.input[0], "data_cuda_1")
