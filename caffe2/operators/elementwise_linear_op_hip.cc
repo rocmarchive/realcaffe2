@@ -19,10 +19,7 @@
 #include "elementwise_linear_op.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/operator_fallback_hip.h"
-
-#if 0 // TBD Ashish: cub
 #include <cub/block/block_reduce.cuh>
-#endif
 
 namespace caffe2 {
 
@@ -49,7 +46,6 @@ __global__ void ElementwiseLinearGradientKernel(const int N, const int D,
     g_a_sum += gox * X_data[n * D + d];
     g_b_sum += gox;
   }
-#if 0 // Ashish TBD: cub
   typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
@@ -61,7 +57,6 @@ __global__ void ElementwiseLinearGradientKernel(const int N, const int D,
     g_a_data[d] = g_a_sum_tot;
     g_b_data[d] = g_b_sum_tot;
   }
-#endif
 }
 
 }  // namespace

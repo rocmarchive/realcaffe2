@@ -52,3 +52,7 @@
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
+[submodule "third_party/cub-hip"]
+	path = third_party/cub-hip
+	url = https://github.com/ashishfarmer/cub-hip.git
+	branch = hip_port_1.7.4_fixes

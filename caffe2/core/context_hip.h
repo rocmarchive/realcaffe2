@@ -17,7 +17,7 @@ namespace caffe2 {
 
 enum class HipMemoryPoolType {
   NONE = 0,
-  //CUB = 1,
+  CUB = 1,
 };
 
 /**

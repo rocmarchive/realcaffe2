@@ -399,6 +399,15 @@ if(USE_CUDA)
   endif()
 endif()
 
+# ---[ AMD Thrust
+if(USE_HIP)
+  caffe2_include_directories($ENV{THRUST_ROOT})
+  #For cub-hip
+  caffe2_include_directories($ENV{THRUST_ROOT}/thrust/system/cuda/detail/cub-hip)
+  message(STATUS "Found Thrust: $ENV{THRUST_ROOT}")
+  message(STATUS "Found cub-hip: $ENV{THRUST_ROOT}/thrust/system/cuda/detail/cub-hip")
+endif()
+
 if(USE_GLOO)
   if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     message(WARNING "Gloo can only be used on Linux.")

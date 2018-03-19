@@ -1,20 +1,17 @@
 // Implements the math functions in HIP for GPU.
 #include "hip/hip_runtime.h"
 
-//#include <cub/block/block_reduce.cuh>
-
 #include "caffe2/core/context_hip.h"
 #include "caffe2/utils/conversions.h"
 #include "caffe2/utils/math.h"
 
-#if 0 // Ashish TBD: cub and thrust
 #include <cub/cub.cuh>
+#include <cub/block/block_reduce.cuh>
 
-#if THRUST_VERSION >= 100800
+/*#if THRUST_VERSION >= 100800
 #define THRUST_SUPPORTS_PER_THREAD
 #endif  // THRUST_VERSION >= 100800
-#endif
-
+*/
 namespace caffe2 {
 namespace math {
 
@@ -134,8 +131,7 @@ DELEGATE_SIMPLE_HIP_BINARY_PREFIX_FUNCTION(float, ElemwiseMax, fmaxf);
       T* dst,                                                           \
       Tensor<HIPContext>* scratch_ptr,                                 \
       HIPContext* context) {                                           \
-    VLOG(1) << "WIP: Cub call in Reduce... is NOP";                     \
-/*    size_t memRequired = 0;                                             \
+    size_t memRequired = 0;                                             \
     cub::DeviceReduce::func(                                            \
         nullptr, memRequired, src, dst, N, context->hip_stream());     \
     auto buffer_size =                                                  \
@@ -148,7 +144,7 @@ DELEGATE_SIMPLE_HIP_BINARY_PREFIX_FUNCTION(float, ElemwiseMax, fmaxf);
         dst,                                                            \
         N,                                                              \
         context->hip_stream());                                        \
-  */}
+  }
 
 DELEGATE_REDUCTION_FUNCTION(float, ReduceMin, Min)
 DELEGATE_REDUCTION_FUNCTION(float, ReduceMax, Max)
@@ -819,8 +815,6 @@ void SumFloatIter(
     float*& dest,
     HIPContext* context,
     Tensor<HIPContext>* scratch_ptr) {
-  CAFFE_THROW("Unsupported library");
-#if 0
   size_t memRequired = 0;
   cub::DeviceReduce::Sum(
       nullptr, memRequired, it, dest, N, context->hip_stream());
@@ -840,7 +834,6 @@ void SumFloatIter(
       dest,
       N,
       context->hip_stream());
-#endif
 }
 } // namespace
 
@@ -876,7 +869,7 @@ struct FloatTransform {
       T* y,                                                               \
       HIPContext* context,                                               \
       Tensor<HIPContext>* scratch_ptr) {                                 \
-/*    if (scratch_ptr && N > DEVICE_REDUCE_SIZE_THRESHOLD) {                \
+      if (scratch_ptr && N > DEVICE_REDUCE_SIZE_THRESHOLD) {                \
       FloatTransform<T> transform;                                        \
       cub::TransformInputIterator<float, FloatTransform<T>, const T*> it( \
           x, transform);                                                  \
@@ -886,7 +879,7 @@ struct FloatTransform {
     } else {                                                              \
       hipLaunchKernelGGL((SumKernel), dim3(1), dim3(SUM_KERNEL_NTHREADS), 0, context->hip_stream(),    \
           N, x, y, false);                                                \
-    }*/  CAFFE_THROW("Unsupported library");                               \
+    }                                                                    \
   }
 
 CAFFE2_MATH_SUM_FUNC(float16)
@@ -908,8 +901,6 @@ void SumSqr<float, HIPContext>(
     float* y,
     HIPContext* context,
     Tensor<HIPContext>* scratch_ptr) {
-  CAFFE_THROW("Unsupported library");
-#if 0
   if (scratch_ptr && N > DEVICE_REDUCE_SIZE_THRESHOLD) {
     SqrTransform<float> transform;
     cub::TransformInputIterator<float, SqrTransform<float>, const float*> it(
@@ -919,7 +910,6 @@ void SumSqr<float, HIPContext>(
     hipLaunchKernelGGL((SumKernel), dim3(1), dim3(SUM_KERNEL_NTHREADS), 0, context->hip_stream(), 
         N, x, y, true);
   }
-#endif
 }
 
 #define CAFFE2_MATH_SUMSQR_FUNC(T)                                      \
@@ -930,7 +920,7 @@ void SumSqr<float, HIPContext>(
       T* y,                                                             \
       HIPContext* context,                                             \
       Tensor<HIPContext>* scratch_ptr) {                               \
-/*    if (scratch_ptr && N > DEVICE_REDUCE_SIZE_THRESHOLD) {              \
+      if (scratch_ptr && N > DEVICE_REDUCE_SIZE_THRESHOLD) {            \
       FloatTransform<T> float_transform;                                \
       cub::TransformInputIterator<float, FloatTransform<T>, const T*>   \
           float_it(x, float_transform);                                 \
@@ -946,7 +936,7 @@ void SumSqr<float, HIPContext>(
     } else {                                                            \
       hipLaunchKernelGGL((SumKernel), dim3(1), dim3(SUM_KERNEL_NTHREADS), 0, context->hip_stream(),  \
           N, x, y, true);                                               \
-    }*/ CAFFE_THROW("Unsupported library");                             \
+    }                                                                   \
   }
 
 CAFFE2_MATH_SUMSQR_FUNC(float16)
@@ -1393,7 +1383,7 @@ __global__ void im2col_nd_gpu_kernel(
         }
       } // for (int i = num_axes - 1; i >= 0; --i)
     } while (incremented); // do
-  } // CUDA_KERNEL_LOOP(index, n)
+  } // HIP_KERNEL_LOOP(index, n)
 }
 
 template <typename T, int num_axes>
@@ -1460,7 +1450,7 @@ __global__ void col2im_nd_gpu_kernel(
       }
     }
     if (done) {
-      continue; // CUDA_KERNEL_LOOP(index, n)
+      continue; // HIP_KERNEL_LOOP(index, n)
     }
     // Loop over the col to compute the output val.
     T val = 0;
@@ -1504,7 +1494,7 @@ __global__ void col2im_nd_gpu_kernel(
       } // for (int i = num_axes - 1; i >= 0; --i)
     } while (incremented);
     data_im[index] = val;
-  } // CUDA_KERNEL_LOOP(index, n)
+  } // HIP_KERNEL_LOOP(index, n)
 }
 
 }  // namespace
@@ -1753,7 +1743,6 @@ __global__ void rowwise_max_kernel(
     const int cols,
     const float* data,
     float* out) {
-#if 0 // Ashish TBD: cub
   typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   for (int rowIndex = hipBlockIdx_x; rowIndex < rows; rowIndex += hipGridDim_x) {
@@ -1764,7 +1753,7 @@ __global__ void rowwise_max_kernel(
     // However, if we reduce the number of threads to take advantage of
     // warp-wide synchronization, this may become a problem again.
     for (int colIndex = hipThreadIdx_x; colIndex < cols; colIndex += hipBlockDim_x) {
-      maxval = max(data[rowIndex * cols + colIndex], maxval);
+      maxval = fmaxf(data[rowIndex * cols + colIndex], maxval);
     }
     maxval = BlockReduce(temp_storage).Reduce(maxval, cub::Max());
     if (hipThreadIdx_x == 0) {
@@ -1772,7 +1761,6 @@ __global__ void rowwise_max_kernel(
     }
     __syncthreads();
   }
-#endif
 }
 
 __global__ void colwise_max_kernel(
@@ -1780,13 +1768,12 @@ __global__ void colwise_max_kernel(
     const int cols,
     const float* data,
     float* out) {
-#if 0 // Ashish TBS: cub
   typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   for (int colIndex = hipBlockIdx_x; colIndex < cols; colIndex += hipGridDim_x) {
     float maxval = -FLT_MAX;
     for (int rowIndex = hipThreadIdx_x; rowIndex < rows; rowIndex += hipBlockDim_x) {
-      maxval = max(data[rowIndex * cols + colIndex], maxval);
+      maxval = fmaxf(data[rowIndex * cols + colIndex], maxval);
     }
     maxval = BlockReduce(temp_storage).Reduce(maxval, cub::Max());
     if (hipThreadIdx_x == 0) {
@@ -1794,7 +1781,6 @@ __global__ void colwise_max_kernel(
     }
     __syncthreads();
   }
-#endif
 }
 
 } // namespace

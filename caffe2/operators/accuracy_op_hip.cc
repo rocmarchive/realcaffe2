@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 /**
  * Copyright (c) 2016-present, Facebook, Inc.
  *
@@ -18,8 +17,8 @@
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/accuracy_op.h"
 #include "caffe2/utils/math.h"
-
-//#include <cub/block/block_reduce.cuh>
+#include "hip/hip_runtime.h"
+#include <cub/block/block_reduce.cuh>
 
 namespace caffe2 {
 
@@ -31,8 +30,8 @@ __global__ void AccuracyKernel(
     const float* Xdata,
     const int* labelData,
     float* accuracy) {
-  //typedef cub::BlockReduce<int, CAFFE_HIP_NUM_THREADS> BlockReduce;
-  //__shared__ typename BlockReduce::TempStorage temp_storage;
+  typedef cub::BlockReduce<int, CAFFE_HIP_NUM_THREADS> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
   int correct = 0;
   for (int row = blockIdx.x; row < N; row += gridDim.x) {
     const int label = labelData[row];
@@ -44,7 +43,7 @@ __global__ void AccuracyKernel(
         ++ngt;
       }
     }
-    //ngt = BlockReduce(temp_storage).Sum(ngt);
+    ngt = BlockReduce(temp_storage).Sum(ngt);
     if (ngt <= top_k) {
       ++correct;
     }

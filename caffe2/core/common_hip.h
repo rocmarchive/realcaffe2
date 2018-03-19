@@ -229,11 +229,14 @@ const char* rocblasGetErrorString(rocblas_status error);
 // CUDA_KERNEL_ASSERT is a macro that wraps an assert() call inside cuda
 // kernels. This is not supported by Apple platforms so we special case it.
 // See http://docs.nvidia.com/cuda/cuda-c-programming-guide/#assertion
+#if 0 // TBD Ashish: Disabling assert(..) which is under development for device code
 #ifdef __APPLE__
 #define HIP_KERNEL_ASSERT(...)
 #else  // __APPLE__
 #define HIP_KERNEL_ASSERT(...) assert(__VA_ARGS__)
 #endif  // __APPLE__
+#endif
+#define HIP_KERNEL_ASSERT(...)
 
 // The following helper functions are here so that you can write a kernel call
 // when you are not particularly interested in maxing out the kernels'
