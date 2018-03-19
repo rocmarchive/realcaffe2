@@ -1219,7 +1219,10 @@ class RNNCellTest(hu.HypothesisTestCase):
                     if arg.name == "step_net":
                         for step_op in arg.n.op:
                             self.assertEqual(0, step_op.device_option.device_type)
-                            self.assertEqual(1, step_op.device_option.cuda_gpu_id)
+                            if workspace.has_hip:
+                                self.assertEqual(1, step_op.device_option.hip_gpu_id)
+                            else:
+                                self.assertEqual(1, step_op.device_option.cuda_gpu_id)
                     elif arg.name == 'backward_step_net':
                         self.assertEqual(caffe2_pb2.NetDef(), arg.n)
 
