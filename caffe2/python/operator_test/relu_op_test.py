@@ -31,7 +31,7 @@ import unittest
 class TestRelu(hu.HypothesisTestCase):
 
     @given(X=hu.tensor(),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["MIOPEN"]),
            **mu.gcs)
     def test_relu(self, X, gc, dc, engine):
         op = core.CreateOperator("Relu", ["X"], ["Y"], engine=engine)
