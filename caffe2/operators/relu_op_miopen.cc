@@ -91,7 +91,6 @@ class MiOPENReluOp final : public Operator<HIPContext> {
     const auto& X = Input(0);
     auto* Y = Output(0);
     Y->ResizeLike(X);
-//TODO enable fp16 support
     if (X.IsType<float>()) {
       return DoRunWithType<float>();
     } else {
@@ -105,7 +104,7 @@ class MiOPENReluOp final : public Operator<HIPContext> {
   miopenTensorDescriptor_t data_desc_;
   miopenActivationDescriptor_t activ_desc_;
   vector<TIndex> miopen_input_dims_;
-
+  
   const float alpha_;
   const float beta_;
   const double power_;
@@ -198,7 +197,6 @@ class MiOPENReluGradientOp final : public Operator<HIPContext> {
     const auto& Y = Input(0);
     auto* dX = Output(0);
     dX->ResizeLike(Y);
-//TODO enable fp16 suppot
     if (Y.IsType<float>()) {
       return DoRunWithType<float>();
     } else {
