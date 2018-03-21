@@ -27,7 +27,22 @@ def _cudnn_supports(
         return False
     return True
 
-# Rohith :  add miopen supoort cases as above
+def _miopen_supports(
+        dilation=False,
+        nhwc=False,
+        backward=False,
+):
+    """Return True if MIOPEN supports this configuration."""
+    if backward:
+        if nhwc:
+            # nhwc isn't supported in backward ops.
+            return False
+    else:
+        # Forward mode.
+        if dilation:
+            return False
+    return True
+
 def _conv_1d_output_size(size, kernel, pad, dilation, stride):
     return max(
         1,
@@ -135,6 +150,9 @@ class TestConvolution(hu.HypothesisTestCase):
         if gc.device_type == caffe2_pb2.CUDA and engine == 'CUDNN':
             assume(_cudnn_supports(dilation=(dilation > 1),
                                    nhwc=(order == 'NHWC')))
+        if gc.device_type == caffe2_pb2.HIP and engine == 'MIOPEN':
+            assume(_miopen_supports(dilation=(dilation > 1),
+                                   nhwc=(order == 'NHWC')))
 
         assume(engine != "MKLDNN" or use_bias is True)
 
@@ -222,7 +240,9 @@ class TestConvolution(hu.HypothesisTestCase):
         if gc.device_type == caffe2_pb2.CUDA and engine == 'CUDNN':
             assume(_cudnn_supports(dilation=(dilation > 1),
                                    nhwc=(order == 'NHWC')))
-
+        if gc.device_type == caffe2_pb2.HIP and engine == 'MIOPEN':
+            assume(_miopen_supports(dilation=(dilation > 1),
+                                   nhwc=(order == 'NHWC')))
         assume(engine != "MKLDNN" or use_bias is True)
 
         op = core.CreateOperator(
@@ -306,7 +326,9 @@ class TestConvolution(hu.HypothesisTestCase):
         if gc.device_type == caffe2_pb2.CUDA and engine == 'CUDNN':
             assume(_cudnn_supports(dilation=(dilation > 1),
                                    nhwc=(order == 'NHWC')))
-
+        if gc.device_type == caffe2_pb2.HIP and engine == 'MIOPEN':
+            assume(_miopen_supports(dilation=(dilation > 1),
+                                   nhwc=(order == 'NHWC')))
         assume(engine != "MKLDNN" or use_bias is True)
 
         op = core.CreateOperator(
@@ -468,7 +490,9 @@ class TestConvolution(hu.HypothesisTestCase):
         if gc.device_type == caffe2_pb2.CUDA and engine == 'CUDNN':
             assume(_cudnn_supports(dilation=(dilation > 1),
                                    nhwc=(order == 'NHWC')))
-
+        if gc.device_type == caffe2_pb2.HIP and engine == 'MIOPEN':
+            assume(_miopen_supports(dilation=(dilation > 1),
+                                   nhwc=(order == 'NHWC')))
         assume(engine != "MKLDNN" or use_bias is True)
 
         op = core.CreateOperator(
