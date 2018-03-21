@@ -28,7 +28,7 @@ class Seq2SeqModelHelper(ModelHelper):
 
     def __init__(self, init_params=True, **kwargs):
         arg_scope = {
-            'use_cudnn': kwargs.pop('use_cudnn', True),
+            'use_gpu_engine': kwargs.pop('use_gpu_engine', True),
             'cudnn_exhaustive_search': kwargs.pop('cudnn_exhaustive_search', False),
             'order': 'NHWC',
         }
