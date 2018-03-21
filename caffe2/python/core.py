@@ -259,7 +259,7 @@ class BlobReference(object):
         additional_methods = [
             op
             for op in _REGISTERED_OPERATORS
-            if '_ENGINE_' not in op or '_ENGINE_CUDNN' in op]
+            if '_ENGINE_' not in op or '_ENGINE_MIOPEN' in op or '_ENGINE_CUDNN' in op]
         return sorted(set(chain(
             dir(type(self)),
             viewkeys(self.__dict__),
@@ -1989,7 +1989,7 @@ class Net(object):
             raise ValueError('{} is not supported'.format(aggregator))
         return GradientSlice(indices=unique, values=new_g)
 
-    def RunAllOnGPU(self, gpu_id=0, use_cudnn=False):
+    def RunAllOnGPU(self, gpu_id=0, use_gpu_engine=False):
         """A convenient function to run everything on the GPU."""
         device_option = caffe2_pb2.DeviceOption()
         if(workspace.C.has_hip):
@@ -1999,9 +1999,9 @@ class Net(object):
             device_option.device_type = caffe2_pb2.CUDA
             device_option.cuda_gpu_id = gpu_id
         self._net.device_option.CopyFrom(device_option)
-        if use_cudnn:
+        if use_gpu_engine:
             for op in self._net.op:
-                op.engine = "CUDNN"
+                op.engine = "MIOPEN" if workspace.has_hip else "CUDNN"
     def RunAllOnMKL(self):
         """A convenient function to run everything using MKLDNN."""
         device_option = caffe2_pb2.DeviceOption()
@@ -2043,7 +2043,7 @@ class Net(object):
     def __getattr__(self, op_type):
         if op_type.startswith('__'):
             raise AttributeError('Attribute {} not found.'.format(op_type))
-        if not IsOperator(op_type) and not IsOperatorWithEngine(op_type, "CUDNN"):
+        if not IsOperator(op_type) and not IsOperatorWithEngine(op_type, "MIOPEN") and not IsOperatorWithEngine(op_type, "CUDNN"):
             raise AttributeError(
                 'Method ' + op_type + ' is not a registered operator.' +
                 ' Did you mean: [' +
