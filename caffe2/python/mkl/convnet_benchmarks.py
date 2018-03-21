@@ -85,7 +85,7 @@ from caffe2.python.model_helper import ModelHelper
 from caffe2.python.models import resnet
 import numpy as np
 
-def MLP(order, cudnn_ws, mkl):
+def MLP(order, gpu_engine_ws, mkl):
     model = ModelHelper(name="benchmark")
     d = 256
     depth = 20
@@ -112,19 +112,19 @@ def MLP(order, cudnn_ws, mkl):
     return model, d
 
 
-def ResNet50(order, cudnn_ws, mkl):
-    my_arg_scope = {'order': order, 'use_cudnn': True,
-                    'cudnn_exhaustive_search': True,
-                    'ws_nbytes_limit': str(cudnn_ws)}
+def ResNet50(order, gpu_engine_ws, mkl):
+    my_arg_scope = {'order': order, 'use_gpu_engine': True,
+                    'gpu_engine_exhaustive_search': True,
+                    'ws_nbytes_limit': str(gpu_engine_ws)}
     model = ModelHelper(name="alexnet", arg_scope=my_arg_scope)
     resnet.create_resnet50(model, "data", 3, 1000, is_test=True,
                            final_avg_kernel=14)
     return model, 448
 
-def AlexNet(order, cudnn_ws, mkl):
-    my_arg_scope = {'order': order, 'use_cudnn': True,
-                    'cudnn_exhaustive_search': True,
-                    'ws_nbytes_limit': str(cudnn_ws)}
+def AlexNet(order, gpu_engine_ws, mkl):
+    my_arg_scope = {'order': order, 'use_gpu_engine': True,
+                    'gpu_engine_exhaustive_search': True,
+                    'ws_nbytes_limit': str(gpu_engine_ws)}
     model = ModelHelper(name="alexnet", arg_scope=my_arg_scope)
     conv1 = brew.conv(
         model,
@@ -209,10 +209,10 @@ def AlexNet(order, cudnn_ws, mkl):
     return model, 224
 
 
-def OverFeat(order, cudnn_ws, mkl):
-    my_arg_scope = {'order': order, 'use_cudnn': True,
-                    'cudnn_exhaustive_search': True,
-                    'ws_nbytes_limit': str(cudnn_ws)}
+def OverFeat(order, gpu_engine_ws, mkl):
+    my_arg_scope = {'order': order, 'use_gpu_engine': True,
+                    'gpu_engine_exhaustive_search': True,
+                    'ws_nbytes_limit': str(gpu_engine_ws)}
     model = ModelHelper(name='overfeat', arg_scope=my_arg_scope)
     conv1 = brew.conv(
         model,
@@ -288,10 +288,10 @@ def OverFeat(order, cudnn_ws, mkl):
     return model, 231
 
 
-def VGGA(order, cudnn_ws, mkl):
-    my_arg_scope = {'order': order, 'use_cudnn': True,
-                    'cudnn_exhaustive_search': True,
-                    'ws_nbytes_limit': str(cudnn_ws)}
+def VGGA(order, gpu_engine_ws, mkl):
+    my_arg_scope = {'order': order, 'use_gpu_engine': True,
+                    'gpu_engine_exhaustive_search': True,
+                    'ws_nbytes_limit': str(gpu_engine_ws)}
     model = ModelHelper(name='vgg-a', arg_scope=my_arg_scope)
     conv1 = brew.conv(
         model,
@@ -478,10 +478,10 @@ def _InceptionModule(
     return output
 
 
-def Inception(order, cudnn_ws, mkl):
-    my_arg_scope = {'order': order, 'use_cudnn': True,
-                    'cudnn_exhaustive_search': True,
-                    'ws_nbytes_limit': str(cudnn_ws)}
+def Inception(order, gpu_engine_ws, mkl):
+    my_arg_scope = {'order': order, 'use_gpu_engine': True,
+                    'gpu_engine_exhaustive_search': True,
+                    'ws_nbytes_limit': str(gpu_engine_ws)}
     model = ModelHelper(name="inception", arg_scope=my_arg_scope)
     conv1 = brew.conv(
         model,
@@ -572,7 +572,7 @@ def AddParameterUpdate(model):
 
 
 def Benchmark(model_gen, arg):
-    model, input_size = model_gen(arg.order, arg.cudnn_ws, arg.mkl)
+    model, input_size = model_gen(arg.order, arg.gpu_engine_ws, arg.mkl)
     model.Proto().type = arg.net_type
     model.Proto().num_workers = arg.num_workers
 
@@ -667,9 +667,9 @@ def GetArgumentParser():
         help="The order to evaluate."
     )
     parser.add_argument(
-        "--cudnn_ws",
+        "--gpu_engine_ws",
         type=int,
-        help="The cudnn workspace size."
+        help="The gpu_engine workspace size."
     )
     parser.add_argument(
         "--iterations",
