@@ -131,7 +131,7 @@ class ModelHelper(object):
         self.biases = []
         self._arg_scope = {
             'order': "NCHW",
-            'use_cudnn': True,
+            'use_gpu_engine': True,
             'cudnn_exhaustive_search': False,
         }
         if arg_scope is not None:
