@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from caffe2.python import core
+from caffe2.python.workspace import has_hip
 from hypothesis import given
 import hypothesis.strategies as st
 import caffe2.python.hypothesis_test_util as hu
@@ -51,7 +52,7 @@ class TestWhere(hu.HypothesisTestCase):
         ).all())
 
     @given(N=st.integers(min_value=1, max_value=10),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN"]),
            **hu.gcs_cpu_only)
     def test_where(self, N, gc, dc, engine):
         C = np.random.rand(N).astype(bool)
@@ -62,7 +63,7 @@ class TestWhere(hu.HypothesisTestCase):
         self.assertReferenceChecks(gc, op, [C, X, Y], mux)
 
     @given(N=st.integers(min_value=1, max_value=10),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN"]),
            **hu.gcs_cpu_only)
     def test_where_dim2(self, N, gc, dc, engine):
         C = np.random.rand(N, N).astype(bool)
@@ -88,7 +89,7 @@ class TestRowWhere(hu.HypothesisTestCase):
         ).all())
 
     @given(N=st.integers(min_value=1, max_value=10),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN"]),
            **hu.gcs_cpu_only)
     def test_rowwhere(self, N, gc, dc, engine):
         C = np.random.rand(N).astype(bool)
@@ -105,7 +106,7 @@ class TestRowWhere(hu.HypothesisTestCase):
         self.assertReferenceChecks(gc, op, [C, X, Y], mux)
 
     @given(N=st.integers(min_value=1, max_value=10),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN"]),
            **hu.gcs_cpu_only)
     def test_rowwhere_dim2(self, N, gc, dc, engine):
         C = np.random.rand(N).astype(bool)
@@ -125,7 +126,7 @@ class TestRowWhere(hu.HypothesisTestCase):
 class TestIsMemberOf(hu.HypothesisTestCase):
 
     @given(N=st.integers(min_value=1, max_value=10),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN"]),
            **hu.gcs_cpu_only)
     def test_is_member_of(self, N, gc, dc, engine):
         X = np.random.randint(10, size=N).astype(np.int64)
