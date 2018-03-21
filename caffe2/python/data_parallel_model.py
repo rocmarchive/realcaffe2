@@ -938,7 +938,7 @@ def _AllReduce(devices, model, net, param, use_nccl=False, control_input=None):
         return
 
     if model._device_type == caffe2_pb2.CUDA or model._device_type == caffe2_pb2.HIP:
-        p2p_access_pattern = workspace.GetHipPeerAccessPattern() if workspace.has_hip else workspace.GetCudaPeerAccessPattern
+        p2p_access_pattern = workspace.GetHipPeerAccessPattern() if workspace.has_hip else workspace.GetCudaPeerAccessPattern()
     else:
         p2p_access_pattern = None
 
