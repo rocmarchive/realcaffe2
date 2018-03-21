@@ -22,6 +22,7 @@ from hypothesis import assume, given, settings
 import hypothesis.strategies as st
 
 from caffe2.python import core
+from caffe2.python.workspace import has_hip
 import caffe2.python.hypothesis_test_util as hu
 
 
@@ -34,7 +35,7 @@ class TestConvolutionTranspose(hu.HypothesisTestCase):
            input_channels=st.integers(1, 8),
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
-           engine=st.sampled_from(["", "CUDNN", "BLOCK"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN", "BLOCK"]),
            shared_buffer=st.booleans(),
            use_bias=st.booleans(),
            **hu.gcs)
@@ -99,7 +100,7 @@ class TestConvolutionTranspose(hu.HypothesisTestCase):
            input_channels=st.integers(1, 8),
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
-           engine=st.sampled_from(["", "CUDNN", "BLOCK"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN", "BLOCK"]),
            shared_buffer=st.booleans(),
            use_bias=st.booleans(),
            **hu.gcs)
@@ -240,7 +241,7 @@ class TestConvolutionTranspose(hu.HypothesisTestCase):
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
            order=st.sampled_from(["NCHW", "NHWC"]),
-           engine=st.sampled_from(["", "CUDNN", "BLOCK"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN", "BLOCK"]),
            use_bias=st.booleans(),
            compute_dX=st.booleans(),
            **hu.gcs)
