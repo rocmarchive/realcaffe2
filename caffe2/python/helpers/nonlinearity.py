@@ -21,6 +21,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from caffe2.python import core
+from caffe2.python.workspace import has_hip
 
 
 def prelu(model, blob_in, blob_out, num_channels=1, slope_init=None,
@@ -44,15 +45,15 @@ def prelu(model, blob_in, blob_out, num_channels=1, slope_init=None,
     return model.net.PRelu([blob_in, slope], [blob_out])
 
 
-def relu(model, blob_in, blob_out, use_cudnn=False, order="NCHW", **kwargs):
+def relu(model, blob_in, blob_out, use_gpu_engine=False, order="NCHW", **kwargs):
     """Relu."""
-    if use_cudnn:
-        kwargs['engine'] = 'CUDNN'
+    if use_gpu_engine:
+        kwargs['engine'] = 'MIOPEN' if has_hip else 'CUDNN'
     return model.net.Relu(blob_in, blob_out, order=order, **kwargs)
 
 
-def tanh(model, blob_in, blob_out, use_cudnn=False, order="NCHW", **kwargs):
+def tanh(model, blob_in, blob_out, use_gpu_engine=False, order="NCHW", **kwargs):
     """Tanh."""
-    if use_cudnn:
-        kwargs['engine'] = 'CUDNN'
+    if use_gpu_engine:
+        kwargs['engine'] = 'MIOPEN' if has_hip else 'CUDNN'
     return model.net.Tanh(blob_in, blob_out, order=order, **kwargs)
