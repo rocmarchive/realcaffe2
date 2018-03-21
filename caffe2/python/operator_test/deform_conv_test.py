@@ -27,7 +27,7 @@ def _cudnn_supports(
         return False
     return True
 
-
+# Rohith :  add miopen supoort cases as above
 def _conv_1d_output_size(size, kernel, pad, dilation, stride):
     return max(
         1,
@@ -122,7 +122,7 @@ class TestConvolution(hu.HypothesisTestCase):
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
            order=st.sampled_from(["NCHW"]),
-           engine=st.sampled_from(["", "CUDNN", "MKLDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN", "MKLDNN"]),
            use_bias=st.booleans(),
            deformable_group=st.integers(1, 3),
            **hu.gcs_gpu_only)
@@ -209,7 +209,7 @@ class TestConvolution(hu.HypothesisTestCase):
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
            order=st.sampled_from(["NCHW"]),
-           engine=st.sampled_from(["", "CUDNN", "MKLDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN", "MKLDNN"]),
            use_bias=st.booleans(),
            deformable_group=st.integers(1, 4),
            **hu.gcs_gpu_only)
@@ -293,7 +293,7 @@ class TestConvolution(hu.HypothesisTestCase):
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
            order=st.sampled_from(["NCHW"]),
-           engine=st.sampled_from(["", "CUDNN", "MKLDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN", "MKLDNN"]),
            use_bias=st.booleans(),
            deformable_group=st.integers(1, 4),
            **hu.gcs_gpu_only)
@@ -456,7 +456,7 @@ class TestConvolution(hu.HypothesisTestCase):
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
            order=st.sampled_from(["NCHW"]),
-           engine=st.sampled_from(["", "CUDNN", "MKLDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN", "MKLDNN"]),
            use_bias=st.booleans(),
            deformable_group=st.integers(1, 3),
            **hu.gcs_gpu_only)
