@@ -267,7 +267,7 @@ def Train(args):
     # Create ModelHelper object
     train_arg_scope = {
         'order': 'NCHW',
-        'use_cudnn': True,
+        'use_gpu_engine': True,
         'cudnn_exhaustive_search': True,
         'ws_nbytes_limit': (args.cudnn_workspace_limit_mb * 1024 * 1024),
     }
@@ -445,7 +445,7 @@ def Train(args):
 
     if args.model_parallel:
         # Shift half of the activations to another GPU
-        assert workspace.NumCudaDevices() >= 2 * args.num_gpus
+        assert workspace.NumGpuDevices() >= 2 * args.num_gpus
         activations = data_parallel_model_utils.GetActivationBlobs(train_model)
         data_parallel_model_utils.ShiftActivationDevices(
             train_model,
@@ -464,7 +464,7 @@ def Train(args):
         log.info("----- Create test net ----")
         test_arg_scope = {
             'order': "NCHW",
-            'use_cudnn': True,
+            'use_gpu_engine': True,
             'cudnn_exhaustive_search': True,
         }
         test_model = model_helper.ModelHelper(
