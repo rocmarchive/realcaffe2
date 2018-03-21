@@ -57,14 +57,8 @@ def _miopen_supports(
         backward=False,
 ):
     """Return True if MIOPEN supports this configuration."""
-    if backward:
-        if nhwc:
-            # nhwc isn't supported in backward ops.
-            return False
-    else:
-        # Forward mode.
-        if dilation:
-            return False
+    if nhwc or dilation:
+          return False
     return True
 
 
