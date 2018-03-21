@@ -4,6 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from caffe2.python import core
+from caffe2.python.workspace import has_hip
 from hypothesis import given
 import hypothesis.strategies as st
 import caffe2.python.hypothesis_test_util as hu
@@ -15,7 +16,7 @@ import unittest
 class TestSelu(hu.HypothesisTestCase):
 
     @given(X=hu.tensor(),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN"]),
             **hu.gcs)
     def test_selu_1(self, X, gc, dc, engine):
         alpha = 1.0
@@ -30,7 +31,7 @@ class TestSelu(hu.HypothesisTestCase):
         )
 
     @given(X=hu.tensor(),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN"]),
             **hu.gcs)
     def test_selu_2(self, X, gc, dc, engine):
         alpha = 1.6732
@@ -46,7 +47,7 @@ class TestSelu(hu.HypothesisTestCase):
         )
 
     @given(X=hu.tensor(),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN"]),
             **hu.gcs)
     def test_selu_3(self, X, gc, dc, engine):
         alpha = 1.3
@@ -62,7 +63,7 @@ class TestSelu(hu.HypothesisTestCase):
         )
 
     @given(X=hu.tensor(),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN"]),
             **hu.gcs)
     def test_selu_inplace(self, X, gc, dc, engine):
         alpha = 1.3
