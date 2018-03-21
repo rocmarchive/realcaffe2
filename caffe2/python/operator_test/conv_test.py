@@ -50,7 +50,23 @@ def _cudnn_supports(
             # Dilation and NHWC not supported together
             return False
     return True
-# Rohith: need to write similar test cases as above for MIOPEN
+
+def _miopen_supports(
+        dilation=False,
+        nhwc=False,
+        backward=False,
+):
+    """Return True if MIOPEN supports this configuration."""
+    if backward:
+        if nhwc:
+            # nhwc isn't supported in backward ops.
+            return False
+    else:
+        # Forward mode.
+        if dilation:
+            return False
+    return True
+
 
 class TestConvolution(hu.HypothesisTestCase):
     # CUDNN does NOT support different padding values and we skip it
@@ -386,9 +402,13 @@ class TestConvolution(hu.HypothesisTestCase):
 
         for order in ["NCHW", "NHWC"]:
             engine_list = ['']
-            if workspace.has_hip and _cudnn_supports(dilation=(dilation > 1), nhwc=(order == 'NHWC')):
-                engine_list.append('CUDNN')
-            # Rohith:  add miopen checks and engine here
+            if workspace.has_hip:
+                if _miopen_supports(dilation=(dilation > 1), nhwc=(order == 'NHWC')):
+                    engine_list.append('MIOPEN')
+            else:
+                if _cudnn_supports(dilation=(dilation > 1), nhwc=(order == 'NHWC')):
+                    engine_list.append('CUDNN')
+            
             for engine in engine_list:
                 op = core.CreateOperator(
                     op_type,
