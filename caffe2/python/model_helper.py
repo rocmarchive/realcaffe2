@@ -132,7 +132,7 @@ class ModelHelper(object):
         self._arg_scope = {
             'order': "NCHW",
             'use_gpu_engine': True,
-            'cudnn_exhaustive_search': False,
+            'gpu_engine_exhaustive_search': False,
         }
         if arg_scope is not None:
             # Please notice value as None is not acceptable. We are not checking it
