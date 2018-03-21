@@ -32,7 +32,7 @@ class Seq2SeqModelHelperTest(test_util.TestCase):
 
         self.assertEqual(m.arg_scope, {
             'use_gpu_engine': True,
-            'cudnn_exhaustive_search': False,
+            'gpu_engine_exhaustive_search': False,
             'order': 'NHWC'
         })
 
