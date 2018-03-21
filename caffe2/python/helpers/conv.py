@@ -21,6 +21,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from caffe2.python import core
+from caffe2.python.workspace import has_hip
 from caffe2.python.modeling import initializers
 from caffe2.python.modeling.parameter_info import ParameterTags
 
@@ -38,7 +39,7 @@ def _ConvBase(
     BiasInitializer=None,
     group=1,
     transform_inputs=None,
-    use_cudnn=False,
+    use_gpu_engine=False,
     order="NCHW",
     cudnn_exhaustive_search=False,
     ws_nbytes_limit=None,
@@ -58,18 +59,24 @@ def _ConvBase(
             kernels = [kernel] * 2
 
     requested_engine = kwargs.get('engine')
+    
     if requested_engine is not None:
-        if use_cudnn and requested_engine != 'CUDNN':
+        if has_hip and use_gpu_engine and requested_engine != 'MIOPEN':
             raise ValueError(
-                'When use_cudnn=True, the only engine you can specify is '
+                'When use_gpu_engine=True and has_hip=True, the only engine you can specify is '
+                '"MIOPEN"')
+        elif not has_hip and use_gpu_engine and requested_engine != 'CUDNN':
+            raise ValueError(
+                'When use_gpu_engine=True and has_hip=False, the only engine you can specify is '
                 '"CUDNN"')
-        elif not use_cudnn and requested_engine == 'CUDNN':
+        elif not use_gpu_engine and (requested_engine == 'CUDNN' or requested_engine == 'MIOPEN'):
             raise ValueError(
-                'When use_cudnn=False, the only engine you can specify is '
+                'When use_gpu_engine=False, the only engine you can specify is '
                 '""')
+    
 
-    if use_cudnn:
-        kwargs['engine'] = 'CUDNN'
+    if use_gpu_engine:
+        kwargs['engine'] = 'MIOPEN' if has_hip else 'CUDNN'
         kwargs['exhaustive_search'] = cudnn_exhaustive_search
         if ws_nbytes_limit:
             kwargs['ws_nbytes_limit'] = ws_nbytes_limit
@@ -205,7 +212,7 @@ def conv_transpose(
     kernel,
     weight_init=None,
     bias_init=None,
-    use_cudnn=False,
+    use_gpu_engine=False,
     order="NCHW",
     cudnn_exhaustive_search=False,
     ws_nbytes_limit=None,
@@ -240,8 +247,8 @@ def conv_transpose(
             blob_out + '_b', model.param_init_net)
     model.AddParameter(weight, ParameterTags.WEIGHT)
     model.AddParameter(bias, ParameterTags.BIAS)
-    if use_cudnn:
-        kwargs['engine'] = 'CUDNN'
+    if use_gpu_engine:
+        kwargs['engine'] = 'MIOPEN' if has_hip else 'CUDNN'
         kwargs['exhaustive_search'] = cudnn_exhaustive_search
         if ws_nbytes_limit:
             kwargs['ws_nbytes_limit'] = ws_nbytes_limit
@@ -286,7 +293,7 @@ def group_conv_deprecated(
     weight_init=None,
     bias_init=None,
     group=1,
-    use_cudnn=False,
+    use_gpu_engine=False,
     order="NCHW",
     cudnn_exhaustive_search=False,
     ws_nbytes_limit=None,
@@ -300,8 +307,8 @@ def group_conv_deprecated(
     weight_init = weight_init if weight_init else ('XavierFill', {})
     bias_init = bias_init if bias_init else ('ConstantFill', {})
     use_bias = False if ("no_bias" in kwargs and kwargs["no_bias"]) else True
-    if use_cudnn:
-        kwargs['engine'] = 'CUDNN'
+    if use_gpu_engine:
+        kwargs['engine'] = 'MIOPEN' if has_hip else 'CUDNN'
         kwargs['exhaustive_search'] = cudnn_exhaustive_search
         if ws_nbytes_limit:
             kwargs['ws_nbytes_limit'] = ws_nbytes_limit
