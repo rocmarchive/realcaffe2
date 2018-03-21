@@ -31,11 +31,11 @@ def executor_test_settings(func):
         return func
 
 
-def gen_test_resnet50(_order, _cudnn_ws):
+def gen_test_resnet50(_order, _gpu_engine_ws):
     model = cnn.CNNModelHelper(
         order="NCHW",
         name="resnet_50_test",
-        cudnn_exhaustive_search=True,
+        gpu_engine_exhaustive_search=True,
     )
     data = model.net.AddExternalInput("data")
     label = model.net.AddExternalInput("label")
@@ -109,7 +109,7 @@ def build_resnet50_dataparallel_model(
         num_gpus,
         batch_size,
         epoch_size,
-        cudnn_workspace_limit_mb=64,
+        gpu_engine_workspace_limit_mb=64,
         num_channels=3,
         num_labels=1000,
         weight_decay=1e-4,
@@ -121,9 +121,9 @@ def build_resnet50_dataparallel_model(
 
     train_arg_scope = {
         'order': 'NCHW',
-        'use_cudnn': True,
-        'cudnn_exhaustive_search': False,
-        'ws_nbytes_limit': (cudnn_workspace_limit_mb * 1024 * 1024),
+        'use_gpu_engine': True,
+        'gpu_engine_exhaustive_search': False,
+        'ws_nbytes_limit': (gpu_engine_workspace_limit_mb * 1024 * 1024),
         'deterministic': True,
     }
     train_model = model_helper.ModelHelper(
