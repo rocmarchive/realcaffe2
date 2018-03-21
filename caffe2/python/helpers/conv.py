@@ -41,7 +41,7 @@ def _ConvBase(
     transform_inputs=None,
     use_gpu_engine=False,
     order="NCHW",
-    cudnn_exhaustive_search=False,
+    gpu_engine_exhaustive_search=False,
     ws_nbytes_limit=None,
     **kwargs
 ):
@@ -77,7 +77,7 @@ def _ConvBase(
 
     if use_gpu_engine:
         kwargs['engine'] = 'MIOPEN' if has_hip else 'CUDNN'
-        kwargs['exhaustive_search'] = cudnn_exhaustive_search
+        kwargs['exhaustive_search'] = gpu_engine_exhaustive_search
         if ws_nbytes_limit:
             kwargs['ws_nbytes_limit'] = ws_nbytes_limit
 
@@ -214,7 +214,7 @@ def conv_transpose(
     bias_init=None,
     use_gpu_engine=False,
     order="NCHW",
-    cudnn_exhaustive_search=False,
+    gpu_engine_exhaustive_search=False,
     ws_nbytes_limit=None,
     **kwargs
 ):
@@ -249,7 +249,7 @@ def conv_transpose(
     model.AddParameter(bias, ParameterTags.BIAS)
     if use_gpu_engine:
         kwargs['engine'] = 'MIOPEN' if has_hip else 'CUDNN'
-        kwargs['exhaustive_search'] = cudnn_exhaustive_search
+        kwargs['exhaustive_search'] = gpu_engine_exhaustive_search
         if ws_nbytes_limit:
             kwargs['ws_nbytes_limit'] = ws_nbytes_limit
     return model.net.ConvTranspose(
@@ -295,7 +295,7 @@ def group_conv_deprecated(
     group=1,
     use_gpu_engine=False,
     order="NCHW",
-    cudnn_exhaustive_search=False,
+    gpu_engine_exhaustive_search=False,
     ws_nbytes_limit=None,
     **kwargs
 ):
@@ -309,7 +309,7 @@ def group_conv_deprecated(
     use_bias = False if ("no_bias" in kwargs and kwargs["no_bias"]) else True
     if use_gpu_engine:
         kwargs['engine'] = 'MIOPEN' if has_hip else 'CUDNN'
-        kwargs['exhaustive_search'] = cudnn_exhaustive_search
+        kwargs['exhaustive_search'] = gpu_engine_exhaustive_search
         if ws_nbytes_limit:
             kwargs['ws_nbytes_limit'] = ws_nbytes_limit
             if dim_in % group:
