@@ -48,7 +48,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
             order=order,
             is_test=True,
             epsilon=epsilon,
-            engine="CUDNN",
+            engine="MIOPEN" if workspace.has_hip else "CUDNN",
         )
 
         def reference_spatialbn_test(X, scale, bias, mean, var):
@@ -92,7 +92,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
             order=order,
             is_test=True,
             epsilon=epsilon,
-            engine="CUDNN",
+            engine="MIOPEN" if workspace.has_hip else "CUDNN",
         )
 
         def reference_spatialbn_test(X, scale, bias, mean, var):
@@ -122,7 +122,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
            seed=st.integers(0, 65535),
            order=st.sampled_from(["NCHW", "NHWC"]),
            epsilon=st.floats(min_value=1e-5, max_value=1e-2),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN"]),
            inplace=st.sampled_from([True, False]),
            **hu.gcs)
     def test_spatialbn_test_mode(
@@ -167,7 +167,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
            seed=st.integers(0, 65535),
            order=st.sampled_from(["NCHW", "NHWC"]),
            epsilon=st.floats(1e-5, 1e-2),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["","MIOPEN" if workspace.has_hip else "CUDNN"]),
            inplace=st.sampled_from([True, False]),
            **hu.gcs)
     def test_spatialbn_train_mode(
@@ -203,7 +203,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
            seed=st.integers(0, 65535),
            order=st.sampled_from(["NCHW", "NHWC"]),
            epsilon=st.floats(min_value=1e-5, max_value=1e-2),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN"]),
            **hu.gcs)
     def test_spatialbn_train_mode_gradient_check(
             self, size, input_channels, batch_size, seed, order, epsilon,
@@ -248,7 +248,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
             order=order,
             is_test=False,
             epsilon=epsilon,
-            engine="CUDNN",
+            engine="MIOPEN" if workspace.has_hip else "CUDNN",
         )
         np.random.seed(seed)
         scale = np.random.rand(input_channels).astype(np.float32) + 0.5
@@ -269,7 +269,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
            batch_size=st.integers(1, 3),
            seed=st.integers(0, 65535),
            epsilon=st.floats(1e-5, 1e-2),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN"]),
            **hu.gcs)
     def test_spatialbn_brew_wrapper(
             self, size, input_channels, batch_size, seed, epsilon,
