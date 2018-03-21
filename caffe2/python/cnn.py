@@ -32,7 +32,7 @@ class CNNModelHelper(ModelHelper):
     """
 
     def __init__(self, order="NCHW", name=None,
-                 use_gpu_engine=True, cudnn_exhaustive_search=False,
+                 use_gpu_engine=True, gpu_engine_exhaustive_search=False,
                  ws_nbytes_limit=None, init_params=True,
                  skip_sparse_optim=False,
                  param_model=None):
@@ -47,7 +47,7 @@ class CNNModelHelper(ModelHelper):
         cnn_arg_scope = {
             'order': order,
             'use_gpu_engine': use_gpu_engine,
-            'cudnn_exhaustive_search': cudnn_exhaustive_search,
+            'gpu_engine_exhaustive_search': gpu_engine_exhaustive_search,
         }
         if ws_nbytes_limit:
             cnn_arg_scope['ws_nbytes_limit'] = ws_nbytes_limit
@@ -61,7 +61,7 @@ class CNNModelHelper(ModelHelper):
 
         self.order = order
         self.use_gpu_engine = use_gpu_engine
-        self.cudnn_exhaustive_search = cudnn_exhaustive_search
+        self.gpu_engine_exhaustive_search = gpu_engine_exhaustive_search
         self.ws_nbytes_limit = ws_nbytes_limit
         if self.order != "NHWC" and self.order != "NCHW":
             raise ValueError(
@@ -96,7 +96,7 @@ class CNNModelHelper(ModelHelper):
             *args,
             use_gpu_engine=self.use_gpu_engine,
             order=self.order,
-            cudnn_exhaustive_search=self.cudnn_exhaustive_search,
+            gpu_engine_exhaustive_search=self.gpu_engine_exhaustive_search,
             ws_nbytes_limit=self.ws_nbytes_limit,
             **kwargs
         )
@@ -107,7 +107,7 @@ class CNNModelHelper(ModelHelper):
             *args,
             use_gpu_engine=self.use_gpu_engine,
             order=self.order,
-            cudnn_exhaustive_search=self.cudnn_exhaustive_search,
+            gpu_engine_exhaustive_search=self.gpu_engine_exhaustive_search,
             ws_nbytes_limit=self.ws_nbytes_limit,
             **kwargs
         )
@@ -118,7 +118,7 @@ class CNNModelHelper(ModelHelper):
             *args,
             use_gpu_engine=self.use_gpu_engine,
             order=self.order,
-            cudnn_exhaustive_search=self.cudnn_exhaustive_search,
+            gpu_engine_exhaustive_search=self.gpu_engine_exhaustive_search,
             ws_nbytes_limit=self.ws_nbytes_limit,
             **kwargs
         )
@@ -129,7 +129,7 @@ class CNNModelHelper(ModelHelper):
             *args,
             use_gpu_engine=self.use_gpu_engine,
             order=self.order,
-            cudnn_exhaustive_search=self.cudnn_exhaustive_search,
+            gpu_engine_exhaustive_search=self.gpu_engine_exhaustive_search,
             ws_nbytes_limit=self.ws_nbytes_limit,
             **kwargs
         )
@@ -140,7 +140,7 @@ class CNNModelHelper(ModelHelper):
             *args,
             use_gpu_engine=self.use_gpu_engine,
             order=self.order,
-            cudnn_exhaustive_search=self.cudnn_exhaustive_search,
+            gpu_engine_exhaustive_search=self.gpu_engine_exhaustive_search,
             ws_nbytes_limit=self.ws_nbytes_limit,
             **kwargs
         )
