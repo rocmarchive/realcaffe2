@@ -31,7 +31,7 @@ class Seq2SeqModelHelperTest(test_util.TestCase):
         self.assertEqual(m.init_params, True)
 
         self.assertEqual(m.arg_scope, {
-            'use_cudnn': True,
+            'use_gpu_engine': True,
             'cudnn_exhaustive_search': False,
             'order': 'NHWC'
         })
