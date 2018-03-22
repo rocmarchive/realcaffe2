@@ -20,11 +20,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from caffe2.python.workspace import has_hip
 
-def dropout(model, blob_in, blob_out, use_cudnn=False, **kwargs):
+def dropout(model, blob_in, blob_out, use_gpu_engine=False, **kwargs):
     """dropout"""
-    if use_cudnn:
-        kwargs['engine'] = 'CUDNN'
+    if use_gpu_engine:
+        kwargs['engine'] = 'MIOPEN' if has_hip else 'CUDNN'
     else:
         kwargs['engine'] = 'DEFAULT'
     assert 'is_test' in kwargs, "Argument 'is_test' is required"

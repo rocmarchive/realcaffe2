@@ -75,7 +75,7 @@ class TestUtilityOps(hu.HypothesisTestCase):
            ndims=st.integers(min_value=1, max_value=5),
            seed=st.integers(min_value=0, max_value=65536),
            null_axes=st.booleans(),
-           engine=st.sampled_from(['CUDNN', None]),
+           engine=st.sampled_from(["MIOPEN" if workspace.has_hip else "CUDNN", None]),
            **hu.gcs)
     def test_transpose(self, dtype, ndims, seed, null_axes, engine, gc, dc):
         if (gc.device_type == caffe2_pb2.CUDA and engine == "CUDNN"):

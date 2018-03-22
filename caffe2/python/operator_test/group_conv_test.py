@@ -22,6 +22,7 @@ from hypothesis import assume, given, settings
 import hypothesis.strategies as st
 
 from caffe2.python import core
+from caffe2.python.workspace import has_hip
 import caffe2.python.hypothesis_test_util as hu
 
 import unittest
@@ -41,7 +42,7 @@ class TestGroupConvolution(hu.HypothesisTestCase):
            order=st.sampled_from(["NCHW"]),
            # Note: Eigen does not support group convolution, but it should
            # fall back to the default engine without failing.
-           engine=st.sampled_from(["", "CUDNN", "EIGEN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN", "EIGEN"]),
            use_bias=st.booleans(),
            **hu.gcs)
     @settings(max_examples=2, timeout=100)

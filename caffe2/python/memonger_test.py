@@ -244,7 +244,7 @@ class MemongerTest(hu.HypothesisTestCase):
         Check that memonger does not make blobs cross CPU/GPU boundary
         '''
         m = model_helper.ModelHelper()
-        with core.DeviceScope(core.DeviceOption(caffe2_pb2.CUDA, 0)):
+        with core.DeviceScope(core.DeviceOption(caffe2_pb2.HIP if workspace.has_hip else caffe2_pb2.CUDA, 0)):
             fc1 = brew.fc(m, "data", "fc1", dim_in=2, dim_out=2)
             fc2 = brew.fc(m, fc1, "fc2", dim_in=2, dim_out=2)
             fc3 = brew.fc(m, fc2, "fc3", dim_in=2, dim_out=2)
@@ -274,7 +274,10 @@ class MemongerTest(hu.HypothesisTestCase):
 
         # Create set of blobs on CPU side and GPU side and check they don't
         # overlap
-        device_blobs = {caffe2_pb2.CPU: set(), caffe2_pb2.CUDA: set()}
+        if workspace.has_hip:
+            device_blobs = {caffe2_pb2.CPU: set(), caffe2_pb2.HIP: set()}
+        else:
+            device_blobs = {caffe2_pb2.CPU: set(), caffe2_pb2.CUDA: set()}
         for op in optim_proto.op:
             if op.type not in ['CopyCPUToGPU', "CopyGPUToCPU"]:
                 dev = op.device_option.device_type
@@ -282,7 +285,7 @@ class MemongerTest(hu.HypothesisTestCase):
                     device_blobs[dev].add(b)
 
         device_crossers = device_blobs[caffe2_pb2.CPU].intersection(
-            device_blobs[caffe2_pb2.CUDA]
+            device_blobs[caffe2_pb2.HIP] if workspace.has_hip else device_blobs[caffe2_pb2.CUDA]
         )
         self.assertEquals(device_crossers, set())
 

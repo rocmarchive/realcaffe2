@@ -231,7 +231,7 @@ def GetGPUMemoryUsageStats():
             "GetGPUMemoryUsage",
             [],
             ["____mem____"],
-            device_option=core.DeviceOption(caffe2_pb2.CUDA, 0),
+            device_option=core.DeviceOption(caffe2_pb2.HIP if workspace.has_hip else caffe2_pb2.CUDA, 0),
         ),
     )
     b = workspace.FetchBlob("____mem____")
