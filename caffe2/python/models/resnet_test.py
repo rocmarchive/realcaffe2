@@ -61,7 +61,7 @@ class ResnetMemongerTest(hu.HypothesisTestCase):
         model = cnn.CNNModelHelper(
             order="NCHW",
             name="test",
-            cudnn_exhaustive_search=True,
+            gpu_engine_exhaustive_search=True,
         )
         with core.NameScope("gpu_0"):
             data = model.net.AddExternalInput("gpu_0/data")
@@ -125,7 +125,7 @@ class ResnetMemongerTest(hu.HypothesisTestCase):
         model = cnn.CNNModelHelper(
             order="NCHW",
             name="test",
-            cudnn_exhaustive_search=True,
+            gpu_engine_exhaustive_search=True,
         )
         with core.NameScope("gpu_0"):
                 data = model.net.AddExternalInput("gpu_0/data")
@@ -167,7 +167,7 @@ class ResnetMemongerTest(hu.HypothesisTestCase):
         model = cnn.CNNModelHelper(
             order="NCHW",
             name="test",
-            cudnn_exhaustive_search=True,
+            gpu_engine_exhaustive_search=True,
         )
         with core.NameScope("gpu_0"):
                 data = model.net.AddExternalInput("gpu_0/data")

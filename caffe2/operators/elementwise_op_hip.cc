@@ -263,16 +263,16 @@ bool SumReduceLikeOp<HIPContext>::DoRunWithType() {
     // because we check shape(B) \in shape(A) before,
     // post and pre cannot be 1 at same time
     if (post == 1) {
-      hipLaunchKernelGGL((reduce_sum_like_post1<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), Adata, Cdata, pre, n);
+      hipLaunchKernelGGL((reduce_sum_like_post1<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), Adata, Cdata, static_cast<int>(pre), static_cast<int>(n));
     } else {
       if (post >= 128) {
-        hipLaunchKernelGGL((reduce_sum_like<T, 512>), dim3(n), dim3(512), 0, context_.hip_stream(), Adata, Cdata, pre, n, post);
+        hipLaunchKernelGGL((reduce_sum_like<T, 512>), dim3(n), dim3(512), 0, context_.hip_stream(), Adata, Cdata, static_cast<int>(pre), static_cast<int>(n), static_cast<int>(post));
       } else if (post >= 64) {
-        hipLaunchKernelGGL((reduce_sum_like<T, 128>), dim3(n), dim3(128), 0, context_.hip_stream(), Adata, Cdata, pre, n, post);
+        hipLaunchKernelGGL((reduce_sum_like<T, 128>), dim3(n), dim3(128), 0, context_.hip_stream(), Adata, Cdata, static_cast<int>(pre), static_cast<int>(n), static_cast<int>(post));
       } else if (post >= 32) {
-        hipLaunchKernelGGL((reduce_sum_like<T, 64>), dim3(n), dim3(64), 0, context_.hip_stream(), Adata, Cdata, pre, n, post);
+        hipLaunchKernelGGL((reduce_sum_like<T, 64>), dim3(n), dim3(64), 0, context_.hip_stream(), Adata, Cdata, static_cast<int>(pre), static_cast<int>(n), static_cast<int>(post));
       } else {
-        hipLaunchKernelGGL((reduce_sum_like<T, 32>), dim3(n), dim3(32), 0, context_.hip_stream(), Adata, Cdata, pre, n, post);
+        hipLaunchKernelGGL((reduce_sum_like<T, 32>), dim3(n), dim3(32), 0, context_.hip_stream(), Adata, Cdata, static_cast<int>(pre), static_cast<int>(n), static_cast<int>(post));
       }
     }
   }

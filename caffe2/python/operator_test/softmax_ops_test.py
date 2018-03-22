@@ -30,7 +30,7 @@ class TestSoftmaxOps(hu.HypothesisTestCase):
 
     @given(n=st.sampled_from([2, 4, 71, 103]),
            D=st.sampled_from([4, 8, 64, 79, 256, 333]),
-           engine=st.sampled_from([None, 'CUDNN']),
+           engine=st.sampled_from([None, "MIOPEN" if workspace.has_hip else "CUDNN"]),
            **hu.gcs)
     def test_softmax(self, n, D, engine, gc, dc):
         # n = number of examples, D = |labels|
@@ -68,7 +68,7 @@ class TestSoftmaxOps(hu.HypothesisTestCase):
 
     @given(n=st.sampled_from([2, 4, 71, 103, 555, 751, 1201]),
            D=st.sampled_from([4, 8, 64, 79, 256, 333, 1000]),
-           engine=st.sampled_from([None, 'CUDNN']),
+           engine=st.sampled_from([None, "MIOPEN" if workspace.has_hip else "CUDNN"]),
            **hu.gcs)
     def test_softmax_grad(self, n, D, engine, gc, dc):
         # n = number of examples, D = |labels|
@@ -100,7 +100,7 @@ class TestSoftmaxOps(hu.HypothesisTestCase):
         )
 
     @given(axis=st.integers(min_value=1, max_value=4),
-           engine=st.sampled_from([None, 'CUDNN']),
+           engine=st.sampled_from([None, "MIOPEN" if workspace.has_hip else "CUDNN"]),
            **hu.gcs)
     def test_softmax_axis(self, axis, engine, gc, dc):
         np.random.seed(1)
@@ -639,7 +639,7 @@ class TestSoftmaxOps(hu.HypothesisTestCase):
                 "SpatialSoftmaxWithLoss",
                 ["X_gpu", "label_gpu"],
                 ["probs_gpu", "avgloss_gpu"],
-                device_option=core.DeviceOption(caffe2_pb2.CUDA, 0)
+                device_option=core.DeviceOption(caffe2_pb2.HIP if workspace.has_hip else caffe2_pb2.CUDA, 0)
             )
 
             cpuop = core.CreateOperator(
@@ -662,7 +662,7 @@ class TestSoftmaxOps(hu.HypothesisTestCase):
             # Initialize label. Some of the labels are (-1), i.e "DONT CARE"
             label = (np.random.rand(n, H, W) * (D + 1)).astype(np.int32) - 1
 
-            gpu0 = core.DeviceOption(caffe2_pb2.CUDA, 0)
+            gpu0 = core.DeviceOption(caffe2_pb2.HIP if workspace.has_hip else caffe2_pb2.CUDA, 0)
             workspace.FeedBlob("X_cpu", X)
             workspace.FeedBlob("label_cpu", label)
             workspace.FeedBlob("X_gpu", X, device_option=gpu0)

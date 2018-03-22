@@ -325,8 +325,11 @@ class TestWorkspaceGPU(test_util.TestCase):
         self.assertEqual(workspace.SetDefaultGPUID(0), None)
         self.assertEqual(workspace.GetDefaultGPUID(), 0)
 
-    def testGetCudaPeerAccessPattern(self):
-        pattern = workspace.GetCudaPeerAccessPattern()
+    def testGetGpuPeerAccessPattern(self):
+        if workspace.has_hip:
+            pattern = workspace.GetHipPeerAccessPattern()
+        else:
+            pattern = workspace.GetCudaPeerAccessPattern()
         self.assertEqual(type(pattern), np.ndarray)
         self.assertEqual(pattern.ndim, 2)
         self.assertEqual(pattern.shape[0], pattern.shape[1])
@@ -557,8 +560,8 @@ class TestTransform(htu.HypothesisTestCase):
         conv = brew.conv(m, fc2, "conv",
                             dim_in=output_dim,
                             dim_out=output_dim,
-                            use_cudnn=True,
-                            engine="CUDNN",
+                            use_gpu_engine=True,
+                            engine="MIOPEN" if workspace.has_hip else "CUDNN",
                             kernel=3)
 
         conv.Relu([], conv)\
@@ -599,8 +602,8 @@ class TestTransform(htu.HypothesisTestCase):
                             dim_in=5,
                             dim_out=5,
                             kernel=3,
-                            use_cudnn=True,
-                            engine="CUDNN")
+                            use_gpu_engine=True,
+                            engine="MIOPEN" if workspace.has_hip else "CUDNN")
 
         conv.Relu([], conv)\
            .Softmax([], "pred") \

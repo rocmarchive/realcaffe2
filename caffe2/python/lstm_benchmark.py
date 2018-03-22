@@ -23,7 +23,7 @@ from __future__ import unicode_literals
 from caffe2.proto import caffe2_pb2
 from caffe2.python import workspace, core, utils, rnn_cell, model_helper
 from caffe2.python import recurrent
-
+from caffe2.python.workspace import has_hip
 import argparse
 import numpy as np
 import time
@@ -354,9 +354,9 @@ if __name__ == '__main__':
         '--caffe2_print_blob_sizes_at_exit=0',
         '--caffe2_rnn_executor={}'.format(rnn_executor_opt),
         '--caffe2_gpu_memory_tracking=1'] + extra_args)
-
+    gpu_device_option = caffe2_pb2.HIP if has_hip else caffe2_pb2.CUDA
     device = core.DeviceOption(
-        caffe2_pb2.CUDA if args.gpu else caffe2_pb2.CPU, 4)
+        gpu_device_option if args.gpu else caffe2_pb2.CPU, 4)
 
     with core.DeviceScope(device):
         Benchmark(args)

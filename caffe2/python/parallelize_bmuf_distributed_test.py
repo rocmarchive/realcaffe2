@@ -43,7 +43,7 @@ def bmuf_process(filestore_dir, process_id, shared_results,
         if not workspace.has_gpu_support:
             log.info('No GPU support test is Ignored.')
             return
-        if workspace.NumCudaDevices() < 4:
+        if workspace.NumGpuDevices() < 4:
             log.info('Not enough GPU support, test IGNORED')
             return
 
@@ -52,7 +52,7 @@ def bmuf_process(filestore_dir, process_id, shared_results,
         name="test"
     )
     if not cpu_device:
-        device_type = caffe2_pb2.CUDA
+        device_type = caffe2_pb2.HIP if workspace.has_hip else caffe2_pb2.CUDA
         device_prefix = "gpu"
     else:
         device_type = caffe2_pb2.CPU
