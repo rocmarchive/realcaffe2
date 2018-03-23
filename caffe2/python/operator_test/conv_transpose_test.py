@@ -53,6 +53,8 @@ class TestConvolutionTranspose(hu.HypothesisTestCase):
         b = np.random.rand(output_channels).astype(np.float32) - 0.5
         outputs = {}
         for order in ["NCHW", "NHWC"]:
+            if engine == "MIOPEN":
+                assume(order == "NCHW")
             op = core.CreateOperator(
                 "ConvTranspose",
                 ["X", "w", "b"] if use_bias else ["X", "w"],
@@ -118,6 +120,8 @@ class TestConvolutionTranspose(hu.HypothesisTestCase):
         b = np.random.rand(output_channels).astype(np.float32) - 0.5
         outputs = {}
         for order in ["NCHW", "NHWC"]:
+            if engine == "MIOPEN":
+                assume(order == "NCHW")
             op = core.CreateOperator(
                 "ConvTranspose",
                 ["X", "w", "b"] if use_bias else ["X", "w"],
@@ -252,6 +256,8 @@ class TestConvolutionTranspose(hu.HypothesisTestCase):
                                              order, engine, use_bias,
                                              compute_dX, gc, dc):
         assume(adj < stride)
+        if engine == "MIOPEN":
+            assume(order == "NCHW")
         X = np.random.rand(
             batch_size, size, size, input_channels).astype(np.float32) - 0.5
         w = np.random.rand(

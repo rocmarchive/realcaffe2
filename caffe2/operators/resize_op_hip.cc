@@ -98,14 +98,14 @@ bool ResizeNearestOp<float, HIPContext>::RunOnDevice() {
 
   const auto size = Y->size();
   hipLaunchKernelGGL((NearestNeighborKernel), dim3(CAFFE_GET_BLOCKS(size)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
-      size,
+      static_cast<const int>(size),
       num_channels,
       input_height,
       input_width,
       output_height,
       output_width,
-      height_scale_,
-      width_scale_,
+      static_cast<const float>(height_scale_),
+      static_cast<const float>(width_scale_),
       X.data<float>(),
       Y->mutable_data<float>());
 
@@ -130,14 +130,14 @@ bool ResizeNearestGradientOp<float, HIPContext>::RunOnDevice() {
 
   const auto size = dY.size();
   hipLaunchKernelGGL((NearestNeighborGradientKernel), dim3(CAFFE_GET_BLOCKS(size)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
-      size,
+      static_cast<const int>(size),
       num_channels,
       input_height,
       input_width,
       output_height,
       output_width,
-      height_scale_,
-      width_scale_,
+      static_cast<const float>(height_scale_),
+      static_cast<const float>(width_scale_),
       dY.data<float>(),
       dX->mutable_data<float>());
 
