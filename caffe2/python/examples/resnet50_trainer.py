@@ -267,9 +267,9 @@ def Train(args):
     # Create ModelHelper object
     train_arg_scope = {
         'order': 'NCHW',
-        'use_cudnn': True,
-        'cudnn_exhaustive_search': True,
-        'ws_nbytes_limit': (args.cudnn_workspace_limit_mb * 1024 * 1024),
+        'use_gpu_engine': True,
+        'gpu_engine_exhaustive_search': True,
+        'ws_nbytes_limit': (args.gpu_engine_workspace_limit_mb * 1024 * 1024),
     }
     train_model = model_helper.ModelHelper(
         name="resnet50", arg_scope=train_arg_scope
@@ -445,7 +445,7 @@ def Train(args):
 
     if args.model_parallel:
         # Shift half of the activations to another GPU
-        assert workspace.NumCudaDevices() >= 2 * args.num_gpus
+        assert workspace.NumGpuDevices() >= 2 * args.num_gpus
         activations = data_parallel_model_utils.GetActivationBlobs(train_model)
         data_parallel_model_utils.ShiftActivationDevices(
             train_model,
@@ -464,8 +464,8 @@ def Train(args):
         log.info("----- Create test net ----")
         test_arg_scope = {
             'order': "NCHW",
-            'use_cudnn': True,
-            'cudnn_exhaustive_search': True,
+            'use_gpu_engine': True,
+            'gpu_engine_exhaustive_search': True,
         }
         test_model = model_helper.ModelHelper(
             name="resnet50_test", arg_scope=test_arg_scope, init_params=False
@@ -582,8 +582,8 @@ def main():
                         help="Initial learning rate.")
     parser.add_argument("--weight_decay", type=float, default=1e-4,
                         help="Weight decay (L2 regularization)")
-    parser.add_argument("--cudnn_workspace_limit_mb", type=int, default=64,
-                        help="CuDNN workspace limit in MBs")
+    parser.add_argument("--gpu_engine_workspace_limit_mb", type=int, default=64,
+                        help="gpu_engine workspace limit in MBs")
     parser.add_argument("--num_shards", type=int, default=1,
                         help="Number of machines in distributed run")
     parser.add_argument("--shard_id", type=int, default=0,

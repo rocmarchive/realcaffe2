@@ -27,6 +27,15 @@ def _cudnn_supports(
         return False
     return True
 
+def _miopen_supports(
+        dilation=False,
+        nhwc=False,
+        backward=False,
+):
+    """Return True if MIOPEN supports this configuration."""
+    if nhwc or dilation:
+          return False
+    return True
 
 def _conv_1d_output_size(size, kernel, pad, dilation, stride):
     return max(
@@ -122,7 +131,7 @@ class TestConvolution(hu.HypothesisTestCase):
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
            order=st.sampled_from(["NCHW"]),
-           engine=st.sampled_from(["", "CUDNN", "MKLDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN", "MKLDNN"]),
            use_bias=st.booleans(),
            deformable_group=st.integers(1, 3),
            **hu.gcs_gpu_only)
@@ -134,6 +143,9 @@ class TestConvolution(hu.HypothesisTestCase):
 
         if gc.device_type == caffe2_pb2.CUDA and engine == 'CUDNN':
             assume(_cudnn_supports(dilation=(dilation > 1),
+                                   nhwc=(order == 'NHWC')))
+        if gc.device_type == caffe2_pb2.HIP and engine == 'MIOPEN':
+            assume(_miopen_supports(dilation=(dilation > 1),
                                    nhwc=(order == 'NHWC')))
 
         assume(engine != "MKLDNN" or use_bias is True)
@@ -209,7 +221,7 @@ class TestConvolution(hu.HypothesisTestCase):
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
            order=st.sampled_from(["NCHW"]),
-           engine=st.sampled_from(["", "CUDNN", "MKLDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN", "MKLDNN"]),
            use_bias=st.booleans(),
            deformable_group=st.integers(1, 4),
            **hu.gcs_gpu_only)
@@ -222,7 +234,9 @@ class TestConvolution(hu.HypothesisTestCase):
         if gc.device_type == caffe2_pb2.CUDA and engine == 'CUDNN':
             assume(_cudnn_supports(dilation=(dilation > 1),
                                    nhwc=(order == 'NHWC')))
-
+        if gc.device_type == caffe2_pb2.HIP and engine == 'MIOPEN':
+            assume(_miopen_supports(dilation=(dilation > 1),
+                                   nhwc=(order == 'NHWC')))
         assume(engine != "MKLDNN" or use_bias is True)
 
         op = core.CreateOperator(
@@ -293,7 +307,7 @@ class TestConvolution(hu.HypothesisTestCase):
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
            order=st.sampled_from(["NCHW"]),
-           engine=st.sampled_from(["", "CUDNN", "MKLDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN", "MKLDNN"]),
            use_bias=st.booleans(),
            deformable_group=st.integers(1, 4),
            **hu.gcs_gpu_only)
@@ -306,7 +320,9 @@ class TestConvolution(hu.HypothesisTestCase):
         if gc.device_type == caffe2_pb2.CUDA and engine == 'CUDNN':
             assume(_cudnn_supports(dilation=(dilation > 1),
                                    nhwc=(order == 'NHWC')))
-
+        if gc.device_type == caffe2_pb2.HIP and engine == 'MIOPEN':
+            assume(_miopen_supports(dilation=(dilation > 1),
+                                   nhwc=(order == 'NHWC')))
         assume(engine != "MKLDNN" or use_bias is True)
 
         op = core.CreateOperator(
@@ -456,7 +472,7 @@ class TestConvolution(hu.HypothesisTestCase):
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
            order=st.sampled_from(["NCHW"]),
-           engine=st.sampled_from(["", "CUDNN", "MKLDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN", "MKLDNN"]),
            use_bias=st.booleans(),
            deformable_group=st.integers(1, 3),
            **hu.gcs_gpu_only)
@@ -468,7 +484,9 @@ class TestConvolution(hu.HypothesisTestCase):
         if gc.device_type == caffe2_pb2.CUDA and engine == 'CUDNN':
             assume(_cudnn_supports(dilation=(dilation > 1),
                                    nhwc=(order == 'NHWC')))
-
+        if gc.device_type == caffe2_pb2.HIP and engine == 'MIOPEN':
+            assume(_miopen_supports(dilation=(dilation > 1),
+                                   nhwc=(order == 'NHWC')))
         assume(engine != "MKLDNN" or use_bias is True)
 
         op = core.CreateOperator(

@@ -277,9 +277,9 @@ def main():
                         help="If set, training is going to use GPU 0")
 
     args = parser.parse_args()
-
+    gpu_device_option = caffe2_pb2.HIP if workspace.has_hip else caffe2_pb2.CUDA
     device = core.DeviceOption(
-        caffe2_pb2.CUDA if args.gpu else caffe2_pb2.CPU, 0)
+        gpu_device_option if args.gpu else caffe2_pb2.CPU, 0)
     with core.DeviceScope(device):
         model = CharRNN(args)
         model.CreateModel()

@@ -51,6 +51,16 @@ def _cudnn_supports(
             return False
     return True
 
+def _miopen_supports(
+        dilation=False,
+        nhwc=False,
+        backward=False,
+):
+    """Return True if MIOPEN supports this configuration."""
+    if nhwc or dilation:
+          return False
+    return True
+
 
 class TestConvolution(hu.HypothesisTestCase):
     # CUDNN does NOT support different padding values and we skip it
@@ -191,7 +201,7 @@ class TestConvolution(hu.HypothesisTestCase):
            output_channels=st.integers(1, 8),
            batch_size=st.integers(1, 3),
            order=st.sampled_from(["NCHW", "NHWC"]),
-           engine=st.sampled_from(["", "CUDNN", "MKLDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN", "MKLDNN"]),
            use_bias=st.booleans(),
            **hu.gcs)
     def test_convolution_gradients(self, op_type, stride, pad, kernel, dilation,
@@ -203,6 +213,10 @@ class TestConvolution(hu.HypothesisTestCase):
             assume(_cudnn_supports(dilation=(dilation > 1),
                                    nhwc=(order == 'NHWC'),
                                    backward=True))
+        if engine == "MIOPEN":
+            assume(_miopen_supports(dilation=(dilation > 1),
+                                    nhwc=(order == 'NHWC'),
+                                    backward=True)) 
 
         assume(engine != "MKLDNN" or use_bias is True)
 
@@ -320,7 +334,7 @@ class TestConvolution(hu.HypothesisTestCase):
            pad=st.integers(0, 2),
            use_bias=st.booleans(),
            **hu.gcs)
-    def test_3d_convolution_cudnn_nchw(self, op_type, batch_size, stride, size,
+    def test_3d_convolution_gpu_engine_nchw(self, op_type, batch_size, stride, size,
                                        kernel, dilation, pad, use_bias, gc, dc):
         input_channels = 1
         output_channels = 1
@@ -386,9 +400,13 @@ class TestConvolution(hu.HypothesisTestCase):
 
         for order in ["NCHW", "NHWC"]:
             engine_list = ['']
-            if _cudnn_supports(dilation=(dilation > 1), nhwc=(order == 'NHWC')):
-                engine_list.append('CUDNN')
-
+            if workspace.has_hip:
+                if _miopen_supports(dilation=(dilation > 1), nhwc=(order == 'NHWC')):
+                    engine_list.append('MIOPEN')
+            else:
+                if _cudnn_supports(dilation=(dilation > 1), nhwc=(order == 'NHWC')):
+                    engine_list.append('CUDNN')
+            
             for engine in engine_list:
                 op = core.CreateOperator(
                     op_type,
@@ -438,7 +456,7 @@ class TestConvolution(hu.HypothesisTestCase):
                ["simple", "dag"] +
                (["async_dag"] if workspace.has_gpu_support else [])),
            do=st.sampled_from(hu.device_options),
-           engine=st.sampled_from(["CUDNN", ""]))
+           engine=st.sampled_from(["MIOPEN" if workspace.has_hip else "CUDNN", ""]))
     def test_convolution_sync(self, net_type, num_workers, do, engine):
         m = ModelHelper(name="test_model")
         n = 1
@@ -449,7 +467,7 @@ class TestConvolution(hu.HypothesisTestCase):
         w = 5
         workspace.ResetWorkspace()
 
-        use_cudnn = (engine == 'CUDNN')
+        use_gpu_engine = (engine == 'CUDNN' or engine == 'MIOPEN')
 
         np.random.seed(1701)
         # Build a binary tree of conv layers, summing at each node.
@@ -471,7 +489,7 @@ class TestConvolution(hu.HypothesisTestCase):
                     stride=1,
                     pad=1,
                     deterministic=1,
-                    use_cudnn=use_cudnn,
+                    use_gpu_engine=use_gpu_engine,
                     engine=engine)
                 brew.conv(
                     m, bottom_2, mid_2,
@@ -483,7 +501,7 @@ class TestConvolution(hu.HypothesisTestCase):
                     bias_init=('ConstantFill', dict(value=b2)),
                     deterministic=1,
                     cudnn_state=np.random.randint(0, 3),
-                    use_cudnn=use_cudnn,
+                    use_gpu_engine=use_gpu_engine,
                     engine=engine)
                 m.net.Sum([mid_1, mid_2], top)
 
@@ -521,7 +539,7 @@ class TestConvolution(hu.HypothesisTestCase):
                 np.sum(np.square(output)),
                 1763719461732352.0,
                 rtol=1e-5)
-
+    # Rohith :  investigate later..
     def test_use_cudnn_engine_interactions(self):
         """Make sure the use_cudnn and engine kwargs work as expected."""
         for model_default in [None, True, False]:

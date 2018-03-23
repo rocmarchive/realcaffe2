@@ -23,7 +23,7 @@ import hypothesis.strategies as st
 import numpy as np
 
 from caffe2.proto import caffe2_pb2
-from caffe2.python import core
+from caffe2.python import core, workspace
 import caffe2.python.hypothesis_test_util as hu
 
 
@@ -32,7 +32,7 @@ class TestDropout(hu.HypothesisTestCase):
     @given(X=hu.tensor(),
            in_place=st.booleans(),
            ratio=st.floats(0, 0.999),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN"]),
            **hu.gcs)
     def test_dropout_is_test(self, X, in_place, ratio, engine, gc, dc):
         """Test with is_test=True for a deterministic reference impl."""
@@ -60,7 +60,7 @@ class TestDropout(hu.HypothesisTestCase):
     @given(X=hu.tensor(),
            in_place=st.booleans(),
            output_mask=st.booleans(),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN"]),
            **hu.gcs)
     def test_dropout_ratio0(self, X, in_place, output_mask, engine, gc, dc):
         """Test with ratio=0 for a deterministic reference impl."""
@@ -83,7 +83,8 @@ class TestDropout(hu.HypothesisTestCase):
 
         def reference_dropout_ratio0(x):
             return (x,) if is_test else (x, np.ones(x.shape, dtype=np.bool))
+
         self.assertReferenceChecks(
             gc, op, [X], reference_dropout_ratio0,
             # Don't check the mask with cuDNN because it's packed data
-            outputs_to_check=None if engine != 'CUDNN' else [0])
+            outputs_to_check=None if (engine != 'CUDNN' and engine != 'MIOPEN') else [0])

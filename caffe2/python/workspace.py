@@ -62,7 +62,7 @@ if has_gpu_support:
     GetDefaultGPUID = C.get_default_gpu_id
     if has_hip:
         NumHipDevices = C.num_hip_devices
-        GetHIPVersion = C.get_hip_version
+        #GetMIOPENVersion = C.get_MIOPEN_version
         NumGpuDevices = C.num_hip_devices
     else:
         NumCudaDevices = C.num_cuda_devices

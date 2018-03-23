@@ -5,7 +5,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-//#include "caffe2/core/common_cudnn.h"
+#include "caffe2/core/common_miopen.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/operator_fallback_hip.h"
 
@@ -32,7 +32,7 @@ void addHIPGlobalMethods(py::module& m) {
   m.def("set_default_gpu_id", &SetDefaultGPUID);
   m.def("get_default_gpu_id", &GetDefaultGPUID);
   m.def("get_hip_version", &HipVersion);
-  //m.def("get_cudnn_version", &cudnnCompiledVersion);
+  m.def("get_miopen_version", &miopenCompiledVersion);
   m.def("get_hip_peer_access_pattern", []() {
     std::vector<std::vector<bool>> pattern;
     CAFFE_ENFORCE(caffe2::GetHipPeerAccessPattern(&pattern));
