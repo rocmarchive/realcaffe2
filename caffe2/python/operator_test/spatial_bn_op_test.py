@@ -18,7 +18,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from hypothesis import given
+from hypothesis import given, assume
 import hypothesis.strategies as st
 import numpy as np
 from caffe2.python import brew, core, workspace
@@ -41,6 +41,8 @@ class TestSpatialBN(hu.HypothesisTestCase):
     def test_spatialbn_test_mode_3d(
             self, size, input_channels, batch_size, seed, order, epsilon,
             inplace, gc, dc):
+        if workspace.has_hip:
+            assume(order == "NCHW")
         op = core.CreateOperator(
             "SpatialBN",
             ["X", "scale", "bias", "mean", "var"],
@@ -50,7 +52,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
             epsilon=epsilon,
             engine="MIOPEN" if workspace.has_hip else "CUDNN",
         )
-
+        
         def reference_spatialbn_test(X, scale, bias, mean, var):
             if order == "NCHW":
                 scale = scale[np.newaxis, :, np.newaxis, np.newaxis, np.newaxis]
@@ -72,7 +74,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
         self.assertReferenceChecks(gc, op, [X, scale, bias, mean, var],
                                    reference_spatialbn_test)
         self.assertDeviceChecks(dc, op, [X, scale, bias, mean, var], [0])
-
+    
     @unittest.skipIf(not workspace.has_gpu_support, "No gpu support")
     @given(size=st.integers(7, 10),
            input_channels=st.integers(1, 10),
@@ -85,6 +87,8 @@ class TestSpatialBN(hu.HypothesisTestCase):
     def test_spatialbn_test_mode_1d(
             self, size, input_channels, batch_size, seed, order, epsilon,
             inplace, gc, dc):
+        if workspace.has_hip:
+            assume(order == "NCHW")
         op = core.CreateOperator(
             "SpatialBN",
             ["X", "scale", "bias", "mean", "var"],
@@ -128,6 +132,8 @@ class TestSpatialBN(hu.HypothesisTestCase):
     def test_spatialbn_test_mode(
             self, size, input_channels, batch_size, seed, order, epsilon,
             inplace, engine, gc, dc):
+        if engine == "MIOPEN":
+            assume(order == "NCHW")
         op = core.CreateOperator(
             "SpatialBN",
             ["X", "scale", "bias", "mean", "var"],
@@ -173,6 +179,8 @@ class TestSpatialBN(hu.HypothesisTestCase):
     def test_spatialbn_train_mode(
             self, size, input_channels, batch_size, seed, order, epsilon,
             inplace, engine, gc, dc):
+        if engine == "MIOPEN":
+            assume(order == "NCHW")
         op = core.CreateOperator(
             "SpatialBN",
             ["X", "scale", "bias", "running_mean", "running_var"],
@@ -208,6 +216,8 @@ class TestSpatialBN(hu.HypothesisTestCase):
     def test_spatialbn_train_mode_gradient_check(
             self, size, input_channels, batch_size, seed, order, epsilon,
             engine, gc, dc):
+        if engine == "MIOPEN":
+            assume(order == "NCHW")
         op = core.CreateOperator(
             "SpatialBN",
             ["X", "scale", "bias", "mean", "var"],
@@ -241,6 +251,8 @@ class TestSpatialBN(hu.HypothesisTestCase):
     def test_spatialbn_train_mode_gradient_check_1d(
             self, size, input_channels, batch_size, seed, order, epsilon,
             gc, dc):
+        if workspace.has_hip:
+            assume(order == "NCHW")
         op = core.CreateOperator(
             "SpatialBN",
             ["X", "scale", "bias", "mean", "var"],
@@ -294,6 +306,6 @@ class TestSpatialBN(hu.HypothesisTestCase):
         workspace.RunNetOnce(model.param_init_net)
         workspace.RunNetOnce(model.net)
 
-
+    
 if __name__ == "__main__":
     unittest.main()
