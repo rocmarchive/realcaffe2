@@ -73,7 +73,6 @@ class TestPooling(hu.HypothesisTestCase):
         self.assertDeviceChecks(dc, op, [X], [0])
         if 'MaxPool' not in op_type:
             self.assertGradientChecks(gc, op, [X], 0, [0])
-    # Rohith : Investigate for MIOPEN
     # This test is to check if CUDNN works for bigger batch size or not
     @unittest.skipIf(not os.getenv('CAFFE2_DEBUG'),
                      "This is a test that reproduces a cudnn error. If you "
@@ -88,7 +87,7 @@ class TestPooling(hu.HypothesisTestCase):
             kernel=7,
             pad=0,
             order="NHWC",
-            engine="MIOPEN" if workspace.has_hip else "CUDNN",
+            engine="CUDNN",
         )
         X = np.random.rand(70000, 7, 7, 81).astype(np.float32)
 
@@ -135,7 +134,7 @@ class TestPooling(hu.HypothesisTestCase):
            order=st.sampled_from(["NCHW", "NHWC"]),
            op_type=st.sampled_from(["MaxPool", "AveragePool",
                                     "MaxPool3D", "AveragePool3D"]),
-           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN"]),
+           engine=st.sampled_from(["", "CUDNN"]),
            **hu.gcs)
     def test_pooling_3d(self, stride, pad, kernel, size, input_channels,
                         batch_size, order, op_type, engine, gc, dc):
@@ -172,7 +171,7 @@ class TestPooling(hu.HypothesisTestCase):
            order=st.sampled_from(["NCHW", "NHWC"]),
            op_type=st.sampled_from(["MaxPool", "AveragePool",
                                     "MaxPool3D", "AveragePool3D"]),
-           engine=st.sampled_from(["", "MIOPEN" if workspace.has_hip else "CUDNN"]),
+           engine=st.sampled_from(["", "CUDNN"]),
            **hu.gcs)
     def test_global_pooling_3d(self, stride, pad, kernel, size, input_channels,
                                batch_size, order, op_type, engine, gc, dc):
@@ -335,6 +334,8 @@ class TestPooling(hu.HypothesisTestCase):
                      input_channels, batch_size,
                      order, op_type, engine, gc, dc):
         assume(pad < kernel)
+        if engine == 'MIOPEN':
+            assume(op_type != "LpPool" and order == "NCHW")
         op = core.CreateOperator(
             op_type,
             ["X"],
@@ -366,6 +367,8 @@ class TestPooling(hu.HypothesisTestCase):
         # CuDNN 5 does not support deterministic max pooling.
         if not workspace.has_hip:
             assume(workspace.GetCuDNNVersion() >= 6000 or op_type != "MaxPool")
+        if engine == 'MIOPEN':
+            assume(op_type != "LpPool" and order == "NCHW")
         op = core.CreateOperator(
             op_type,
             ["X"],
