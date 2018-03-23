@@ -213,6 +213,10 @@ class TestConvolution(hu.HypothesisTestCase):
             assume(_cudnn_supports(dilation=(dilation > 1),
                                    nhwc=(order == 'NHWC'),
                                    backward=True))
+        if engine == "MIOPEN":
+            assume(_miopen_supports(dilation=(dilation > 1),
+                                    nhwc=(order == 'NHWC'),
+                                    backward=True)) 
 
         assume(engine != "MKLDNN" or use_bias is True)
 
@@ -347,7 +351,7 @@ class TestConvolution(hu.HypothesisTestCase):
             dilations=[dilation] * n,
             pads=[pad] * n * 2,
             order=order,
-            engine="MIOPEN" if workspace.has_hip else "CUDNN",
+            engine="CUDNN",
         )
 
         input_dims = [batch_size, input_channels]
