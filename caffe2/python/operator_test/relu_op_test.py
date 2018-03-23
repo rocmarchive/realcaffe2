@@ -19,6 +19,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from caffe2.python import core
+from caffe2.python.workspace import has_hip
 from hypothesis import given
 import hypothesis.strategies as st
 import caffe2.python.hypothesis_test_util as hu
@@ -31,7 +32,7 @@ import unittest
 class TestRelu(hu.HypothesisTestCase):
 
     @given(X=hu.tensor(),
-           engine=st.sampled_from(["", "CUDNN"]),
+           engine=st.sampled_from(["", "MIOPEN" if has_hip else "CUDNN"]),
            **mu.gcs)
     def test_relu(self, X, gc, dc, engine):
         op = core.CreateOperator("Relu", ["X"], ["Y"], engine=engine)

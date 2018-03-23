@@ -28,8 +28,8 @@ class Seq2SeqModelHelper(ModelHelper):
 
     def __init__(self, init_params=True, **kwargs):
         arg_scope = {
-            'use_cudnn': kwargs.pop('use_cudnn', True),
-            'cudnn_exhaustive_search': kwargs.pop('cudnn_exhaustive_search', False),
+            'use_gpu_engine': kwargs.pop('use_gpu_engine', True),
+            'gpu_engine_exhaustive_search': kwargs.pop('gpu_engine_exhaustive_search', False),
             'order': 'NHWC',
         }
         if kwargs.get('ws_nbytes_limit', None):

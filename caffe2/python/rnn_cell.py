@@ -663,14 +663,14 @@ class DropoutCell(RNNCell):
         self,
         internal_cell,
         dropout_ratio=None,
-        use_cudnn=False,
+        use_gpu_engine=False,
         **kwargs
     ):
         self.internal_cell = internal_cell
         self.dropout_ratio = dropout_ratio
         assert 'is_test' in kwargs, "Argument 'is_test' is required"
         self.is_test = kwargs.pop('is_test')
-        self.use_cudnn = use_cudnn
+        self.use_gpu_engine = use_gpu_engine
         super(DropoutCell, self).__init__(**kwargs)
 
         self.prepare_input = internal_cell.prepare_input
@@ -725,7 +725,7 @@ class DropoutCell(RNNCell):
                     str(output) + '_with_dropout_mask{}'.format(self.mask),
                     ratio=float(self.dropout_ratio),
                     is_test=self.is_test,
-                    use_cudnn=self.use_cudnn,
+                    use_gpu_engine=self.use_gpu_engine,
                 )
                 self.mask += 1
         return output
@@ -1136,7 +1136,7 @@ class AttentionCell(RNNCell):
         )
         if (
             scope.CurrentDeviceScope() is not None and
-            scope.CurrentDeviceScope().device_type == caffe2_pb2.CUDA
+            (scope.CurrentDeviceScope().device_type == caffe2_pb2.CUDA or scope.CurrentDeviceScope().device_type == caffe2_pb2.HIP)
         ):
             encoder_length = model.net.CopyGPUToCPU(
                 encoder_length,

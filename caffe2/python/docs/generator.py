@@ -117,6 +117,7 @@ class OperatorEngine(object):
     def getDeviceImpl(self):
         deviceImplList = []
         for device, impl in [('CPU', OpSchema.get_cpu_impl(self.op_name)),
+                             ('HIP', OpSchema.get_hip_impl(self.op_name)),
                              ('CUDA', OpSchema.get_cuda_impl(self.op_name))]:
             if not impl:
                 continue
@@ -197,7 +198,7 @@ class OperatorDoc(object):
             self.getInfo(formatter,
                          'CPU', OpSchema.get_cpu_impl(self.name)),
             self.getInfo(formatter,
-                         'GPU', OpSchema.get_cuda_impl(self.name)),
+                         'GPU', OpSchema.get_hip_impl(self.name) if workspace.has_hip else OpSchema.get_cuda_impl(self.name)),
         ]
         formatter.addList([i for i in devices if i])
 

@@ -38,7 +38,31 @@ from caffe2.proto import caffe2_pb2
 import unittest
 
 
-if workspace.has_gpu_support and workspace.NumCudaDevices() > 0:
+
+if workspace.has_gpu_support and workspace.has_hip and workspace.NumHipDevices() > 0:
+    gpu_device_option = caffe2_pb2.DeviceOption()
+    gpu_device_option.device_type = caffe2_pb2.HIP
+    cpu_device_option = caffe2_pb2.DeviceOption()
+    gpu_device_checker = device_checker.DeviceChecker(
+        0.01, [gpu_device_option]
+    )
+    device_checker = device_checker.DeviceChecker(
+        0.01, [gpu_device_option, cpu_device_option]
+    )
+    gpu_gradient_checkers = [
+        gradient_checker.GradientChecker(
+            0.005, 0.05, gpu_device_option, "gpu_checker_ws"
+        ),
+    ]
+    gradient_checkers = [
+        gradient_checker.GradientChecker(
+            0.005, 0.05, gpu_device_option, "gpu_checker_ws"
+        ),
+        gradient_checker.GradientChecker(
+            0.01, 0.05, cpu_device_option, "cpu_checker_ws"
+        ),
+    ]
+elif workspace.has_gpu_support and workspace.has_cuda and workspace.NumCudaDevices() > 0:
     gpu_device_option = caffe2_pb2.DeviceOption()
     gpu_device_option.device_type = caffe2_pb2.CUDA
     cpu_device_option = caffe2_pb2.DeviceOption()
@@ -100,7 +124,6 @@ class TestLRN(test_util.TestCase):
             for checker in gradient_checkers:
                 res, grad, grad_estimated = checker.CheckSimple(op, [X], 0, [0])
                 self.assertTrue(res)
-
 
 class TestFlatten(test_util.TestCase):
 
@@ -559,7 +582,6 @@ class TestWhile(test_util.TestCase):
         # (z^3)' = 3z^2
         self.assertAlmostEqual(workspace.FetchBlob("z_grad"), 12)
         self.assertAlmostEqual(workspace.FetchBlob("z"), 8)
-
 
 if __name__ == '__main__':
     workspace.GlobalInit(["python"])
