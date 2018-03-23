@@ -21,7 +21,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from caffe2.python import scope
-from caffe2.workspace import has_hip
+from caffe2.python.workspace import has_hip
 from caffe2.python.modeling.parameter_info import ParameterTags
 from caffe2.proto import caffe2_pb2
 from caffe2.python.modeling import initializers
