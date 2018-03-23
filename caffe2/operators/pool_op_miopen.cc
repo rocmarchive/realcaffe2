@@ -160,7 +160,8 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
             top_desc_,
             &poolWsSize_));
 
-    hipMalloc(&poolWs, poolWsSize_);
+    hipFree(poolWs);
+    HIP_CHECK(hipMalloc(&poolWs, poolWsSize_));
   }
 
   ~MIOPENPoolGradientOp() {
