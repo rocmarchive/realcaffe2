@@ -88,7 +88,8 @@ namespace caffe2 {
         MIOPENConvOp(const OperatorDef &operator_def, Workspace *ws)
                 : MIOPENConvOpBase(operator_def, ws),
                   requestAlgoCount_(OperatorBase::GetSingleArgument<int>("requestAlgoCount_", 1)),
-                  returnedAlgoCount_(OperatorBase::GetSingleArgument<int>("returnedAlgoCount_", 1))
+                  returnedAlgoCount_(OperatorBase::GetSingleArgument<int>("returnedAlgoCount_", 1)),
+                  bestAlgoFound_(OperatorBase::GetSingleArgument<bool>("bestAlgoFound_", false))
         {
 
             MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(miopen_wrapper_.inline_miopen_handle(),
@@ -112,6 +113,7 @@ namespace caffe2 {
     private:
         const int requestAlgoCount_;
         int returnedAlgoCount_;
+        bool bestAlgoFound_;
         char* fwdConvWs;
         size_t fwdConvWsSize_;
         miopenConvAlgoPerf_t perf_;
@@ -126,7 +128,9 @@ namespace caffe2 {
                 : MIOPENConvOpBase(operator_def, ws),
                   no_bias_(OperatorBase::GetSingleArgument<int>("no_bias", 0)),
                   requestAlgoCount_(OperatorBase::GetSingleArgument<int>("requestAlgoCount_", 1)),
-                  returnedAlgoCount_(OperatorBase::GetSingleArgument<int>("returnedAlgoCount_", 1)) {
+                  returnedAlgoCount_(OperatorBase::GetSingleArgument<int>("returnedAlgoCount_", 1)),
+                  bestDataAlgoFound_(OperatorBase::GetSingleArgument<bool>("bestAlgoFound", false)),
+                  bestWeightAlgoFound_(OperatorBase::GetSingleArgument<bool>("bestAlgoFound", false)) {
             CAFFE_ENFORCE(
                     !(no_bias_ && OutputSize() == 3),
                     "If bias is not present, you should not have 3 grad output.");
@@ -166,6 +170,8 @@ namespace caffe2 {
         bool no_bias_;
         const int requestAlgoCount_;
         int returnedAlgoCount_;
+        bool bestDataAlgoFound_;
+        bool bestWeightAlgoFound_;
         miopenConvAlgoPerf_t perf_;
         size_t bwdWeightWsSize_;
         size_t bwdDataWsSize_;
@@ -223,20 +229,26 @@ namespace caffe2 {
                                                    W_out));
 
 
-        MIOPEN_ENFORCE(miopenFindConvolutionForwardAlgorithm(miopen_wrapper_.inline_miopen_handle(),
-                                                             bottom_desc_,
-                                                             X.template data<T_X>(),
-                                                             weight_desc_,
-                                                             Weight.template data<T_W>(),
-                                                             conv_desc_,
-                                                             top_desc_,
-                                                             Y->template mutable_data<T_Y>(),
-                                                             requestAlgoCount_,
-                                                             &returnedAlgoCount_,
-                                                             &perf_,
-                                                             fwdConvWs,
-                                                             fwdConvWsSize_,
-                                                             exhaustive_search_));
+        while(!bestAlgoFound_)
+        {
+
+            MIOPEN_ENFORCE(miopenFindConvolutionForwardAlgorithm(miopen_wrapper_.inline_miopen_handle(),
+                                                                 bottom_desc_,
+                                                                 X.template data<T_X>(),
+                                                                 weight_desc_,
+                                                                 Weight.template data<T_W>(),
+                                                                 conv_desc_,
+                                                                 top_desc_,
+                                                                 Y->template mutable_data<T_Y>(),
+                                                                 requestAlgoCount_,
+                                                                 &returnedAlgoCount_,
+                                                                 &perf_,
+                                                                 fwdConvWs,
+                                                                 fwdConvWsSize_,
+                                                                 exhaustive_search_));
+
+            bestAlgoFound_ = true;
+        }
 
 
         MIOPEN_ENFORCE(miopenConvolutionForward(miopen_wrapper_.inline_miopen_handle(),
@@ -320,21 +332,27 @@ namespace caffe2 {
 
         //////////// BWD DATA ////////////////////////////////////////
 
-        MIOPEN_ENFORCE(miopenFindConvolutionBackwardDataAlgorithm
-                               (miopen_wrapper_.inline_miopen_handle(),
-                                top_desc_,
-                                dY.template data<T_DY>(),
-                                weight_desc_,
-                                Weight.template data<T_W>(),
-                                conv_desc_,
-                                bottom_desc_,
-                                dX->template data<T_DX>(),
-                                requestAlgoCount_,
-                                &returnedAlgoCount_,
-                                &perf_,
-                                bwdDataWs,// state->workspace().get(fwdConvWsSize_);
-                                bwdDataWsSize_,
-                                exhaustive_search_));
+        while(!bestDataAlgoFound_)
+        {
+
+            MIOPEN_ENFORCE(miopenFindConvolutionBackwardDataAlgorithm
+                                   (miopen_wrapper_.inline_miopen_handle(),
+                                    top_desc_,
+                                    dY.template data<T_DY>(),
+                                    weight_desc_,
+                                    Weight.template data<T_W>(),
+                                    conv_desc_,
+                                    bottom_desc_,
+                                    dX->template data<T_DX>(),
+                                    requestAlgoCount_,
+                                    &returnedAlgoCount_,
+                                    &perf_,
+                                    bwdDataWs,// state->workspace().get(fwdConvWsSize_);
+                                    bwdDataWsSize_,
+                                    exhaustive_search_));
+
+            bestDataAlgoFound_ = true;
+        }
 
 
         MIOPEN_ENFORCE(miopenConvolutionBackwardData(miopen_wrapper_.inline_miopen_handle(),
@@ -354,21 +372,26 @@ namespace caffe2 {
 
         //////////////////////////////   BWD WEIGHT //////////////////////
 
-        MIOPEN_ENFORCE(miopenFindConvolutionBackwardWeightsAlgorithm(miopen_wrapper_.inline_miopen_handle(),
-                                                                     top_desc_,
-                                                                     dY.template data<T_DY>(),
-                                                                     bottom_desc_,
-                                                                     X.template data<T_X>(),
-                                                                     conv_desc_,
-                                                                     weight_desc_,
-                                                                     dW->template mutable_data<T_DW>(),
-                                                                     requestAlgoCount_,
-                                                                     &returnedAlgoCount_,
-                                                                     &perf_,
-                                                                     bwdWeightWs,// state->workspace().get(bwd_conv_ws_size);
-                                                                     bwdWeightWsSize_,
-                                                                     exhaustive_search_));
+        while(!bestWeightAlgoFound_)
+        {
 
+            MIOPEN_ENFORCE(miopenFindConvolutionBackwardWeightsAlgorithm(miopen_wrapper_.inline_miopen_handle(),
+                                                                         top_desc_,
+                                                                         dY.template data<T_DY>(),
+                                                                         bottom_desc_,
+                                                                         X.template data<T_X>(),
+                                                                         conv_desc_,
+                                                                         weight_desc_,
+                                                                         dW->template mutable_data<T_DW>(),
+                                                                         requestAlgoCount_,
+                                                                         &returnedAlgoCount_,
+                                                                         &perf_,
+                                                                         bwdWeightWs,// state->workspace().get(bwd_conv_ws_size);
+                                                                         bwdWeightWsSize_,
+                                                                         exhaustive_search_));
+
+            bestWeightAlgoFound_ = true;
+        }
         MIOPEN_ENFORCE(miopenConvolutionBackwardWeights(miopen_wrapper_.inline_miopen_handle(),
                                                         &alpha_,
                                                         top_desc_,
