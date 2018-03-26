@@ -48,7 +48,7 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
             top_desc_,
             &poolWsSize_));
 
-    hipFree(poolWs);
+    if(poolWs) hipFree(poolWs);
     HIP_CHECK(hipMalloc(&poolWs, poolWsSize_));
   }
 
@@ -56,7 +56,7 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bottom_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
     MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
-    hipFree(poolWs);
+    if(poolWs) hipFree(poolWs);
   }
 
   template <typename T, typename M>
@@ -160,7 +160,7 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
             top_desc_,
             &poolWsSize_));
 
-    hipFree(poolWs);
+    if(poolWs) hipFree(poolWs);
     HIP_CHECK(hipMalloc(&poolWs, poolWsSize_));
   }
 
@@ -168,7 +168,7 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bottom_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
     MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
-    hipFree(poolWs);
+    if(poolWs) hipFree(poolWs);
   }
 
   template <typename T, typename M>
