@@ -45,9 +45,9 @@ public:
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_for_bias_));
     MIOPEN_ENFORCE(miopenCreateConvolutionDescriptor(&conv_desc_));
 
-    if (operator_def.type().substr(0, 12) == "Convolution") {
+    if (operator_def.type().substr(0, 12) == "Conv2D") {
       mode_ = miopenConvolution;
-    } else if (operator_def.type().substr(0, 10) == "Transpose") {
+    } else if (operator_def.type().substr(0, 10) == "Trans2D") {
       mode_ = miopenTranspose;
     } else {
       LOG(FATAL) << "Unsupported convolution method: " << operator_def.type();
