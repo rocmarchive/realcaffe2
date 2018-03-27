@@ -26,7 +26,8 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
         miopen_wrapper_(&context_),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
-        do_backward_(OperatorBase::GetSingleArgument<bool>("do_backward", true))
+        do_backward_(OperatorBase::GetSingleArgument<bool>("do_backward", true)),
+        poolWs_(nullptr)
 
   {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bottom_desc_));
@@ -48,15 +49,15 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
             top_desc_,
             &poolWsSize_));
 
-    if(poolWs) hipFree(poolWs);
-    HIP_CHECK(hipMalloc(&poolWs, poolWsSize_));
+    if(poolWs_) hipFree(poolWs_);
+    HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
   }
 
   ~MIOPENPoolOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bottom_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
     MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
-    if(poolWs) hipFree(poolWs);
+    if(poolWs_) hipFree(poolWs_);
   }
 
   template <typename T, typename M>
@@ -64,20 +65,12 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
     auto& X = Input(0);
     auto* Y = Output(0);
     int N = 0, C = 0, H = 0, W = 0, D = 0;
-    int N_out = 0, C_out = 0, H_out = 0, W_out = 0, D_out = 0;
-
-    // cuDNN pooling support only 2 and 3 spatial dimensions.
+    int N_out = 0, C_out = 0, H_out = 0, W_out = 0;
     CAFFE_ENFORCE(X.ndim() >= 4 && X.ndim() <= 5);
-
     N = X.dim32(0);
     C = X.dim32(1);
     H = X.dim32(2);
     W = X.ndim() > 3 ? X.dim32(3) : 1;
-    D = X.ndim() > 4 ? X.dim32(4) : 1;
-    ConvPoolOpBase::SetOutputSize(X, Y, C);
-    H_out = Y->dim32(2);
-    W_out = Y->ndim() > 3 ? Y->dim32(3) : 1;
-    D_out = Y->ndim() > 4 ? Y->dim32(4) : 1;
 
     if (kernel_.size() == 2) {
         MIOPEN_ENFORCE(miopenSet2dPoolingDescriptor(
@@ -91,6 +84,30 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
             stride_w()));
       }
 
+    MIOPEN_ENFORCE(miopenGetPoolingForwardOutputDim(
+            pooling_desc_,
+            bottom_desc_,
+            &N_out,
+            &C_out,
+            &H_out,
+            &W_out));
+
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+            bottom_desc_,
+            miopenTypeWrapper<T>::type,
+            N,
+            C,
+            H,
+            W));
+
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+            top_desc_,
+            miopenTypeWrapper<T>::type,
+            N_out,
+            C_out,
+            H_out,
+            W_out));
+
     const T* Xdata = X.template data<T>();
     T* Ydata = Y->template mutable_data<T>();
     MIOPEN_ENFORCE(miopenPoolingForward(
@@ -103,7 +120,7 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
         top_desc_,
         Ydata,
         do_backward_,
-        poolWs,
+        poolWs_,
         poolWsSize_));
     return true;
   }
@@ -122,7 +139,7 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
 
  protected:
   size_t poolWsSize_;
-  char*  poolWs;
+  char*  poolWs_;
   MIOPENWrapper miopen_wrapper_;
   miopenTensorDescriptor_t bottom_desc_;
   miopenTensorDescriptor_t top_desc_;
@@ -140,7 +157,9 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
       : ConvPoolOpBase<HIPContext>(operator_def, ws),
         miopen_wrapper_(&context_),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
-        beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)){
+        beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
+        poolWs_(nullptr)
+  {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bottom_desc_));
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_));
     MIOPEN_ENFORCE(miopenCreatePoolingDescriptor(&pooling_desc_));
@@ -160,15 +179,15 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
             top_desc_,
             &poolWsSize_));
 
-    if(poolWs) hipFree(poolWs);
-    HIP_CHECK(hipMalloc(&poolWs, poolWsSize_));
+    if(poolWs_) hipFree(poolWs_);
+    HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
   }
 
   ~MIOPENPoolGradientOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bottom_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
     MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
-    if(poolWs) hipFree(poolWs);
+    if(poolWs_) hipFree(poolWs_);
   }
 
   template <typename T, typename M>
@@ -224,7 +243,7 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
         &beta_,
         bottom_desc_,
         dXdata,
-        poolWs));
+        poolWs_));
 
     return true;
   }
@@ -246,7 +265,7 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
 
  protected:
   size_t poolWsSize_;
-  char*  poolWs;
+  char*  poolWs_;
   MIOPENWrapper miopen_wrapper_;
   miopenTensorDescriptor_t bottom_desc_;
   miopenTensorDescriptor_t top_desc_;
