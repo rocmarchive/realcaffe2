@@ -72,6 +72,7 @@ class MIOpenSoftmaxOp final : public Operator<HIPContext> {
  protected:
   MIOPENWrapper miopen_wrapper_;
   miopenTensorDescriptor_t desc_;
+  vector<TIndex> dims_;
   const int axis_;
   const float alpha_;
   const float beta_;
@@ -137,6 +138,7 @@ class MIOpenSoftmaxGradientOp final : public Operator<HIPContext> {
   const float alpha_;
   const float beta_;
   miopenTensorDescriptor_t desc_;
+  vector<TIndex> dims_;
 };
 
 namespace {
