@@ -21,9 +21,9 @@
 
 namespace caffe2 {
 
-class MiOPENReluOp final : public Operator<HIPContext> {
+class MIOPENReluOp final : public Operator<HIPContext> {
  public:
-  MiOPENReluOp(const OperatorDef& operator_def, Workspace* ws)
+  MIOPENReluOp(const OperatorDef& operator_def, Workspace* ws)
       : Operator<HIPContext>(operator_def, ws),
         miopen_wrapper_(&context_),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
@@ -35,7 +35,7 @@ class MiOPENReluOp final : public Operator<HIPContext> {
         activ_desc_, miopenActivationRELU, alpha_, beta_, power_));
   }
 
-  ~MiOPENReluOp() {
+  ~MIOPENReluOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(data_desc_));
     MIOPEN_ENFORCE(miopenDestroyActivationDescriptor(activ_desc_));
   }
@@ -104,22 +104,21 @@ class MiOPENReluOp final : public Operator<HIPContext> {
   miopenTensorDescriptor_t data_desc_;
   miopenActivationDescriptor_t activ_desc_;
   vector<TIndex> miopen_input_dims_;
-  
   const float alpha_;
   const float beta_;
   const double power_;
 };
 
 
-// Note: You can see that in MiOPENReluGradientOp, we abused the miopen interface
+// Note: You can see that in MIOPENReluGradientOp, we abused the miopen interface
 // by passing in the output tensor for both bottom and top. This is dependent on
 // the assumption that the Relu gradient actually does not rely on the bottom
 // data, or it treats input=0 the same way as input<0. This is of course not
 // very safe, but we have been running in this way in Caffe for a while so it
 // *might* be safe to assume so.
-class MiOPENReluGradientOp final : public Operator<HIPContext> {
+class MIOPENReluGradientOp final : public Operator<HIPContext> {
  public:
-  MiOPENReluGradientOp(const OperatorDef& operator_def, Workspace* ws)
+  MIOPENReluGradientOp(const OperatorDef& operator_def, Workspace* ws)
       : Operator<HIPContext>(operator_def, ws),
         miopen_wrapper_(&context_),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
@@ -131,7 +130,7 @@ class MiOPENReluGradientOp final : public Operator<HIPContext> {
             activ_desc_, miopenActivationRELU, alpha_, beta_, power_));
   }
 
-  ~MiOPENReluGradientOp() {
+  ~MIOPENReluGradientOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(data_desc_));
     MIOPEN_ENFORCE(miopenDestroyActivationDescriptor(activ_desc_));
   }
@@ -217,7 +216,7 @@ class MiOPENReluGradientOp final : public Operator<HIPContext> {
 };
 
 namespace {
-REGISTER_MIOPEN_OPERATOR(Relu, MiOPENReluOp);
-REGISTER_MIOPEN_OPERATOR(ReluGradient, MiOPENReluGradientOp);
+REGISTER_MIOPEN_OPERATOR(Relu, MIOPENReluOp);
+REGISTER_MIOPEN_OPERATOR(ReluGradient, MIOPENReluGradientOp);
 }  // namespace
 }  // namespace caffe2

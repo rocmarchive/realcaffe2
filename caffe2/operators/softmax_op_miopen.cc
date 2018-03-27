@@ -20,18 +20,9 @@
 #include "caffe2/operators/softmax_op.h"
 
 namespace caffe2 {
-
-namespace {
-constexpr int NUM_DESCRIPTORS = 2;
-constexpr int GRADIENT_NUM_DESCRIPTORS = 3;
-constexpr int BOTTOM_DESC_ID = 0;
-constexpr int TOP_DESC_ID = 1;
-constexpr int TOP_GRADIENT_DESC_ID = 2;
-}  // namespace
-
-class MiOpenSoftmaxOp final : public Operator<HIPContext> {
+class MIOpenSoftmaxOp final : public Operator<HIPContext> {
  public:
-  explicit MiOpenSoftmaxOp(const OperatorDef& def, Workspace* ws)
+  explicit MIOpenSoftmaxOp(const OperatorDef& def, Workspace* ws)
       : Operator<HIPContext>(def, ws),
         miopen_wrapper_(&context_),
         axis_(OperatorBase::GetSingleArgument<int>("axis", 1)),
@@ -40,7 +31,7 @@ class MiOpenSoftmaxOp final : public Operator<HIPContext> {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&desc_));
   }
 
-  ~MiOpenSoftmaxOp() {
+  ~MIOpenSoftmaxOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(desc_));
   }
 
@@ -88,9 +79,9 @@ class MiOpenSoftmaxOp final : public Operator<HIPContext> {
 };
 
 
-class MiOpenSoftmaxGradientOp final : public Operator<HIPContext> {
+class MIOpenSoftmaxGradientOp final : public Operator<HIPContext> {
  public:
-  explicit MiOpenSoftmaxGradientOp(const OperatorDef& def, Workspace* ws)
+  explicit MIOpenSoftmaxGradientOp(const OperatorDef& def, Workspace* ws)
       : Operator<HIPContext>(def, ws),
         miopen_wrapper_(&context_),
         axis_(OperatorBase::GetSingleArgument<int>("axis", 1)),
@@ -99,7 +90,7 @@ class MiOpenSoftmaxGradientOp final : public Operator<HIPContext> {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&desc_));
   }
 
-  ~MiOpenSoftmaxGradientOp() {
+  ~MIOpenSoftmaxGradientOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(desc_));
   }
 
@@ -151,7 +142,8 @@ class MiOpenSoftmaxGradientOp final : public Operator<HIPContext> {
 };
 
 namespace {
-REGISTER_MIOPEN_OPERATOR(Softmax, MiOpenSoftmaxOp);
-REGISTER_MIOPEN_OPERATOR(SoftmaxGradient, MiOpenSoftmaxGradientOp);
+REGISTER_MIOPEN_OPERATOR(Softmax, MIOpenSoftmaxOp);
+REGISTER_MIOPEN_OPERATOR(SoftmaxGradient, MIOpenSoftmaxGradientOp);
 }  // namespace
+
 }  // namespace caffe2
