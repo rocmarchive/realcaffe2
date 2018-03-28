@@ -34,10 +34,10 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_));
     MIOPEN_ENFORCE(miopenCreatePoolingDescriptor(&pooling_desc_));
 
-    if (operator_def.type().substr(0, 7) == "MaxPool") {
+    if ((operator_def.type().substr(0, 9) == "MaxPool2D") || (operator_def.type().substr(0, 17) == "MaxPool2DGradient")){
       mode_ = miopenPoolingMax;
     }
-    else if (operator_def.type().substr(0, 11) == "AveragePool") {
+    else if ((operator_def.type().substr(0, 13) == "AveragePool2D") || (operator_def.type().substr(0, 21) == "AveragePool2DGradient")) {
       mode_ =  miopenPoolingAverage;
     }
     else
