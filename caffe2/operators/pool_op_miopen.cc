@@ -63,7 +63,7 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
     C = X.dim32(1);
     H = X.dim32(2);
     W = X.ndim() > 3 ? X.dim32(3) : 1;
-
+    ConvPoolOpBase::SetOutputSize(X, Y, C);
     if (kernel_.size() == 2) {
         MIOPEN_ENFORCE(miopenSet2dPoolingDescriptor(
             pooling_desc_,
