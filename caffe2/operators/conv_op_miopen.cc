@@ -93,14 +93,9 @@ public:
         bestAlgoFound_(
             OperatorBase::GetSingleArgument<bool>("bestAlgoFound_", false)) {
 
-    MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(
-        miopen_wrapper_.inline_miopen_handle(), weight_desc_, bottom_desc_,
-        conv_desc_, top_desc_, &fwdConvWsSize_));
-    hipFree(fwdConvWs);
-    HIP_CHECK(hipMalloc(&fwdConvWs, fwdConvWsSize_));
   }
 
-  ~MIOPENConvOp() { hipFree(fwdConvWs); }
+  ~MIOPENConvOp() { }
 
   template <typename T_X, typename T_W, typename T_B, typename MATH,
             typename T_Y>
@@ -135,19 +130,10 @@ public:
     CAFFE_ENFORCE(!(no_bias_ && OutputSize() == 3),
                   "If bias is not present, you should not have 3 grad output.");
 
-    MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
-        miopen_wrapper_.inline_miopen_handle(), top_desc_, weight_desc_,
-        conv_desc_, bottom_desc_, &bwdDataWsSize_));
-    hipFree(bwdDataWs);
-    HIP_CHECK(hipMalloc(&bwdDataWs, bwdDataWsSize_));
-    MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
-        miopen_wrapper_.inline_miopen_handle(), top_desc_, bottom_desc_,
-        conv_desc_, weight_desc_, &bwdWeightWsSize_));
-    hipFree(bwdWeightWs);
-    HIP_CHECK(hipMalloc(&bwdWeightWs, bwdWeightWsSize_));
+
   }
 
-  ~MIOPENConvGradientOp() { hipFree(bwdDataWs); hipFree(bwdWeightWs);}
+  ~MIOPENConvGradientOp() { }
 
   template <typename T_X, typename T_DY, typename T_W, typename T_B,
             typename MATH, typename T_DX, typename T_DW, typename T_DB>
@@ -198,11 +184,24 @@ bool MIOPENConvOp::DoRunWithType() {
   int W_out = Y->ndim() > 3 ? Y->dim32(3) : 1;
   int D_out = Y->ndim() > 4 ? Y->dim32(4) : 1;
 
+
+  MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+          weight_desc_, miopenTypeWrapper<T_X>::type, M, C, kernel_h(), kernel_w()));
+
+  MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+          bottom_desc_, miopenTypeWrapper<T_X>::type, N, C, H, W));
+
   MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(
       conv_desc_, bottom_desc_, weight_desc_, &N_out, &C_out, &H_out, &W_out));
 
   MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
-      top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
+          top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
+
+  MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(
+          miopen_wrapper_.inline_miopen_handle(), weight_desc_, bottom_desc_,
+          conv_desc_, top_desc_, &fwdConvWsSize_));
+  hipFree(fwdConvWs);
+  HIP_CHECK(hipMalloc(&fwdConvWs, fwdConvWsSize_));
 
   while (!bestAlgoFound_) {
 
@@ -234,6 +233,8 @@ bool MIOPENConvOp::DoRunWithType() {
         bias.template data<T_B>(), &beta_, top_desc_for_bias_,
         Y->template mutable_data<T_Y>()));
   }
+
+  hipFree(fwdConvWs);
   return true;
 }
 // TODO : enable fp16 support.
@@ -280,6 +281,17 @@ bool MIOPENConvGradientOp::DoRunWithType() {
   H_out = dY.dim32(2);
   W_out = dY.ndim() > 3 ? dY.dim32(3) : 1;
   D_out = dY.ndim() > 4 ? dY.dim32(4) : 1;
+
+  MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
+          miopen_wrapper_.inline_miopen_handle(), top_desc_, weight_desc_,
+          conv_desc_, bottom_desc_, &bwdDataWsSize_));
+  hipFree(bwdDataWs);
+  HIP_CHECK(hipMalloc(&bwdDataWs, bwdDataWsSize_));
+  MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
+          miopen_wrapper_.inline_miopen_handle(), top_desc_, bottom_desc_,
+          conv_desc_, weight_desc_, &bwdWeightWsSize_));
+  hipFree(bwdWeightWs);
+  HIP_CHECK(hipMalloc(&bwdWeightWs, bwdWeightWsSize_));
 
   //////////// BWD DATA ////////////////////////////////////////
 
@@ -328,6 +340,8 @@ bool MIOPENConvGradientOp::DoRunWithType() {
         dY.template data<T_DY>(), &beta_, bias_desc_,
         dbias->template mutable_data<T_DB>()));
   }
+
+  hipFree(bwdDataWs); hipFree(bwdWeightWs);
   return true;
 }
 
