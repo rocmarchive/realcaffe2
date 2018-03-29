@@ -104,7 +104,7 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
             top_desc_,
             &poolWsSize_));
 
-    if(poolWs_) hipFree(poolWs_);
+    hipFree(poolWs_);
     HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
 
     const T* Xdata = X.template data<T>();
@@ -122,7 +122,7 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
         poolWs_,
         poolWsSize_));
 
-    if(poolWs_) hipFree(poolWs_);
+    hipFree(poolWs_);
     return true;
   }
 
@@ -237,7 +237,7 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
             top_desc_,
             &poolWsSize_));
 
-    if(poolWs_) hipFree(poolWs_);
+    hipFree(poolWs_);
     HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
 
     // Carry out the pooling computation.
@@ -261,7 +261,7 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
         dXdata,
         poolWs_));
 
-    if(poolWs_) hipFree(poolWs_);
+    hipFree(poolWs_);
     return true;
   }
 
