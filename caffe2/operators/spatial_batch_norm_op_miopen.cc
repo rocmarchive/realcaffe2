@@ -30,7 +30,9 @@ class MIOpenSpatialBNOp final : public SpatialBNOp<HIPContext> {
   MIOpenSpatialBNOp(const OperatorDef& operator_def, Workspace* ws)
       : SpatialBNOp<HIPContext>(operator_def, ws), miopen_wrapper_(&context_),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
-        beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)) {
+        beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
+        mode_(miopenBNSpatial)
+  {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bn_param_desc_));
     if (epsilon_ <= MIOPEN_BN_MIN_EPSILON) {
@@ -66,7 +68,9 @@ class MIOpenSpatialBNGradientOp final : public SpatialBNGradientOp<HIPContext> {
   MIOpenSpatialBNGradientOp(const OperatorDef& operator_def, Workspace* ws)
       : SpatialBNGradientOp<HIPContext>(operator_def, ws), miopen_wrapper_(&context_),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
-        beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)) {
+        beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
+        mode_(miopenBNSpatial)
+  {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bn_param_desc_));
     if (epsilon_ <= MIOPEN_BN_MIN_EPSILON) {
@@ -155,7 +159,7 @@ bool MIOpenSpatialBNOp::DoRunWithType() {
     MIOPEN_ENFORCE(miopenBatchNormalizationForwardInference(
         miopen_wrapper_.inline_miopen_handle(),
         // Note: PERSISTENT not implemented for inference
-        miopenBNSpatial,
+        mode_,
         &alpha_,
         &beta_,
         data_desc_,
@@ -213,7 +217,7 @@ bool MIOpenSpatialBNOp::DoRunWithType() {
 
     MIOPEN_ENFORCE(miopenBatchNormalizationForwardTraining(
         miopen_wrapper_.inline_miopen_handle(),
-        miopenBNSpatial,
+        mode_,
         &alpha_,
         &beta_,
         data_desc_,
