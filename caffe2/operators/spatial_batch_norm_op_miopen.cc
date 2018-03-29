@@ -15,20 +15,19 @@
  */
 
 #include <cfloat>
-
 #include "caffe2/core/context_hip.h"
 #include "caffe2/core/miopen_wrapper.h"
 #include "caffe2/operators/spatial_batch_norm_op.h"
 #include "caffe2/utils/math.h"
 
-const double MIOPEN_BN_MIN_EPSILON = 1e-5;
+const double MIOPEN_BN_MIN_EPSILON = 1e-6;
 
 namespace caffe2 {
 
-class MiOpenSpatialBNOp final : public SpatialBNOp<HIPContext> {
+class MIOpenSpatialBNOp final : public SpatialBNOp<HIPContext> {
  public:
   USE_OPERATOR_FUNCTIONS(HIPContext);
-  MiOpenSpatialBNOp(const OperatorDef& operator_def, Workspace* ws)
+  MIOpenSpatialBNOp(const OperatorDef& operator_def, Workspace* ws)
       : SpatialBNOp<HIPContext>(operator_def, ws), miopen_wrapper_(&context_),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)) {
@@ -42,7 +41,7 @@ class MiOpenSpatialBNOp final : public SpatialBNOp<HIPContext> {
     epsilon_ = std::max(epsilon_, MIOPEN_BN_MIN_EPSILON);
   }
 
-  ~MiOpenSpatialBNOp() {
+  ~MIOpenSpatialBNOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(data_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bn_param_desc_));
   }
@@ -61,10 +60,10 @@ class MiOpenSpatialBNOp final : public SpatialBNOp<HIPContext> {
   miopenBatchNormMode_t mode_;
 };
 
-class MiOpenSpatialBNGradientOp final : public SpatialBNGradientOp<HIPContext> {
+class MIOpenSpatialBNGradientOp final : public SpatialBNGradientOp<HIPContext> {
  public:
   USE_OPERATOR_FUNCTIONS(HIPContext);
-  MiOpenSpatialBNGradientOp(const OperatorDef& operator_def, Workspace* ws)
+  MIOpenSpatialBNGradientOp(const OperatorDef& operator_def, Workspace* ws)
       : SpatialBNGradientOp<HIPContext>(operator_def, ws), miopen_wrapper_(&context_),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)) {
@@ -78,7 +77,7 @@ class MiOpenSpatialBNGradientOp final : public SpatialBNGradientOp<HIPContext> {
     epsilon_ = std::max(epsilon_, MIOPEN_BN_MIN_EPSILON);
   }
 
-  ~MiOpenSpatialBNGradientOp() {
+  ~MIOpenSpatialBNGradientOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(data_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bn_param_desc_));
   }
@@ -104,7 +103,7 @@ class MiOpenSpatialBNGradientOp final : public SpatialBNGradientOp<HIPContext> {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T, typename M>
-bool MiOpenSpatialBNOp::DoRunWithType() {
+bool MIOpenSpatialBNOp::DoRunWithType() {
 
   // QoL
   typedef typename miopenTypeWrapper<T>::BNParamType BNParamType;
@@ -234,7 +233,7 @@ bool MiOpenSpatialBNOp::DoRunWithType() {
   return true;
 }
 //TODO enable fp16 mode
-bool MiOpenSpatialBNOp::RunOnDevice() {
+bool MIOpenSpatialBNOp::RunOnDevice() {
   if (Input(0).IsType<float>()) {
     return DoRunWithType<float,float>();
   } else {
@@ -244,7 +243,7 @@ bool MiOpenSpatialBNOp::RunOnDevice() {
 }
 
 template <typename T, typename M>
-bool MiOpenSpatialBNGradientOp::DoRunWithType() {
+bool MIOpenSpatialBNGradientOp::DoRunWithType() {
   // QoL
   typedef typename miopenTypeWrapper<T>::BNParamType BNParamType;
 
@@ -311,7 +310,7 @@ bool MiOpenSpatialBNGradientOp::DoRunWithType() {
   return true;
 }
 //TODO enable fp16
-bool MiOpenSpatialBNGradientOp::RunOnDevice() {
+bool MIOpenSpatialBNGradientOp::RunOnDevice() {
   if (Input(0).IsType<float>()) {
     return DoRunWithType<float,float>();
   } else {
@@ -322,9 +321,9 @@ bool MiOpenSpatialBNGradientOp::RunOnDevice() {
 
 // Since there is no default implementation for spatial batch normalization,
 // we will register the miopen version as the default as well.
-REGISTER_HIP_OPERATOR(SpatialBN, MiOpenSpatialBNOp);
-REGISTER_HIP_OPERATOR(SpatialBNGradient, MiOpenSpatialBNGradientOp);
+REGISTER_HIP_OPERATOR(SpatialBN, MIOpenSpatialBNOp);
+REGISTER_HIP_OPERATOR(SpatialBNGradient, MIOpenSpatialBNGradientOp);
 
-REGISTER_MIOPEN_OPERATOR(SpatialBN, MiOpenSpatialBNOp);
-REGISTER_MIOPEN_OPERATOR(SpatialBNGradient, MiOpenSpatialBNGradientOp);
+REGISTER_MIOPEN_OPERATOR(SpatialBN, MIOpenSpatialBNOp);
+REGISTER_MIOPEN_OPERATOR(SpatialBNGradient, MIOpenSpatialBNGradientOp);
 }  // namespace caffe2
