@@ -34,7 +34,7 @@ public:
         miopen_ws_nbytes_limit_(OperatorBase::GetSingleArgument<size_t>(
             "ws_nbytes_limit", kCONV_MIOPEN_WORKSPACE_LIMIT_BYTES)),
         alpha_(OperatorBase::GetSingleArgument<float>(
-            "alpha", 1.0)), // TODO get conv mode
+            "alpha", 1.0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
         exhaustive_search_(
             OperatorBase::GetSingleArgument<bool>("exhaustive_search", false)) {
@@ -45,9 +45,9 @@ public:
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_for_bias_));
     MIOPEN_ENFORCE(miopenCreateConvolutionDescriptor(&conv_desc_));
 
-    if (operator_def.type().substr(0, 12) == "Conv2D") {
+    if ((operator_def.type().substr(0, 6) == "Conv2D") || (operator_def.type().substr(0, 14) == "Conv2DGradient")) {
       mode_ = miopenConvolution;
-    } else if (operator_def.type().substr(0, 10) == "Trans2D") {
+    } else if ((operator_def.type().substr(0, 7) == "Trans2D") || (operator_def.type().substr(0, 15) == "Trans2DGradient" )) {
       mode_ = miopenTranspose;
     } else {
       LOG(FATAL) << "Unsupported convolution method: " << operator_def.type();
@@ -172,6 +172,8 @@ bool MIOPENConvOp::DoRunWithType() {
   CAFFE_ENFORCE(Weight.ndim() >= 3 && Weight.ndim() <= 5);
 
   const int M = Weight.dim32(0);
+  ConvPoolOpBase<HIPContext>::SetOutputSize(X, Y, M);
+
   int N = X.dim32(0);
   int C = X.dim32(1);
   int H = X.dim32(2);
@@ -282,6 +284,18 @@ bool MIOPENConvGradientOp::DoRunWithType() {
   W_out = dY.ndim() > 3 ? dY.dim32(3) : 1;
   D_out = dY.ndim() > 4 ? dY.dim32(4) : 1;
 
+  MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+          weight_desc_, miopenTypeWrapper<T_X>::type, M, C, kernel_h(), kernel_w()));
+
+  MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+          bottom_desc_, miopenTypeWrapper<T_X>::type, N, C, H, W));
+
+  MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(
+          conv_desc_, bottom_desc_, weight_desc_, &N_out, &C_out, &H_out, &W_out));
+
+  MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+          top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
+
   MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
           miopen_wrapper_.inline_miopen_handle(), top_desc_, weight_desc_,
           conv_desc_, bottom_desc_, &bwdDataWsSize_));
@@ -363,4 +377,6 @@ bool MIOPENConvGradientOp::RunOnDevice() {
 
 REGISTER_MIOPEN_OPERATOR(Conv2D, MIOPENConvOp);
 REGISTER_MIOPEN_OPERATOR(Conv2DGradient, MIOPENConvGradientOp);
+REGISTER_MIOPEN_OPERATOR(Trans2D, MIOPENConvOp);
+REGISTER_MIOPEN_OPERATOR(Trans2DGradient, MIOPENConvGradientOp);
 } // namespace caffe2
