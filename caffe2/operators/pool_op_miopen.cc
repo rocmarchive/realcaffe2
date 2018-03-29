@@ -34,30 +34,22 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_));
     MIOPEN_ENFORCE(miopenCreatePoolingDescriptor(&pooling_desc_));
 
-    if (operator_def.type().substr(0, 7) == "MaxPool") {
+    if ((operator_def.type().substr(0, 9) == "MaxPool2D") || (operator_def.type().substr(0, 17) == "MaxPool2DGradient")){
       mode_ = miopenPoolingMax;
     }
-    else if (operator_def.type().substr(0, 11) == "AveragePool") {
+    else if ((operator_def.type().substr(0, 13) == "AveragePool2D") || (operator_def.type().substr(0, 21) == "AveragePool2DGradient")) {
       mode_ =  miopenPoolingAverage;
     }
     else
     {
       LOG(FATAL) << "Unsupported pooling method: " << operator_def.type();
     }
-
-    MIOPEN_ENFORCE(miopenPoolingGetWorkSpaceSize(
-            top_desc_,
-            &poolWsSize_));
-
-    if(poolWs_) hipFree(poolWs_);
-    HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
   }
 
   ~MIOPENPoolOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bottom_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
     MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
-    if(poolWs_) hipFree(poolWs_);
   }
 
   template <typename T, typename M>
@@ -71,7 +63,7 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
     C = X.dim32(1);
     H = X.dim32(2);
     W = X.ndim() > 3 ? X.dim32(3) : 1;
-
+    ConvPoolOpBase::SetOutputSize(X, Y, C);
     if (kernel_.size() == 2) {
         MIOPEN_ENFORCE(miopenSet2dPoolingDescriptor(
             pooling_desc_,
@@ -84,6 +76,14 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
             stride_w()));
       }
 
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+            bottom_desc_,
+            miopenTypeWrapper<T>::type,
+            N,
+            C,
+            H,
+            W));
+
     MIOPEN_ENFORCE(miopenGetPoolingForwardOutputDim(
             pooling_desc_,
             bottom_desc_,
@@ -93,20 +93,19 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
             &W_out));
 
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
-            bottom_desc_,
-            miopenTypeWrapper<T>::type,
-            N,
-            C,
-            H,
-            W));
-
-    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
             top_desc_,
             miopenTypeWrapper<T>::type,
             N_out,
             C_out,
             H_out,
             W_out));
+
+    MIOPEN_ENFORCE(miopenPoolingGetWorkSpaceSize(
+            top_desc_,
+            &poolWsSize_));
+
+    if(poolWs_) hipFree(poolWs_);
+    HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
 
     const T* Xdata = X.template data<T>();
     T* Ydata = Y->template mutable_data<T>();
@@ -122,6 +121,8 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
         do_backward_,
         poolWs_,
         poolWsSize_));
+
+    if(poolWs_) hipFree(poolWs_);
     return true;
   }
 
@@ -174,20 +175,12 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
     {
       LOG(FATAL) << "Unsupported pooling method: " << operator_def.type();
     }
-
-    MIOPEN_ENFORCE(miopenPoolingGetWorkSpaceSize(
-            top_desc_,
-            &poolWsSize_));
-
-    if(poolWs_) hipFree(poolWs_);
-    HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
   }
 
   ~MIOPENPoolGradientOp() {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bottom_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
     MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
-    if(poolWs_) hipFree(poolWs_);
   }
 
   template <typename T, typename M>
@@ -224,6 +217,29 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
             stride_h(),
             stride_w()));
 
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+            bottom_desc_,
+            miopenTypeWrapper<T>::type,
+            N,
+            C,
+            H,
+            W));
+
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+            top_desc_,
+            miopenTypeWrapper<T>::type,
+            N_out,
+            C_out,
+            H_out,
+            W_out));
+
+    MIOPEN_ENFORCE(miopenPoolingGetWorkSpaceSize(
+            top_desc_,
+            &poolWsSize_));
+
+    if(poolWs_) hipFree(poolWs_);
+    HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
+
     // Carry out the pooling computation.
     const T* Xdata = X.template data<T>();
     const T* Ydata = Y.template data<T>();
@@ -245,6 +261,7 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
         dXdata,
         poolWs_));
 
+    if(poolWs_) hipFree(poolWs_);
     return true;
   }
 
