@@ -34,10 +34,10 @@ public:
         miopen_ws_nbytes_limit_(OperatorBase::GetSingleArgument<size_t>(
             "ws_nbytes_limit", kCONV_MIOPEN_WORKSPACE_LIMIT_BYTES)),
         alpha_(OperatorBase::GetSingleArgument<float>(
-            "alpha", 1.0)), // TODO get conv mode
+            "alpha", 1.0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
         exhaustive_search_(
-            OperatorBase::GetSingleArgument<int>("exhaustive_search", 0)) {
+            OperatorBase::GetSingleArgument<bool>("exhaustive_search", false)) {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bottom_desc_));
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bias_desc_));
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&weight_desc_));
@@ -45,9 +45,9 @@ public:
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_for_bias_));
     MIOPEN_ENFORCE(miopenCreateConvolutionDescriptor(&conv_desc_));
 
-    if (operator_def.type().substr(0, 12) == "Convolution") {
+    if ((operator_def.type().substr(0, 6) == "Conv2D") || (operator_def.type().substr(0, 14) == "Conv2DGradient")) {
       mode_ = miopenConvolution;
-    } else if (operator_def.type().substr(0, 10) == "Transpose") {
+    } else if ((operator_def.type().substr(0, 7) == "Trans2D") || (operator_def.type().substr(0, 15) == "Trans2DGradient" )) {
       mode_ = miopenTranspose;
     } else {
       LOG(FATAL) << "Unsupported convolution method: " << operator_def.type();
@@ -93,14 +93,9 @@ public:
         bestAlgoFound_(
             OperatorBase::GetSingleArgument<bool>("bestAlgoFound_", false)) {
 
-    MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(
-        miopen_wrapper_.inline_miopen_handle(), weight_desc_, bottom_desc_,
-        conv_desc_, top_desc_, &fwdConvWsSize_));
-    hipFree(fwdConvWs);
-    HIP_CHECK(hipMalloc(&fwdConvWs, fwdConvWsSize_));
   }
 
-  ~MIOPENConvOp() { hipFree(fwdConvWs); }
+  ~MIOPENConvOp() { }
 
   template <typename T_X, typename T_W, typename T_B, typename MATH,
             typename T_Y>
@@ -135,19 +130,10 @@ public:
     CAFFE_ENFORCE(!(no_bias_ && OutputSize() == 3),
                   "If bias is not present, you should not have 3 grad output.");
 
-    MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
-        miopen_wrapper_.inline_miopen_handle(), top_desc_, weight_desc_,
-        conv_desc_, bottom_desc_, &bwdDataWsSize_));
-    hipFree(bwdDataWs);
-    HIP_CHECK(hipMalloc(&bwdDataWs, bwdDataWsSize_));
-    MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
-        miopen_wrapper_.inline_miopen_handle(), top_desc_, bottom_desc_,
-        conv_desc_, weight_desc_, &bwdWeightWsSize_));
-    hipFree(bwdWeightWs);
-    HIP_CHECK(hipMalloc(&bwdWeightWs, bwdWeightWsSize_));
+
   }
 
-  ~MIOPENConvGradientOp() { hipFree(bwdDataWs); }
+  ~MIOPENConvGradientOp() { }
 
   template <typename T_X, typename T_DY, typename T_W, typename T_B,
             typename MATH, typename T_DX, typename T_DW, typename T_DB>
@@ -184,28 +170,40 @@ bool MIOPENConvOp::DoRunWithType() {
   // Figure out the output shape
   CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
   CAFFE_ENFORCE(Weight.ndim() >= 3 && Weight.ndim() <= 5);
+
   const int M = Weight.dim32(0);
   ConvPoolOpBase<HIPContext>::SetOutputSize(X, Y, M);
-  int N = 0, C = 0, H = 0, W = 0, D = 0, N_out = 0, C_out = 0, H_out = 0,
-      W_out = 0, D_out = 0;
 
-  N = X.dim32(0);
-  C = X.dim32(1);
-  H = X.dim32(2);
-  W = X.ndim() > 3 ? X.dim32(3) : 1;
-  D = X.ndim() > 4 ? X.dim32(4) : 1;
+  int N = X.dim32(0);
+  int C = X.dim32(1);
+  int H = X.dim32(2);
+  int W = X.ndim() > 3 ? X.dim32(3) : 1;
+  int D = X.ndim() > 4 ? X.dim32(4) : 1;
 
-  N_out = Y->dim32(0);
-  C_out = Y->dim32(1);
-  H_out = Y->dim32(2);
-  W_out = Y->ndim() > 3 ? Y->dim32(3) : 1;
-  D_out = Y->ndim() > 4 ? Y->dim32(4) : 1;
+  int N_out = Y->dim32(0);
+  int C_out = Y->dim32(1);
+  int H_out = Y->dim32(2);
+  int W_out = Y->ndim() > 3 ? Y->dim32(3) : 1;
+  int D_out = Y->ndim() > 4 ? Y->dim32(4) : 1;
+
+
+  MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+          weight_desc_, miopenTypeWrapper<T_X>::type, M, C, kernel_h(), kernel_w()));
+
+  MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+          bottom_desc_, miopenTypeWrapper<T_X>::type, N, C, H, W));
 
   MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(
       conv_desc_, bottom_desc_, weight_desc_, &N_out, &C_out, &H_out, &W_out));
 
   MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
-      top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
+          top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
+
+  MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(
+          miopen_wrapper_.inline_miopen_handle(), weight_desc_, bottom_desc_,
+          conv_desc_, top_desc_, &fwdConvWsSize_));
+  hipFree(fwdConvWs);
+  HIP_CHECK(hipMalloc(&fwdConvWs, fwdConvWsSize_));
 
   while (!bestAlgoFound_) {
 
@@ -237,6 +235,8 @@ bool MIOPENConvOp::DoRunWithType() {
         bias.template data<T_B>(), &beta_, top_desc_for_bias_,
         Y->template mutable_data<T_Y>()));
   }
+
+  hipFree(fwdConvWs);
   return true;
 }
 // TODO : enable fp16 support.
@@ -284,6 +284,29 @@ bool MIOPENConvGradientOp::DoRunWithType() {
   W_out = dY.ndim() > 3 ? dY.dim32(3) : 1;
   D_out = dY.ndim() > 4 ? dY.dim32(4) : 1;
 
+  MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+          weight_desc_, miopenTypeWrapper<T_X>::type, M, C, kernel_h(), kernel_w()));
+
+  MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+          bottom_desc_, miopenTypeWrapper<T_X>::type, N, C, H, W));
+
+  MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(
+          conv_desc_, bottom_desc_, weight_desc_, &N_out, &C_out, &H_out, &W_out));
+
+  MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+          top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
+
+  MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
+          miopen_wrapper_.inline_miopen_handle(), top_desc_, weight_desc_,
+          conv_desc_, bottom_desc_, &bwdDataWsSize_));
+  hipFree(bwdDataWs);
+  HIP_CHECK(hipMalloc(&bwdDataWs, bwdDataWsSize_));
+  MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
+          miopen_wrapper_.inline_miopen_handle(), top_desc_, bottom_desc_,
+          conv_desc_, weight_desc_, &bwdWeightWsSize_));
+  hipFree(bwdWeightWs);
+  HIP_CHECK(hipMalloc(&bwdWeightWs, bwdWeightWsSize_));
+
   //////////// BWD DATA ////////////////////////////////////////
 
   while (!bestDataAlgoFound_) {
@@ -292,7 +315,7 @@ bool MIOPENConvGradientOp::DoRunWithType() {
         dY.template data<T_DY>(), weight_desc_, Weight.template data<T_W>(),
         conv_desc_, bottom_desc_, dX->template data<T_DX>(), requestAlgoCount_,
         &returnedAlgoCount_, &perf_,
-        bwdDataWs, // state->workspace().get(fwdConvWsSize_);
+        bwdDataWs,
         bwdDataWsSize_, exhaustive_search_));
 
     bestDataAlgoFound_ = true;
@@ -303,7 +326,7 @@ bool MIOPENConvGradientOp::DoRunWithType() {
       dY.template data<T_DY>(), weight_desc_, Weight.template data<T_W>(),
       conv_desc_, perf_.bwd_data_algo, &beta_, bottom_desc_,
       dX->template mutable_data<T_DX>(),
-      bwdDataWs, // state->workspace().get(bwd_conv_ws_size);
+      bwdDataWs,
       bwdDataWsSize_));
   //////////////////////////////   BWD WEIGHT //////////////////////
 
@@ -331,6 +354,8 @@ bool MIOPENConvGradientOp::DoRunWithType() {
         dY.template data<T_DY>(), &beta_, bias_desc_,
         dbias->template mutable_data<T_DB>()));
   }
+
+  hipFree(bwdDataWs); hipFree(bwdWeightWs);
   return true;
 }
 
@@ -352,4 +377,6 @@ bool MIOPENConvGradientOp::RunOnDevice() {
 
 REGISTER_MIOPEN_OPERATOR(Conv2D, MIOPENConvOp);
 REGISTER_MIOPEN_OPERATOR(Conv2DGradient, MIOPENConvGradientOp);
+REGISTER_MIOPEN_OPERATOR(Trans2D, MIOPENConvOp);
+REGISTER_MIOPEN_OPERATOR(Trans2DGradient, MIOPENConvGradientOp);
 } // namespace caffe2
