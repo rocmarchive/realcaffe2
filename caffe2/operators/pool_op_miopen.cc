@@ -27,7 +27,8 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
         do_backward_(OperatorBase::GetSingleArgument<bool>("do_backward", true)),
-        poolWs_(nullptr)
+        poolWs_(nullptr),
+        poolWsSize_(0)
 
   {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bottom_desc_));
@@ -50,6 +51,11 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bottom_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
     MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
+    if(poolWs_) {
+      hipFree(poolWs_);
+      poolWs_ = nullptr;
+      poolWsSize_ = 0;
+    }
   }
 
   template <typename T, typename M>
@@ -104,8 +110,9 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
             top_desc_,
             &poolWsSize_));
 
-    hipFree(poolWs_);
-    HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
+    if((poolWsSize_ > 0) && (poolWs_ == nullptr)) {
+      HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
+    }
 
     const T* Xdata = X.template data<T>();
     T* Ydata = Y->template mutable_data<T>();
@@ -122,7 +129,6 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
         poolWs_,
         poolWsSize_));
 
-    hipFree(poolWs_);
     return true;
   }
 
@@ -159,7 +165,8 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
         miopen_wrapper_(&context_),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
-        poolWs_(nullptr)
+        poolWs_(nullptr),
+        poolWsSize_(0)
   {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bottom_desc_));
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_));
@@ -181,6 +188,11 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bottom_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
     MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
+    if(poolWs_ != nullptr) {
+      hipFree(poolWs_);
+      poolWs_ = nullptr;
+      poolWsSize_ = 0;
+    }
   }
 
   template <typename T, typename M>
@@ -237,8 +249,9 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
             top_desc_,
             &poolWsSize_));
 
-    hipFree(poolWs_);
-    HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
+    if((poolWsSize_ > 0) && (poolWs_ == nullptr)) {
+      HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
+    }
 
     // Carry out the pooling computation.
     const T* Xdata = X.template data<T>();
@@ -261,7 +274,6 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
         dXdata,
         poolWs_));
 
-    hipFree(poolWs_);
     return true;
   }
 

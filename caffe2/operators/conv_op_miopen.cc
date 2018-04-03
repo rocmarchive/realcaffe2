@@ -91,11 +91,19 @@ public:
         returnedAlgoCount_(
             OperatorBase::GetSingleArgument<int>("returnedAlgoCount_", 1)),
         bestAlgoFound_(
-            OperatorBase::GetSingleArgument<bool>("bestAlgoFound_", false)) {
+            OperatorBase::GetSingleArgument<bool>("bestAlgoFound_", false)),
+        fwdConvWs(nullptr),
+        fwdConvWsSize_(0) {
 
   }
 
-  ~MIOPENConvOp() { }
+  ~MIOPENConvOp() {
+    if(fwdConvWs) {
+      hipFree(fwdConvWs);
+      fwdConvWs = nullptr;
+      fwdConvWsSize_ = 0;
+    }
+  }
 
   template <typename T_X, typename T_W, typename T_B, typename MATH,
             typename T_Y>
@@ -126,14 +134,29 @@ public:
         bestDataAlgoFound_(
             OperatorBase::GetSingleArgument<bool>("bestAlgoFound", false)),
         bestWeightAlgoFound_(
-            OperatorBase::GetSingleArgument<bool>("bestAlgoFound", false)) {
+            OperatorBase::GetSingleArgument<bool>("bestAlgoFound", false)),
+        bwdWeightWs(nullptr),
+        bwdWeightWsSize_(0),
+        bwdDataWs(nullptr),
+        bwdDataWsSize_(0) {
     CAFFE_ENFORCE(!(no_bias_ && OutputSize() == 3),
                   "If bias is not present, you should not have 3 grad output.");
 
 
   }
 
-  ~MIOPENConvGradientOp() { }
+  ~MIOPENConvGradientOp() {
+    if(bwdWeightWs) {
+      hipFree(bwdWeightWs);
+      bwdWeightWs = nullptr;
+      bwdWeightWsSize_ = 0;
+    }
+    if(bwdDataWs) {
+      hipFree(bwdDataWs);
+      bwdDataWs = nullptr;
+      bwdDataWsSize_ = 0;
+    }
+  }
 
   template <typename T_X, typename T_DY, typename T_W, typename T_B,
             typename MATH, typename T_DX, typename T_DW, typename T_DB>
@@ -202,8 +225,10 @@ bool MIOPENConvOp::DoRunWithType() {
   MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(
           miopen_wrapper_.inline_miopen_handle(), weight_desc_, bottom_desc_,
           conv_desc_, top_desc_, &fwdConvWsSize_));
-  hipFree(fwdConvWs);
-  HIP_CHECK(hipMalloc(&fwdConvWs, fwdConvWsSize_));
+  
+  if((fwdConvWsSize_ > 0) && (fwdConvWs == nullptr)) {
+    HIP_CHECK(hipMalloc(&fwdConvWs, fwdConvWsSize_));
+  }
 
   while (!bestAlgoFound_) {
 
@@ -236,7 +261,6 @@ bool MIOPENConvOp::DoRunWithType() {
         Y->template mutable_data<T_Y>()));
   }
 
-  hipFree(fwdConvWs);
   return true;
 }
 // TODO : enable fp16 support.
@@ -299,13 +323,18 @@ bool MIOPENConvGradientOp::DoRunWithType() {
   MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
           miopen_wrapper_.inline_miopen_handle(), top_desc_, weight_desc_,
           conv_desc_, bottom_desc_, &bwdDataWsSize_));
-  hipFree(bwdDataWs);
-  HIP_CHECK(hipMalloc(&bwdDataWs, bwdDataWsSize_));
+
+  if((bwdDataWsSize_ > 0) && (bwdDataWs == nullptr)) {
+    HIP_CHECK(hipMalloc(&bwdDataWs, bwdDataWsSize_));
+  }
+
   MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
           miopen_wrapper_.inline_miopen_handle(), top_desc_, bottom_desc_,
           conv_desc_, weight_desc_, &bwdWeightWsSize_));
-  hipFree(bwdWeightWs);
-  HIP_CHECK(hipMalloc(&bwdWeightWs, bwdWeightWsSize_));
+
+  if((bwdWeightWsSize_ > 0) && (bwdWeightWs == nullptr)) {
+    HIP_CHECK(hipMalloc(&bwdWeightWs, bwdWeightWsSize_));
+  }
 
   //////////// BWD DATA ////////////////////////////////////////
 
@@ -355,7 +384,6 @@ bool MIOPENConvGradientOp::DoRunWithType() {
         dbias->template mutable_data<T_DB>()));
   }
 
-  hipFree(bwdDataWs); hipFree(bwdWeightWs);
   return true;
 }
 
