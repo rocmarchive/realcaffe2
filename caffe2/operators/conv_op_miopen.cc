@@ -216,6 +216,7 @@ bool MIOPENConvOp::DoRunWithType() {
           miopen_wrapper_.inline_miopen_handle(), weight_desc_, bottom_desc_,
           conv_desc_, top_desc_, &fwdConvWsSize_));
   hipFree(fwdConvWs);
+  fwdConvWsSize_ = (group_ > 1) ? miopen_ws_nbytes_limit_: fwdConvWsSize_;
   HIP_CHECK(hipMalloc(&fwdConvWs, fwdConvWsSize_));
 
   while (!bestAlgoFound_) {
@@ -332,12 +333,17 @@ bool MIOPENConvGradientOp::DoRunWithType() {
   MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
           miopen_wrapper_.inline_miopen_handle(), top_desc_, weight_desc_,
           conv_desc_, bottom_desc_, &bwdDataWsSize_));
+
   hipFree(bwdDataWs);
+  bwdDataWsSize_ = (group_ > 1) ? miopen_ws_nbytes_limit_: bwdDataWsSize_;
   HIP_CHECK(hipMalloc(&bwdDataWs, bwdDataWsSize_));
+
   MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
           miopen_wrapper_.inline_miopen_handle(), top_desc_, bottom_desc_,
           conv_desc_, weight_desc_, &bwdWeightWsSize_));
+
   hipFree(bwdWeightWs);
+  bwdWeightWsSize_ = (group_ > 1) ? miopen_ws_nbytes_limit_: bwdWeightWsSize_;
   HIP_CHECK(hipMalloc(&bwdWeightWs, bwdWeightWsSize_));
 
   //////////// BWD DATA ////////////////////////////////////////
