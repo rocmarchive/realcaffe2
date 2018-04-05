@@ -1,17 +1,16 @@
 node("vega") {
     docker.image('petrex/rocm_caffe2').inside {
-        
         stage("checkout") {
             checkout scm
         }
         
-        stage('Clang Format') {
-            sh '''
-                find . -iname *miopen* -o -iname *hip* \
-                | grep -v 'build/' \
-                | xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-3.8-style=file {} | diff - {}'
-            '''
-        }
+        //stage('Clang Format') {
+          //  sh '''
+            //    find . -iname *miopen* -o -iname *hip* \
+              //  | grep -v 'build/' \
+                //| xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-3.8-style=file {} | diff - {}'
+            //'''
+        //}
 
         stage("build_debug") {
             sh '''
