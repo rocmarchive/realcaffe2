@@ -25,7 +25,7 @@ node("rocmtest") {
                     cd build
                     cmake -DCMAKE_BUILD_TYPE='Release' ..
                     make -j8
-                    make DESTDIR=../install install
+                    make DESTDIR=./install install
                 '''
             }
 
@@ -36,7 +36,7 @@ node("rocmtest") {
                     cd build
                     cmake -DCMAKE_BUILD_TYPE='Debug' ..
                     make -j8
-                    make DESTDIR=../install install
+                    make DESTDIR=./install install
                 '''
             }
         }
