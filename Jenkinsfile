@@ -1,5 +1,6 @@
 node("rocmtest") {
     docker.image('petrex/rocm_caffe2').inside {
+        sh 'groups'
         stage("checkout") {
             checkout scm
             sh 'git submodule update --init'
