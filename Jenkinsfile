@@ -2,6 +2,7 @@ node("vega") {
     docker.image('petrex/rocm_caffe2').inside {
         stage("checkout") {
             checkout scm
+            sh 'git submodule update --init'
         }
         
         //stage('Clang Format') {
