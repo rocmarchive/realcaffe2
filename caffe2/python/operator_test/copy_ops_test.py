@@ -55,24 +55,42 @@ class CopyOpsTest(unittest.TestCase):
     def test_copy_gradient_cpu(self):
         self.run_test_copy_gradient(core.DeviceOption(caffe2_pb2.CPU, 0))
 
-    @unittest.skipIf(workspace.NumCudaDevices() < 1, "Need at least 1 GPU.")
-    def test_copy_gradient_gpu(self):
-        self.run_test_copy_gradient(core.DeviceOption(caffe2_pb2.CUDA, 0))
+    num_gpu = 0;
+    if(workspace.C.has_hip):
+        num_gpu = workspace.NumHipDevices()
+    else:
+        num_gpu = workspace.NumCudaDevices()
 
-    @unittest.skipIf(workspace.NumCudaDevices() < 2, "Need at least 2 GPU.")
+    @unittest.skipIf(num_gpu < 1, "Need at least 1 GPU.")
+    def test_copy_gradient_gpu(self):
+        if(workspace.C.has_hip):
+            self.run_test_copy_gradient(core.DeviceOption(caffe2_pb2.HIP, 0))
+        else:
+            self.run_test_copy_gradient(core.DeviceOption(caffe2_pb2.CUDA, 0))
+
+    @unittest.skipIf(num_gpu < 2, "Need at least 2 GPU.")
     def test_copy_gradient_multiple_gpus(self):
         model = model_helper.ModelHelper(name="copy_test")
 
         with core.DeviceScope(core.DeviceOption(caffe2_pb2.CPU, 0)):
             x_cpu = model.net.AddExternalInputs("x_cpu")
 
-        with core.DeviceScope(core.DeviceOption(caffe2_pb2.CUDA, 0)):
-            x_gpu_1 = model.CopyCPUToGPU(x_cpu, "x_gpu_1")
+        if(workspace.C.has_hip):
+            with core.DeviceScope(core.DeviceOption(caffe2_pb2.HIP, 0)):
+                x_gpu_1 = model.CopyCPUToGPU(x_cpu, "x_gpu_1")
 
-        with core.DeviceScope(core.DeviceOption(caffe2_pb2.CUDA, 1)):
-            x_gpu_2 = model.Copy(x_gpu_1, "x_gpu_2")
-            loss = model.AveragedLoss(x_gpu_2, "loss")
-            gradient_map = model.AddGradientOperators([loss])
+            with core.DeviceScope(core.DeviceOption(caffe2_pb2.HIP, 1)):
+                x_gpu_2 = model.Copy(x_gpu_1, "x_gpu_2")
+                loss = model.AveragedLoss(x_gpu_2, "loss")
+                gradient_map = model.AddGradientOperators([loss])
+        else:
+            with core.DeviceScope(core.DeviceOption(caffe2_pb2.CUDA, 0)):
+                x_gpu_1 = model.CopyCPUToGPU(x_cpu, "x_gpu_1")
+
+            with core.DeviceScope(core.DeviceOption(caffe2_pb2.CUDA, 1)):
+                x_gpu_2 = model.Copy(x_gpu_1, "x_gpu_2")
+                loss = model.AveragedLoss(x_gpu_2, "loss")
+                gradient_map = model.AddGradientOperators([loss])
 
         workspace.FeedBlob("x_cpu", np.random.rand(32).astype(np.float32))
         workspace.RunNetOnce(model.param_init_net)
@@ -93,22 +111,35 @@ class CopyOpsTest(unittest.TestCase):
                     return op
             return None
 
-        self.assertEqual(
-            get_op_with_output(model, "x_gpu_2_grad").device_option,
-            core.DeviceOption(caffe2_pb2.CUDA, 1),
-        )
-        self.assertEqual(
-            get_op_with_output(model, "x_cpu_grad").device_option,
-            core.DeviceOption(caffe2_pb2.CUDA, 0),
-        )
+        if(workspace.C.has_hip):
+            self.assertEqual(
+                get_op_with_output(model, "x_gpu_2_grad").device_option,
+                core.DeviceOption(caffe2_pb2.HIP, 1),
+            )
+            self.assertEqual(
+                get_op_with_output(model, "x_cpu_grad").device_option,
+                core.DeviceOption(caffe2_pb2.HIP, 0),
+            )
+        else:
+            self.assertEqual(
+                get_op_with_output(model, "x_gpu_2_grad").device_option,
+                core.DeviceOption(caffe2_pb2.CUDA, 1),
+            )
+            self.assertEqual(
+                get_op_with_output(model, "x_cpu_grad").device_option,
+                core.DeviceOption(caffe2_pb2.CUDA, 0),
+            )
 
-    @unittest.skipIf(workspace.NumCudaDevices() < 1, "Need at least 1 GPU.")
+    @unittest.skipIf(num_gpu < 1, "Need at least 1 GPU.")
     def test_cpu2gpu_gpu2cpu_sparse_gradients(self):
         model = model_helper.ModelHelper(name="copy_test")
         v = model.param_init_net.UniformFill([], ["v"], shape=[16, 4])
         indices = model.param_init_net.UniformFill([], ["v"], shape=[16, 4])
         cpu_opt = core.DeviceOption(caffe2_pb2.CPU, 0)
-        gpu_opt = core.DeviceOption(caffe2_pb2.CUDA, 0)
+        if(workspace.C.has_hip):
+            gpu_opt = core.DeviceOption(caffe2_pb2.HIP, 0)
+        else:
+            gpu_opt = core.DeviceOption(caffe2_pb2.CUDA, 0)
 
         with core.DeviceScope(gpu_opt):
             vcpu = model.CopyGPUToCPU(v, "vcpu")
@@ -127,13 +158,16 @@ class CopyOpsTest(unittest.TestCase):
         self.assertTrue("v" in gradient_map)
         self.assertTrue(isinstance(gradient_map['v'], core.GradientSlice))
 
-    @unittest.skipIf(workspace.NumCudaDevices() < 1, "Need at least 1 GPU.")
+    @unittest.skipIf(num_gpu < 1, "Need at least 1 GPU.")
     def test_cpu2gpu_gpu2cpu_gradients(self):
         model = model_helper.ModelHelper(name="copy_test")
 
         batch = 32
         cpu_opt = core.DeviceOption(caffe2_pb2.CPU, 0)
-        gpu_opt = core.DeviceOption(caffe2_pb2.CUDA, 0)
+        if(workspace.C.has_hip):
+            gpu_opt = core.DeviceOption(caffe2_pb2.HIP, 0)
+        else:
+            gpu_opt = core.DeviceOption(caffe2_pb2.CUDA, 0)
 
         with core.NameScope("cpu"):
             with core.DeviceScope(cpu_opt):

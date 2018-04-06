@@ -26,15 +26,18 @@ Currently, here are the assumptions: we only support the following use cases:
 """
 
 from caffe2.proto import caffe2_pb2
-
+from caffe2.python.workspace import has_hip
 
 def OnGPU(gpu_id):
     """A utility function that returns a device option protobuf of the
   specified gpu id.
   """
     device_option = caffe2_pb2.DeviceOption()
-    device_option.device_type = caffe2_pb2.CUDA
-    device_option.cuda_gpu_id = gpu_id
+    device_option.device_type = caffe2_pb2.HIP if has_hip else caffe2_pb2.CUDA
+    if has_hip:
+        device_option.hip_gpu_id = gpu_id
+    else:
+        device_option.cuda_gpu_id = gpu_id
     return device_option
 
 

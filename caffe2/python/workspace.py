@@ -56,13 +56,19 @@ operator_tracebacks = defaultdict(dict)
 
 is_asan = C.is_asan
 has_gpu_support = C.has_gpu_support
-if has_gpu_support:
-    NumHipDevices = C.num_hip_devices
+has_hip = C.has_hip
+if has_gpu_support:    
     SetDefaultGPUID = C.set_default_gpu_id
     GetDefaultGPUID = C.get_default_gpu_id
-    GetHIPVersion = C.get_hip_version
-    #GetCuDNNVersion = C.get_cudnn_version
-
+    if has_hip:
+        NumHipDevices = C.num_hip_devices
+        #GetMIOPENVersion = C.get_MIOPEN_version
+        NumGpuDevices = C.num_hip_devices
+    else:
+        NumCudaDevices = C.num_cuda_devices
+        GetCuDNNVersion = C.get_cudnn_version
+        NumGpuDevices = C.num_cuda_devices
+        
     def GetHipPeerAccessPattern():
         return np.asarray(C.get_hip_peer_access_pattern())
 

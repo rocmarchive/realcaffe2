@@ -16,12 +16,9 @@ exclude(Caffe2_GPU_SRCS "${Caffe2_GPU_SRCS}" ${tmp})
 # ------[ HIP Sources
 file(GLOB tmp *_hip.cc)
 set(Caffe2_HIP_SRCS ${Caffe2_HIP_SRCS} ${tmp})
-# ------[ HIP Device Sources
-#file(GLOB tmp *_hipdev.cc)
-#set(Caffe2_HIP_SRCS ${Caffe2_HIP_SRCS} ${tmp})
 # ------[ MIOpen files
-#file(GLOB tmp *_miopen.cc)
-#set(Caffe2_HIP_SRCS ${Caffe2_HIP_SRCS} ${tmp})
+file(GLOB tmp *_miopen.cc)
+set(Caffe2_HIP_SRCS ${Caffe2_HIP_SRCS} ${tmp})
 # exclude test files
 file(GLOB tmp *_test.cc)
 exclude(Caffe2_HIP_SRCS "${Caffe2_HIP_SRCS}" ${tmp})

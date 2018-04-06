@@ -78,7 +78,7 @@ import argparse
 from caffe2.python import workspace, brew, model_helper
 
 
-def MLP(order, cudnn_ws):
+def MLP(order, gpu_engine_ws):
     model = model_helper.ModelHelper(name="MLP")
     d = 256
     depth = 20
@@ -113,14 +113,14 @@ def MLP(order, cudnn_ws):
     return model, d
 
 
-def AlexNet(order, cudnn_ws):
+def AlexNet(order, gpu_engine_ws):
     my_arg_scope = {
         'order': order,
-        'use_cudnn': True,
-        'cudnn_exhaustive_search': True,
+        'use_gpu_engine': True,
+        'gpu_engine_exhaustive_search': True,
     }
-    if cudnn_ws:
-        my_arg_scope['ws_nbytes_limit'] = cudnn_ws
+    if gpu_engine_ws:
+        my_arg_scope['ws_nbytes_limit'] = gpu_engine_ws
     model = model_helper.ModelHelper(
         name="alexnet",
         arg_scope=my_arg_scope,
@@ -206,14 +206,14 @@ def AlexNet(order, cudnn_ws):
     return model, 224
 
 
-def OverFeat(order, cudnn_ws):
+def OverFeat(order, gpu_engine_ws):
     my_arg_scope = {
         'order': order,
-        'use_cudnn': True,
-        'cudnn_exhaustive_search': True,
+        'use_gpu_engine': True,
+        'gpu_engine_exhaustive_search': True,
     }
-    if cudnn_ws:
-        my_arg_scope['ws_nbytes_limit'] = cudnn_ws
+    if gpu_engine_ws:
+        my_arg_scope['ws_nbytes_limit'] = gpu_engine_ws
     model = model_helper.ModelHelper(
         name="overfeat",
         arg_scope=my_arg_scope,
@@ -292,14 +292,14 @@ def OverFeat(order, cudnn_ws):
     return model, 231
 
 
-def VGGA(order, cudnn_ws):
+def VGGA(order, gpu_engine_ws):
     my_arg_scope = {
         'order': order,
-        'use_cudnn': True,
-        'cudnn_exhaustive_search': True,
+        'use_gpu_engine': True,
+        'gpu_engine_exhaustive_search': True,
     }
-    if cudnn_ws:
-        my_arg_scope['ws_nbytes_limit'] = cudnn_ws
+    if gpu_engine_ws:
+        my_arg_scope['ws_nbytes_limit'] = gpu_engine_ws
     model = model_helper.ModelHelper(
         name="vgga",
         arg_scope=my_arg_scope,
@@ -490,14 +490,14 @@ def _InceptionModule(
     return output
 
 
-def Inception(order, cudnn_ws):
+def Inception(order, gpu_engine_ws):
     my_arg_scope = {
         'order': order,
-        'use_cudnn': True,
-        'cudnn_exhaustive_search': True,
+        'use_gpu_engine': True,
+        'gpu_engine_exhaustive_search': True,
     }
-    if cudnn_ws:
-        my_arg_scope['ws_nbytes_limit'] = cudnn_ws
+    if gpu_engine_ws:
+        my_arg_scope['ws_nbytes_limit'] = gpu_engine_ws
     model = model_helper.ModelHelper(
         name="inception",
         arg_scope=my_arg_scope,
@@ -590,7 +590,7 @@ def AddParameterUpdate(model):
 
 
 def Benchmark(model_gen, arg):
-    model, input_size = model_gen(arg.order, arg.cudnn_ws)
+    model, input_size = model_gen(arg.order, arg.gpu_engine_ws)
     model.Proto().type = arg.net_type
     model.Proto().num_workers = arg.num_workers
 
@@ -671,9 +671,9 @@ def GetArgumentParser():
         help="The order to evaluate."
     )
     parser.add_argument(
-        "--cudnn_ws",
+        "--gpu_engine_ws",
         type=int,
-        help="The cudnn workspace size."
+        help="The gpu_engine workspace size."
     )
     parser.add_argument(
         "--iterations",

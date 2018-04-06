@@ -5,7 +5,7 @@
 #include <mutex>
 #include <hiprand.h>
 
-//#include "caffe2/core/common_cudnn.h"
+#include "caffe2/core/common_miopen.h"
 #include "caffe2/core/common_hip.h"
 #include "caffe2/core/context.h"
 #include "caffe2/core/logging.h"
@@ -44,9 +44,7 @@ class ThreadLocalHIPObjects {
     for (int i = 0; i < CAFFE2_COMPILE_TIME_MAX_GPUS; ++i) {
       hip_streams_[i] = vector<hipStream_t>();
       rocblas_handles_[i] = vector<rocblas_handle>();
-#if 0 // Ashish TBD: Add the handles to miopen, rocrand here
-      cudnn_handles_[i] = vector<cudnnHandle_t>();
-#endif
+      miopen_handles_[i] = vector<miopenHandle_t>();
     }
   }
 
@@ -82,21 +80,19 @@ class ThreadLocalHIPObjects {
     return gpu_handles[stream_id];
   }
 
-#if 0 // Ashish TBD: Placeholder for handles when integrating miopen, rocrand and so on
-  cudnnHandle_t GetCudnnHandle(int gpu, int stream_id) {
+  miopenHandle_t GetMiopenHandle(int gpu, int stream_id) {
     DeviceGuard guard(gpu);
-    vector<cudnnHandle_t>& gpu_handles = cudnn_handles_[gpu];
+    vector<miopenHandle_t>& gpu_handles = miopen_handles_[gpu];
     if (gpu_handles.size() <= stream_id) {
       gpu_handles.resize(stream_id + 1, nullptr);
     }
     if (!gpu_handles[stream_id]) {
-      CUDNN_ENFORCE(cudnnCreate(&gpu_handles[stream_id]));
-      CUDNN_ENFORCE(
-          cudnnSetStream(gpu_handles[stream_id], GetStream(gpu, stream_id)));
+      MIOPEN_ENFORCE(miopenCreate(&gpu_handles[stream_id]));
+      MIOPEN_ENFORCE(
+          miopenSetStream(gpu_handles[stream_id], GetStream(gpu, stream_id)));
     }
     return gpu_handles[stream_id];
   }
-#endif
 
   ~ThreadLocalHIPObjects() noexcept {
     for (int i = 0; i < CAFFE2_COMPILE_TIME_MAX_GPUS; ++i) {
@@ -110,20 +106,16 @@ class ThreadLocalHIPObjects {
           HIP_CHECK(hipStreamDestroy(stream));
         }
       }
-#if 0 // Ashish TBD: miopen handle goes here
-      for (auto& handle : cudnn_handles_[i]) {
+      for (auto& handle : miopen_handles_[i]) {
         if (handle) {
-          CUDNN_CHECK(cudnnDestroy(handle));
+          MIOPEN_CHECK(miopenDestroy(handle));
         }
       }
-#endif
     }
   }
   vector<hipStream_t> hip_streams_[CAFFE2_COMPILE_TIME_MAX_GPUS];
   vector<rocblas_handle> rocblas_handles_[CAFFE2_COMPILE_TIME_MAX_GPUS];
-#if 0 // Ashish TBD: miopen and rocblas handles
-  vector<cudnnHandle_t> cudnn_handles_[CAFFE2_COMPILE_TIME_MAX_GPUS];
-#endif
+  vector<miopenHandle_t> miopen_handles_[CAFFE2_COMPILE_TIME_MAX_GPUS];
 };
 
 class HIPContext final {
@@ -184,11 +176,10 @@ class HIPContext final {
     return hip_objects_.GetHandle(gpu_id_, stream_id_);
   }
 
-#if 0 // Ashish TBD: miopen, rocrand handles
-  cudnnHandle_t cudnn_handle() {
-    return cuda_objects_.GetCudnnHandle(gpu_id_, stream_id_);
+  miopenHandle_t miopen_handle() {
+    return hip_objects_.GetMiopenHandle(gpu_id_, stream_id_);
   }
-#endif
+
   hiprandGenerator_t& hiprand_generator() {
     if (!hiprand_generator_) {
       DeviceGuard guard(gpu_id_);
@@ -216,6 +207,8 @@ class HIPContext final {
 
   template <class SrcContext, class DstContext>
   inline void CopyBytes(size_t nbytes, const void* src, void* dst) {
+    if(nbytes == 0)
+      return;
     HIP_ENFORCE(hipMemcpyAsync(
         dst,
         src,
