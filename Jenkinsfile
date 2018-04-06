@@ -17,6 +17,7 @@ node("rocmtest") {
             //}
 
             stage("build_release") {
+
                 sh '''
                     export HCC_AMDGPU_TARGET=gfx900
                     rm -rf build
@@ -24,7 +25,7 @@ node("rocmtest") {
                     cd build
                     cmake -DCMAKE_BUILD_TYPE='Release' ..
                     make -j8
-                    make install
+                    make DESTDIR=../install install
                 '''
             }
 
@@ -35,7 +36,7 @@ node("rocmtest") {
                     cd build
                     cmake -DCMAKE_BUILD_TYPE='Debug' ..
                     make -j8
-                    make install
+                    make DESTDIR=../install install
                 '''
             }
         }
