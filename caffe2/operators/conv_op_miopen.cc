@@ -91,11 +91,19 @@ public:
         returnedAlgoCount_(
             OperatorBase::GetSingleArgument<int>("returnedAlgoCount_", 1)),
         bestAlgoFound_(
-            OperatorBase::GetSingleArgument<bool>("bestAlgoFound_", false)) {
+            OperatorBase::GetSingleArgument<bool>("bestAlgoFound_", false)),
+        fwdConvWs(nullptr),
+        fwdConvWsSize_(0) {
 
   }
 
-  ~MIOPENConvOp() { }
+  ~MIOPENConvOp() {
+    if(fwdConvWs) {
+      hipFree(fwdConvWs);
+      fwdConvWs = nullptr;
+      fwdConvWsSize_ = 0;
+    }
+  }
 
   template <typename T_X, typename T_W, typename T_B, typename MATH,
             typename T_Y>
@@ -126,14 +134,29 @@ public:
         bestDataAlgoFound_(
             OperatorBase::GetSingleArgument<bool>("bestAlgoFound", false)),
         bestWeightAlgoFound_(
-            OperatorBase::GetSingleArgument<bool>("bestAlgoFound", false)) {
+            OperatorBase::GetSingleArgument<bool>("bestAlgoFound", false)),
+        bwdWeightWs(nullptr),
+        bwdWeightWsSize_(0),
+        bwdDataWs(nullptr),
+        bwdDataWsSize_(0) {
     CAFFE_ENFORCE(!(no_bias_ && OutputSize() == 3),
                   "If bias is not present, you should not have 3 grad output.");
 
 
   }
 
-  ~MIOPENConvGradientOp() { }
+  ~MIOPENConvGradientOp() {
+    if(bwdWeightWs) {
+      hipFree(bwdWeightWs);
+      bwdWeightWs = nullptr;
+      bwdWeightWsSize_ = 0;
+    }
+    if(bwdDataWs) {
+      hipFree(bwdDataWs);
+      bwdDataWs = nullptr;
+      bwdDataWsSize_ = 0;
+    }
+  }
 
   template <typename T_X, typename T_DY, typename T_W, typename T_B,
             typename MATH, typename T_DX, typename T_DW, typename T_DB>
@@ -185,10 +208,23 @@ bool MIOPENConvOp::DoRunWithType() {
   int H_out = Y->dim32(2);
   int W_out = Y->ndim() > 3 ? Y->dim32(3) : 1;
   int D_out = Y->ndim() > 4 ? Y->dim32(4) : 1;
+  CAFFE_ENFORCE_EQ(Weight.dim32(1), C / group_);
+  int group_offset_X = C / group_ * H * W * D;
+  int group_offset_Y = M / group_ * H_out * W_out * D_out;
 
+  CAFFE_ENFORCE(
+          C % group_ == 0,
+          "If you set group, the number of input channels should be divisible "
+                  "by group.");
+  CAFFE_ENFORCE(
+          M % group_ == 0,
+          "If you set group, the number of output channels should be divisible "
+                  "by group.");
+
+  int group_offset_filter = Weight.size() / group_;
 
   MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
-          weight_desc_, miopenTypeWrapper<T_X>::type, M, C, kernel_h(), kernel_w()));
+          weight_desc_, miopenTypeWrapper<T_X>::type, M/group_, C/group_, kernel_h(), kernel_w()));
 
   MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
           bottom_desc_, miopenTypeWrapper<T_X>::type, N, C, H, W));
@@ -202,8 +238,12 @@ bool MIOPENConvOp::DoRunWithType() {
   MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(
           miopen_wrapper_.inline_miopen_handle(), weight_desc_, bottom_desc_,
           conv_desc_, top_desc_, &fwdConvWsSize_));
-  hipFree(fwdConvWs);
-  HIP_CHECK(hipMalloc(&fwdConvWs, fwdConvWsSize_));
+
+  fwdConvWsSize_ = (group_ > 1) ? miopen_ws_nbytes_limit_: fwdConvWsSize_;
+
+  if((fwdConvWsSize_ > 0) && (fwdConvWs == nullptr)) {
+    HIP_CHECK(hipMalloc(&fwdConvWs, fwdConvWsSize_));
+  }
 
   while (!bestAlgoFound_) {
 
@@ -217,26 +257,29 @@ bool MIOPENConvOp::DoRunWithType() {
     bestAlgoFound_ = true;
   }
 
-  MIOPEN_ENFORCE(miopenConvolutionForward(
-      miopen_wrapper_.inline_miopen_handle(), &alpha_, bottom_desc_,
-      X.template data<T_X>(), weight_desc_, Weight.template data<T_W>(),
-      conv_desc_, perf_.fwd_algo, &beta_, top_desc_,
-      Y->template mutable_data<T_Y>(), fwdConvWs, fwdConvWsSize_));
+  for (int i = 0; i<group_; i++)
+  {
+    MIOPEN_ENFORCE(miopenConvolutionForward(
+            miopen_wrapper_.inline_miopen_handle(), &alpha_, bottom_desc_,
+            X.template data<T_X>() + i * group_offset_X, weight_desc_, Weight.template data<T_W>() + i * group_offset_filter,
+            conv_desc_, perf_.fwd_algo, &beta_, top_desc_,
+            Y->template mutable_data<T_Y>() + i * group_offset_Y, fwdConvWs, fwdConvWsSize_));
 
-  // BIAS
-  if (InputSize() == 3) {
-    auto &bias = Input(BIAS);
+    // BIAS
+    if (InputSize() == 3) {
+      auto &bias = Input(BIAS);
 
-    CAFFE_ENFORCE_EQ(bias.ndim(), 1);
-    CAFFE_ENFORCE_EQ(bias.dim32(0), M);
+      CAFFE_ENFORCE_EQ(bias.ndim(), 1);
+      CAFFE_ENFORCE_EQ(bias.dim32(0), M);
 
-    MIOPEN_ENFORCE(miopenConvolutionForwardBias(
-        miopen_wrapper_.inline_miopen_handle(), &alpha_, bias_desc_,
-        bias.template data<T_B>(), &beta_, top_desc_for_bias_,
-        Y->template mutable_data<T_Y>()));
+      MIOPEN_ENFORCE(miopenConvolutionForwardBias(
+              miopen_wrapper_.inline_miopen_handle(), &alpha_, bias_desc_,
+              bias.template data<T_B>()+ i * group_offset_Y, &beta_, top_desc_for_bias_,
+              Y->template mutable_data<T_Y>() + i * group_offset_Y));
+    }
   }
 
-  hipFree(fwdConvWs);
+  hipDeviceSynchronize();
   return true;
 }
 // TODO : enable fp16 support.
@@ -284,6 +327,21 @@ bool MIOPENConvGradientOp::DoRunWithType() {
   W_out = dY.ndim() > 3 ? dY.dim32(3) : 1;
   D_out = dY.ndim() > 4 ? dY.dim32(4) : 1;
 
+  CAFFE_ENFORCE_EQ(Weight.dim32(1), C / group_);
+  int group_offset_X = C / group_ * H * W * D;
+  int group_offset_Y = M / group_ * H_out * W_out * D_out;
+
+  CAFFE_ENFORCE(
+          C % group_ == 0,
+          "If you set group, the number of input channels should be divisible "
+                  "by group.");
+  CAFFE_ENFORCE(
+          M % group_ == 0,
+          "If you set group, the number of output channels should be divisible "
+                  "by group.");
+
+  int group_offset_filter = Weight.size() / group_;
+
   MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
           weight_desc_, miopenTypeWrapper<T_X>::type, M, C, kernel_h(), kernel_w()));
 
@@ -299,63 +357,72 @@ bool MIOPENConvGradientOp::DoRunWithType() {
   MIOPEN_ENFORCE(miopenConvolutionBackwardDataGetWorkSpaceSize(
           miopen_wrapper_.inline_miopen_handle(), top_desc_, weight_desc_,
           conv_desc_, bottom_desc_, &bwdDataWsSize_));
-  hipFree(bwdDataWs);
-  HIP_CHECK(hipMalloc(&bwdDataWs, bwdDataWsSize_));
+
+  bwdDataWsSize_ = (group_ > 1) ? miopen_ws_nbytes_limit_: bwdDataWsSize_;
+  if((bwdDataWsSize_ > 0) && (bwdDataWs == nullptr)) {
+    HIP_CHECK(hipMalloc(&bwdDataWs, bwdDataWsSize_));
+  }
+
   MIOPEN_ENFORCE(miopenConvolutionBackwardWeightsGetWorkSpaceSize(
           miopen_wrapper_.inline_miopen_handle(), top_desc_, bottom_desc_,
           conv_desc_, weight_desc_, &bwdWeightWsSize_));
-  hipFree(bwdWeightWs);
-  HIP_CHECK(hipMalloc(&bwdWeightWs, bwdWeightWsSize_));
 
+  bwdWeightWsSize_ = (group_ > 1) ? miopen_ws_nbytes_limit_: bwdWeightWsSize_;
+  if((bwdWeightWsSize_ > 0) && (bwdWeightWs == nullptr)) {
+    HIP_CHECK(hipMalloc(&bwdWeightWs, bwdWeightWsSize_));
+  }
   //////////// BWD DATA ////////////////////////////////////////
 
-  while (!bestDataAlgoFound_) {
-    MIOPEN_ENFORCE(miopenFindConvolutionBackwardDataAlgorithm(
-        miopen_wrapper_.inline_miopen_handle(), top_desc_,
-        dY.template data<T_DY>(), weight_desc_, Weight.template data<T_W>(),
-        conv_desc_, bottom_desc_, dX->template data<T_DX>(), requestAlgoCount_,
-        &returnedAlgoCount_, &perf_,
-        bwdDataWs,
-        bwdDataWsSize_, exhaustive_search_));
+  for(int i = 0 ; i<group_; i++)
+  {
+    while (!bestDataAlgoFound_) {
+      MIOPEN_ENFORCE(miopenFindConvolutionBackwardDataAlgorithm(
+              miopen_wrapper_.inline_miopen_handle(), top_desc_,
+              dY.template data<T_DY>()+ i * group_offset_Y, weight_desc_, Weight.template data<T_W>()+ i * group_offset_filter,
+              conv_desc_, bottom_desc_, dX->template data<T_DX>()+ i * group_offset_X, requestAlgoCount_,
+              &returnedAlgoCount_, &perf_,
+              bwdDataWs,
+              bwdDataWsSize_, exhaustive_search_));
 
-    bestDataAlgoFound_ = true;
+      bestDataAlgoFound_ = true;
+    }
+
+    MIOPEN_ENFORCE(miopenConvolutionBackwardData(
+            miopen_wrapper_.inline_miopen_handle(), &alpha_, top_desc_,
+            dY.template data<T_DY>()+ i * group_offset_Y, weight_desc_, Weight.template data<T_W>()+ i * group_offset_filter,
+            conv_desc_, perf_.bwd_data_algo, &beta_, bottom_desc_,
+            dX->template mutable_data<T_DX>()+ i * group_offset_X,
+            bwdDataWs,
+            bwdDataWsSize_));
+    //////////////////////////////   BWD WEIGHT //////////////////////
+
+    while (!bestWeightAlgoFound_) {
+      MIOPEN_ENFORCE(miopenFindConvolutionBackwardWeightsAlgorithm(
+              miopen_wrapper_.inline_miopen_handle(), top_desc_,
+              dY.template data<T_DY>()+ i * group_offset_Y, bottom_desc_, X.template data<T_X>()+ i * group_offset_X,
+              conv_desc_, weight_desc_, dW->template mutable_data<T_DW>()+ i * group_offset_filter,
+              requestAlgoCount_, &returnedAlgoCount_, &perf_, bwdWeightWs,
+              bwdWeightWsSize_, exhaustive_search_));
+      bestWeightAlgoFound_ = true;
+    }
+    MIOPEN_ENFORCE(miopenConvolutionBackwardWeights(
+            miopen_wrapper_.inline_miopen_handle(), &alpha_, top_desc_,
+            dY.template data<T_DY>()+ i * group_offset_Y, bottom_desc_, X.template data<T_X>()+ i * group_offset_X,
+            conv_desc_, perf_.bwd_weights_algo, &beta_, weight_desc_,
+            dW->template mutable_data<T_DW>()+ i * group_offset_filter, bwdWeightWs, bwdWeightWsSize_));
+
+    ////////////////////////////////////// BIAS ///////////////////////////
+    if (!no_bias_) {
+      auto *dbias = Output(BIAS_OR_INPUT_GRAD);
+      dbias->Resize(M);
+      MIOPEN_ENFORCE(miopenConvolutionBackwardBias(
+              miopen_wrapper_.inline_miopen_handle(), &alpha_, top_desc_for_bias_,
+              dY.template data<T_DY>()+ i * group_offset_Y, &beta_, bias_desc_,
+              dbias->template mutable_data<T_DB>()+ i * group_offset_Y));
+    }
   }
-
-  MIOPEN_ENFORCE(miopenConvolutionBackwardData(
-      miopen_wrapper_.inline_miopen_handle(), &alpha_, top_desc_,
-      dY.template data<T_DY>(), weight_desc_, Weight.template data<T_W>(),
-      conv_desc_, perf_.bwd_data_algo, &beta_, bottom_desc_,
-      dX->template mutable_data<T_DX>(),
-      bwdDataWs,
-      bwdDataWsSize_));
-  //////////////////////////////   BWD WEIGHT //////////////////////
-
-  while (!bestWeightAlgoFound_) {
-    MIOPEN_ENFORCE(miopenFindConvolutionBackwardWeightsAlgorithm(
-        miopen_wrapper_.inline_miopen_handle(), top_desc_,
-        dY.template data<T_DY>(), bottom_desc_, X.template data<T_X>(),
-        conv_desc_, weight_desc_, dW->template mutable_data<T_DW>(),
-        requestAlgoCount_, &returnedAlgoCount_, &perf_, bwdWeightWs,
-        bwdWeightWsSize_, exhaustive_search_));
-    bestWeightAlgoFound_ = true;
-  }
-  MIOPEN_ENFORCE(miopenConvolutionBackwardWeights(
-      miopen_wrapper_.inline_miopen_handle(), &alpha_, top_desc_,
-      dY.template data<T_DY>(), bottom_desc_, X.template data<T_X>(),
-      conv_desc_, perf_.bwd_weights_algo, &beta_, weight_desc_,
-      dW->template mutable_data<T_DW>(), bwdWeightWs, bwdWeightWsSize_));
-
-  ////////////////////////////////////// BIAS ///////////////////////////
-  if (!no_bias_) {
-    auto *dbias = Output(BIAS_OR_INPUT_GRAD);
-    dbias->Resize(M);
-    MIOPEN_ENFORCE(miopenConvolutionBackwardBias(
-        miopen_wrapper_.inline_miopen_handle(), &alpha_, top_desc_for_bias_,
-        dY.template data<T_DY>(), &beta_, bias_desc_,
-        dbias->template mutable_data<T_DB>()));
-  }
-
-  hipFree(bwdDataWs); hipFree(bwdWeightWs);
+// Synchronize the work across groups.
+  hipDeviceSynchronize();
   return true;
 }
 
