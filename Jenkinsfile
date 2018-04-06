@@ -15,8 +15,9 @@ node("vega") {
             //'''
         //}
 
-        stage("build_debug") {
+        stage("build_release") {
             sh '''
+                export HCC_AMDGPU_TARGET=gfx900
                 rm -rf build
                 mkdir build
                 cd build
@@ -26,7 +27,7 @@ node("vega") {
             '''
         }
 
-        //stage("build_release") {
+        //stage("build_debug") {
           //  sh '''
             //    rm -rf build
               //  mkdir build
