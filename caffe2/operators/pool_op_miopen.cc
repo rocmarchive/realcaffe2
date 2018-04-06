@@ -27,7 +27,6 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
         do_backward_(OperatorBase::GetSingleArgument<bool>("do_backward", true)),
-        poolWs_(nullptr),
         poolWsSize_(0)
 
   {
@@ -51,11 +50,7 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bottom_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
     MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
-    if(poolWs_) {
-      hipFree(poolWs_);
-      poolWs_ = nullptr;
-      poolWsSize_ = 0;
-    }
+    poolWsSize_ = 0;
   }
 
   template <typename T, typename M>
@@ -146,7 +141,6 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext> {
 
  protected:
   size_t poolWsSize_;
-  char*  poolWs_;
   MIOPENWrapper miopen_wrapper_;
   miopenTensorDescriptor_t bottom_desc_;
   miopenTensorDescriptor_t top_desc_;
@@ -165,7 +159,6 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
         miopen_wrapper_(&context_),
         alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
         beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
-        poolWs_(nullptr),
         poolWsSize_(0)
   {
     MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bottom_desc_));
@@ -188,11 +181,7 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(bottom_desc_));
     MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
     MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
-    if(poolWs_ != nullptr) {
-      hipFree(poolWs_);
-      poolWs_ = nullptr;
-      poolWsSize_ = 0;
-    }
+    poolWsSize_ = 0;
   }
 
   template <typename T, typename M>
@@ -294,7 +283,6 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext> {
 
  protected:
   size_t poolWsSize_;
-  char*  poolWs_;
   MIOPENWrapper miopen_wrapper_;
   miopenTensorDescriptor_t bottom_desc_;
   miopenTensorDescriptor_t top_desc_;
