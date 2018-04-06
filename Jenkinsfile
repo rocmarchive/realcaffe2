@@ -1,4 +1,46 @@
 
+
+node("vega") {
+    docker.image('petrex/rocm_caffe2').inside {
+        stage("checkout") {
+            checkout scm
+            sh 'git submodule update --init'
+        }
+        
+        //stage('Clang Format') {
+          //  sh '''
+            //    find . -iname *miopen* -o -iname *hip* \
+              //  | grep -v 'build/' \
+                //| xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-3.8-style=file {} | diff - {}'
+            //'''
+        //}
+
+        stage("build_debug") {
+            sh '''
+                rm -rf build
+                mkdir build
+                cd build
+                cmake -DCMAKE_BUILD_TYPE='Debug' ..
+                make -j8
+                make install
+            '''
+        }
+
+        stage("build_release") {
+            sh '''
+                rm -rf build
+                mkdir build
+                cd build
+                cmake -DCMAKE_BUILD_TYPE='Release' ..
+                make -j8
+                make install
+            '''
+        }
+
+    }
+}
+
+/*
 def rocmtestnode(variant, name, body) {
     def image = 'miopen'
     def cmake_build = { compiler, flags ->
@@ -149,3 +191,4 @@ rocmtest opencl_all: rocmnode('vega') { cmake_build ->
         cmake_build('hcc', '-DBUILD_DEV=On -DMIOPEN_TEST_ALL=On -DCMAKE_BUILD_TYPE=release')
     }
 }
+*/
