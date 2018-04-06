@@ -1,6 +1,4 @@
-
-
-node("vega") {
+node("rocmtest") {
     docker.image('petrex/rocm_caffe2').inside {
         stage("checkout") {
             checkout scm
@@ -27,16 +25,16 @@ node("vega") {
             '''
         }
 
-        //stage("build_debug") {
-          //  sh '''
-            //    rm -rf build
-              //  mkdir build
-                //cd build
-                //cmake -DCMAKE_BUILD_TYPE='Release' ..
-                //make -j8
-                //make install
-            //'''
-        //}
+        stage("build_debug") {
+            sh '''
+                rm -rf build
+                mkdir build
+                cd build
+                cmake -DCMAKE_BUILD_TYPE='Debug' ..
+                make -j8
+                make install
+            '''
+        }
 
     }
 }
