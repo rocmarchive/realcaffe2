@@ -15,7 +15,7 @@ node("rocmtest") {
                     //| xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-3.8-style=file {} | diff - {}'
                 //'''
             //}
-
+            /*
             stage("build_release") {
 
                 sh '''
@@ -39,9 +39,12 @@ node("rocmtest") {
                     make DESTDIR=./install install
                 '''
             }
+            */
             stage("binary_test") {
                 sh '''
                     set -e
+                    pwd
+                    ls
                     cd bin
                     total_tests=$(ls | wc -l)
                     echo $total_tests
