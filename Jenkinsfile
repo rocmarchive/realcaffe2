@@ -45,7 +45,7 @@ node("rocmtest") {
                     set -e
                     pwd
                     ls
-                    cd bin
+                    cd build/bin
                     total_tests=$(ls | wc -l)
                     echo $total_tests
                     passed_tests=0
