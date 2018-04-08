@@ -15,7 +15,6 @@ node("rocmtest") {
                     //| xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-3.8-style=file {} | diff - {}'
                 //'''
             //}
-            /*
             stage("build_release") {
 
                 sh '''
@@ -28,7 +27,7 @@ node("rocmtest") {
                     make DESTDIR=./install install
                 '''
             }
-
+            /*
             stage("build_debug") {
                 sh '''
                     rm -rf build
