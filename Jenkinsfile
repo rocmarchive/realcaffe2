@@ -15,7 +15,6 @@ node("rocmtest") {
                     //| xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-3.8-style=file {} | diff - {}'
                 //'''
             //}
-
             stage("build_release") {
 
                 sh '''
@@ -28,7 +27,7 @@ node("rocmtest") {
                     make DESTDIR=./install install
                 '''
             }
-
+            /*
             stage("build_debug") {
                 sh '''
                     rm -rf build
@@ -37,6 +36,30 @@ node("rocmtest") {
                     cmake -DCMAKE_BUILD_TYPE='Debug' ..
                     make -j8
                     make DESTDIR=./install install
+                '''
+            }
+            */
+            stage("binary_test") {
+                sh '''
+                    set -e
+                    pwd
+                    ls
+                    cd build
+                    ls
+                    cd bin
+                    total_tests=$(ls | wc -l)
+                    echo $total_tests
+                    passed_tests=0
+                    for T in $(ls); do
+                        echo $T
+                        ./$T
+                        if [ $? -eq 0 ]; then
+                            passed_tests=$((passed_tests+1))
+                        fi
+                        echo $passed_tests
+                    done
+                    cd ..
+                    echo "done"
                 '''
             }
         }
