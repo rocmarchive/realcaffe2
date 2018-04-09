@@ -12,7 +12,7 @@ node("rocmtest") {
                     cd caffe2
                     find . -iname *miopen* -o -iname *hip* \
                     | grep -v 'build/' \
-                    | xargs -n 1 -P 1 -I{} -t sh -c 'clang-format-3.8-style=file {} | diff - {}'
+                    | xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-3.8 -style=file {} | diff - {}\'
                 '''
             }
             stage("build_release") {
