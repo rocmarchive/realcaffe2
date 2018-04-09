@@ -42,11 +42,10 @@ node("rocmtest") {
             */
             stage("binary_tests") {
                 sh '''
-                    //set -e
                     cd build/bin
                     total_test_count=$(ls | wc -l)
                     echo $total_test_count
-                    //passed_tests=()
+                    // passed_tests=()
                     passed_count=0
                     failed_tests=()
                     for T in $(ls); do
@@ -54,7 +53,7 @@ node("rocmtest") {
                         ./$T
                         if [ $? -eq 0 ]; then
                             passed_count=$((passed_count+1))
-                            //passed_tests+=($T)
+                            // passed_tests+=($T)
                         else
                             failed_tests+=($T)
                         fi
