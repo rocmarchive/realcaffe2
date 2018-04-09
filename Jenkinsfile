@@ -9,6 +9,7 @@ node("rocmtest") {
             
             stage('Clang Format') {
                 sh '''
+                    apt-get install --yes clang-format-3.8
                     cd caffe2
                     find . -iname *miopen* -o -iname *hip* \
                     | grep -v 'build/' \
