@@ -1,6 +1,6 @@
 node("rocmtest") {
-    docker.image('petrex/rocm_caffe2')
-    withDockerContainer(image: "petrex/rocm_caffe2", args: '--device=/dev/kfd --device=/dev/dri --group-add video') {
+    docker.image('rohith612/rocm_caffe2:clang-format')
+    withDockerContainer(image: "rohith612/rocm_caffe2:clang-format", args: '--device=/dev/kfd --device=/dev/dri --group-add video') {
         timeout(time: 2, unit: 'HOURS'){
             stage("checkout") {
                 checkout scm
@@ -9,11 +9,10 @@ node("rocmtest") {
             
             stage('Clang Format') {
                 sh '''
-                    apt-get install --yes clang-format-3.8
                     cd caffe2
                     find . -iname *miopen* -o -iname *hip* \
                     | grep -v 'build/' \
-                    | xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-3.8 -style=file {} | diff - {}\'
+                    | xargs -n 1 -P 1 -I{} -t sh -c 'clang-format-3.8 -style=file {} | diff - {}'
                 '''
             }
             stage("build_release") {
@@ -46,7 +45,7 @@ node("rocmtest") {
                     cd build/bin
                     total_test_count=$(ls | wc -l)
                     echo $total_test_count
-                    passed_tests=()
+                    //passed_tests=()
                     passed_count=0
                     failed_tests=()
                     for T in $(ls); do
@@ -54,7 +53,7 @@ node("rocmtest") {
                         ./$T
                         if [ $? -eq 0 ]; then
                             passed_count=$((passed_count+1))
-                            passed_tests+=($T)
+                            //passed_tests+=($T)
                         else
                             failed_tests+=($T)
                         fi
