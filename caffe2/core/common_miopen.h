@@ -33,57 +33,47 @@ namespace internal {
 /**
  * A helper function to obtain miopen error strings.
  */
-inline const char* miopenGetErrorString(miopenStatus_t status) {
-  switch (status) {
-    case miopenStatusSuccess:
-      return "MIOPEN_STATUS_SUCCESS";
-    case miopenStatusNotInitialized:
-      return "MIOPEN_STATUS_NOT_INITIALIZED";
-    case miopenStatusAllocFailed:
-      return "MIOPEN_STATUS_ALLOC_FAILED";
-    case miopenStatusBadParm:
-      return "MIOPEN_STATUS_BAD_PARAM";
-    case miopenStatusInternalError:
-      return "MIOPEN_STATUS_INTERNAL_ERROR";
-    case miopenStatusInvalidValue:
-      return "MIOPEN_STATUS_INVALID_VALUE";
-    case miopenStatusNotImplemented:
-      return "MIOPEN_STATUS_NOT_SUPPORTED";
-    case miopenStatusUnknownError:
-      return "MIOPEN_STATUS_UNKNOWN_ERROR";
-    default:
-      return "MIOPEN_STATUS_UNKNOWN_ERROR";
-  }
+inline const char* miopenGetErrorString(miopenStatus_t status)
+{
+    switch(status)
+    {
+    case miopenStatusSuccess: return "MIOPEN_STATUS_SUCCESS";
+    case miopenStatusNotInitialized: return "MIOPEN_STATUS_NOT_INITIALIZED";
+    case miopenStatusAllocFailed: return "MIOPEN_STATUS_ALLOC_FAILED";
+    case miopenStatusBadParm: return "MIOPEN_STATUS_BAD_PARAM";
+    case miopenStatusInternalError: return "MIOPEN_STATUS_INTERNAL_ERROR";
+    case miopenStatusInvalidValue: return "MIOPEN_STATUS_INVALID_VALUE";
+    case miopenStatusNotImplemented: return "MIOPEN_STATUS_NOT_SUPPORTED";
+    case miopenStatusUnknownError: return "MIOPEN_STATUS_UNKNOWN_ERROR";
+    default: return "MIOPEN_STATUS_UNKNOWN_ERROR";
+    }
 }
 } // namespace internal
 
 // A macro that wraps around a miopen statement so we can check if the miopen
 // execution finishes or not.
-#define MIOPEN_ENFORCE(condition)                          \
-  do {                                                    \
-    miopenStatus_t status = condition;                     \
-    CAFFE_ENFORCE_EQ(                                     \
-        status,                                           \
-        miopenStatusSuccess,                             \
-        ", Error at: ",                                   \
-        __FILE__,                                         \
-        ":",                                              \
-        __LINE__,                                         \
-        ": ",                                             \
-        ::caffe2::internal::miopenGetErrorString(status)); \
-  } while (0)
-#define MIOPEN_CHECK(condition)                              \
-  do {                                                      \
-    miopenStatus_t status = condition;                       \
-    CHECK(status == miopenStatusSuccess)                   \
-        << ::caffe2::internal::miopenGetErrorString(status); \
-  } while (0)
+#define MIOPEN_ENFORCE(condition)                                           \
+    do                                                                      \
+    {                                                                       \
+        miopenStatus_t status = condition;                                  \
+        CAFFE_ENFORCE_EQ(status,                                            \
+                         miopenStatusSuccess,                               \
+                         ", Error at: ",                                    \
+                         __FILE__,                                          \
+                         ":",                                               \
+                         __LINE__,                                          \
+                         ": ",                                              \
+                         ::caffe2::internal::miopenGetErrorString(status)); \
+    } while(0)
+#define MIOPEN_CHECK(condition)                                                                   \
+    do                                                                                            \
+    {                                                                                             \
+        miopenStatus_t status = condition;                                                        \
+        CHECK(status == miopenStatusSuccess) << ::caffe2::internal::miopenGetErrorString(status); \
+    } while(0)
 
 // report the version of miopen Caffe2 was compiled with
-inline size_t miopenCompiledVersion() {
-  return MIOPEN_VERSION;
-}
-
+inline size_t miopenCompiledVersion() { return MIOPEN_VERSION; }
 
 /**
  * miopenTypeWrapper is a wrapper class that allows us to refer to the miopen type
@@ -94,35 +84,41 @@ template <typename T>
 class miopenTypeWrapper;
 
 template <>
-class miopenTypeWrapper<float> {
- public:
-  static const miopenDataType_t type = miopenFloat;
-  typedef const float ScalingParamType;
-  typedef float BNParamType;
-  static ScalingParamType* kOne() {
-    static ScalingParamType v = 1.0;
-    return &v;
-  }
-  static const ScalingParamType* kZero() {
-    static ScalingParamType v = 0.0;
-    return &v;
-  }
+class miopenTypeWrapper<float>
+{
+    public:
+    static const miopenDataType_t type = miopenFloat;
+    typedef const float ScalingParamType;
+    typedef float BNParamType;
+    static ScalingParamType* kOne()
+    {
+        static ScalingParamType v = 1.0;
+        return &v;
+    }
+    static const ScalingParamType* kZero()
+    {
+        static ScalingParamType v = 0.0;
+        return &v;
+    }
 };
 
 template <>
-class miopenTypeWrapper<float16> {
- public:
-  static const miopenDataType_t type = miopenHalf;
-  typedef const float ScalingParamType;
-  typedef float BNParamType;
-  static ScalingParamType* kOne() {
-    static ScalingParamType v = 1.0;
-    return &v;
-  }
-  static ScalingParamType* kZero() {
-    static ScalingParamType v = 0.0;
-    return &v;
-  }
+class miopenTypeWrapper<float16>
+{
+    public:
+    static const miopenDataType_t type = miopenHalf;
+    typedef const float ScalingParamType;
+    typedef float BNParamType;
+    static ScalingParamType* kOne()
+    {
+        static ScalingParamType v = 1.0;
+        return &v;
+    }
+    static ScalingParamType* kZero()
+    {
+        static ScalingParamType v = 0.0;
+        return &v;
+    }
 };
 
 /**
@@ -130,55 +126,45 @@ class miopenTypeWrapper<float16> {
  * miopenTensorDescriptor_t, allowing us to do descriptor change as-needed during
  * runtime.
  */
-class miopenTensorDescWrapper {
- public:
-  miopenTensorDescWrapper() {
-    MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&desc_));
-  }
-  ~miopenTensorDescWrapper() noexcept {
-    MIOPEN_CHECK(miopenDestroyTensorDescriptor(desc_));
-  }
+class miopenTensorDescWrapper
+{
+    public:
+    miopenTensorDescWrapper() { MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&desc_)); }
+    ~miopenTensorDescWrapper() noexcept { MIOPEN_CHECK(miopenDestroyTensorDescriptor(desc_)); }
 
-  inline miopenTensorDescriptor_t Descriptor(
-      const miopenDataType_t type,
-      const vector<int>& dims,
-      bool* changed) {
-    if (type_ == type && dims_ == dims) {
-      // if not changed, simply return the current descriptor.
-      if (changed)
-        *changed = false;
-      return desc_;
+    inline miopenTensorDescriptor_t
+    Descriptor(const miopenDataType_t type, const vector<int>& dims, bool* changed)
+    {
+        if(type_ == type && dims_ == dims)
+        {
+            // if not changed, simply return the current descriptor.
+            if(changed)
+                *changed = false;
+            return desc_;
+        }
+        CAFFE_ENFORCE_EQ(
+            dims.size(), 4, "MIOPEN currently only support 4-dimensional tensor descriptor");
+
+        type_ = type;
+        dims_ = dims;
+        MIOPEN_ENFORCE(
+            miopenSet4dTensorDescriptor(desc_, type, dims_[0], dims_[1], dims_[2], dims_[3]));
+        if(changed)
+            *changed = true;
+        return desc_;
     }
-    CAFFE_ENFORCE_EQ(
-        dims.size(), 4, "MIOPEN currently only support 4-dimensional tensor descriptor");
 
-    type_ = type;
-    dims_ = dims;
-    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
-        desc_,
-        type,
-        dims_[0],
-        dims_[1],
-        dims_[2],
-        dims_[3]));
-    if (changed)
-      *changed = true;
-    return desc_;
-  }
+    template <typename T>
+    inline miopenTensorDescriptor_t Descriptor(const StorageOrder& order, const vector<int>& dims)
+    {
+        return Descriptor(miopenTypeWrapper<T>::type, dims, nullptr);
+    }
 
-  template <typename T>
-  inline miopenTensorDescriptor_t Descriptor(
-      const StorageOrder& order,
-      const vector<int>& dims) {
-    return Descriptor(
-         miopenTypeWrapper<T>::type, dims, nullptr);
-  }
-
- private:
-  miopenTensorDescriptor_t desc_;
-  miopenDataType_t type_;
-  vector<int> dims_;
-  DISABLE_COPY_AND_ASSIGN(miopenTensorDescWrapper);
+    private:
+    miopenTensorDescriptor_t desc_;
+    miopenDataType_t type_;
+    vector<int> dims_;
+    DISABLE_COPY_AND_ASSIGN(miopenTensorDescWrapper);
 };
 
 } // namespace caffe2

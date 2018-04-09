@@ -14,9 +14,10 @@
 #include "caffe2/core/tensor.h"
 #include "caffe2/utils/string_utils.h"
 
-CAFFE2_DEFINE_string(caffe2_hip_memory_pool, "",
-              "Sets the memory pool used by caffe2. Possible values are "
-              "none, cnmen and cub.");
+CAFFE2_DEFINE_string(caffe2_hip_memory_pool,
+                     "",
+                     "Sets the memory pool used by caffe2. Possible values are "
+                     "none, cnmen and cub.");
 
 #if 0 // We do not use CUB in HIP flow
 // For description of CUB caching allocator configuration, see
@@ -40,14 +41,12 @@ CAFFE2_DEFINE_bool(
     "events to stdout.");
 #endif
 
-CAFFE2_DEFINE_bool(
-    caffe2_gpu_memory_tracking,
-    false,
-    "If set, logs changes in GPU memory allocations");
-CAFFE2_DEFINE_int(
-    caffe2_gpu_memory_report_interval_mb,
-    128,
-    "The threshold in MB on how frequently to report memory changes");
+CAFFE2_DEFINE_bool(caffe2_gpu_memory_tracking,
+                   false,
+                   "If set, logs changes in GPU memory allocations");
+CAFFE2_DEFINE_int(caffe2_gpu_memory_report_interval_mb,
+                  128,
+                  "The threshold in MB on how frequently to report memory changes");
 
 namespace caffe2 {
 
@@ -87,23 +86,18 @@ static std::vector<long> g_total_by_gpu_map(CAFFE2_COMPILE_TIME_MAX_GPUS, 0);
 static std::vector<long> g_max_by_gpu_map(CAFFE2_COMPILE_TIME_MAX_GPUS, 0);
 
 static long g_total_mem = 0;
-static long g_last_rep = 0;
+static long g_last_rep  = 0;
 
-HipMemoryPoolType GetHipMemoryPoolType() {
-  return g_hip_memory_pool_type;
-}
+HipMemoryPoolType GetHipMemoryPoolType() { return g_hip_memory_pool_type; }
 
-vector<TIndex> GetHipTensorInfo(
-    const void* c,
-    bool* shares_data,
-    size_t* capacity,
-    DeviceOption* device) {
-  vector<TIndex> dims =
-      GetTensorInfo<HIPContext>(c, shares_data, capacity, device);
-  const Tensor<HIPContext>* tc = static_cast<const Tensor<HIPContext>*>(c);
-  device->set_device_type(HIP);
-  device->set_hip_gpu_id(GetGPUIDForPointer(tc->raw_data()));
-  return dims;
+vector<TIndex>
+GetHipTensorInfo(const void* c, bool* shares_data, size_t* capacity, DeviceOption* device)
+{
+    vector<TIndex> dims          = GetTensorInfo<HIPContext>(c, shares_data, capacity, device);
+    const Tensor<HIPContext>* tc = static_cast<const Tensor<HIPContext>*>(c);
+    device->set_device_type(HIP);
+    device->set_hip_gpu_id(GetGPUIDForPointer(tc->raw_data()));
+    return dims;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -115,56 +109,55 @@ vector<TIndex> GetHipTensorInfo(
 // caffe2 instances on a GPU machine.
 ///////////////////////////////////////////////////////////////////////////////
 
-static void Caffe2InitializeHip() {
-  // If the current run does not have any HIP devices, do nothing.
-  if (!HasHipGPU()) {
-    VLOG(1) << "No HIP gpu present. Skipping.";
-    return;
-  }
-  // Check if the number of GPUs matches the expected compile-time max number
-  // of GPUs.
-  CAFFE_ENFORCE_LE(
-      NumHipDevices(),
-      CAFFE2_COMPILE_TIME_MAX_GPUS,
-      "Number of HIP devices on the machine is larger than the compiled "
-      "max number of gpus expected (",
-      CAFFE2_COMPILE_TIME_MAX_GPUS,
-      "). Increase that and recompile the caffe binary.");
-
-  for (int i = 0; i < NumHipDevices(); ++i) {
-    DeviceGuard g(i);
-    // Enable peer access.
-    const int peer_group = i / CAFFE2_HIP_MAX_PEER_SIZE;
-    const int peer_start = peer_group * CAFFE2_HIP_MAX_PEER_SIZE;
-    const int peer_end = std::min(
-        NumHipDevices(), (peer_group + 1) * CAFFE2_HIP_MAX_PEER_SIZE);
-    VLOG(1) << "Enabling peer access within group #" << peer_group
-            << ", from gpuid " << peer_start << " to " << peer_end - 1
-            << ", for gpuid " << i << ".";
-
-    for (int j = peer_start; j < peer_end; ++j) {
-      if (i == j) continue;
-      int can_access;
-      HIP_ENFORCE(hipDeviceCanAccessPeer(&can_access, i, j));
-      if (can_access) {
-        VLOG(1) << "Enabling peer access from " << i << " to " << j;
-        // Note: just for future reference, the 0 here is not a gpu id, it is
-        // a reserved flag for hipDeviceEnablePeerAccess that should always be
-        // zero currently.
-        HIP_ENFORCE(hipDeviceEnablePeerAccess(j, 0));
-      }
+static void Caffe2InitializeHip()
+{
+    // If the current run does not have any HIP devices, do nothing.
+    if(!HasHipGPU())
+    {
+        VLOG(1) << "No HIP gpu present. Skipping.";
+        return;
     }
-  }
+    // Check if the number of GPUs matches the expected compile-time max number
+    // of GPUs.
+    CAFFE_ENFORCE_LE(NumHipDevices(),
+                     CAFFE2_COMPILE_TIME_MAX_GPUS,
+                     "Number of HIP devices on the machine is larger than the compiled "
+                     "max number of gpus expected (",
+                     CAFFE2_COMPILE_TIME_MAX_GPUS,
+                     "). Increase that and recompile the caffe binary.");
 
-  RegisterTypeCallFunction(
-    TypeMeta::Id<Tensor<HIPContext>>(),
-    GetTensorType<HIPContext>
-  );
+    for(int i = 0; i < NumHipDevices(); ++i)
+    {
+        DeviceGuard g(i);
+        // Enable peer access.
+        const int peer_group = i / CAFFE2_HIP_MAX_PEER_SIZE;
+        const int peer_start = peer_group * CAFFE2_HIP_MAX_PEER_SIZE;
+        const int peer_end = std::min(NumHipDevices(), (peer_group + 1) * CAFFE2_HIP_MAX_PEER_SIZE);
+        VLOG(1) << "Enabling peer access within group #" << peer_group << ", from gpuid "
+                << peer_start << " to " << peer_end - 1 << ", for gpuid " << i << ".";
 
-  RegisterTensorInfoFunction(
-      TypeMeta::Id<Tensor<HIPContext>>(), GetHipTensorInfo);
+        for(int j = peer_start; j < peer_end; ++j)
+        {
+            if(i == j)
+                continue;
+            int can_access;
+            HIP_ENFORCE(hipDeviceCanAccessPeer(&can_access, i, j));
+            if(can_access)
+            {
+                VLOG(1) << "Enabling peer access from " << i << " to " << j;
+                // Note: just for future reference, the 0 here is not a gpu id, it is
+                // a reserved flag for hipDeviceEnablePeerAccess that should always be
+                // zero currently.
+                HIP_ENFORCE(hipDeviceEnablePeerAccess(j, 0));
+            }
+        }
+    }
 
-  //CheckMiOpenVersions();
+    RegisterTypeCallFunction(TypeMeta::Id<Tensor<HIPContext>>(), GetTensorType<HIPContext>);
+
+    RegisterTensorInfoFunction(TypeMeta::Id<Tensor<HIPContext>>(), GetHipTensorInfo);
+
+    // CheckMiOpenVersions();
 }
 
 /*static void SetUpCub() {
@@ -184,42 +177,47 @@ static void Caffe2InitializeHip() {
   VLOG(1) << "Done setting up cub memory pool.";
 }*/
 
-static void Caffe2SetHIPMemoryPool() {
-  if (FLAGS_caffe2_hip_memory_pool == "" ||
-      FLAGS_caffe2_hip_memory_pool == "none") {
-    g_hip_memory_pool_type = HipMemoryPoolType::NONE;
-  } else if (FLAGS_caffe2_hip_memory_pool == "cnmem") {
-    CAFFE_THROW("CNMEM is no longer used by Caffe2. Use cub instead. "
-                "This error message may go away in the future.");
-  } /*else if (FLAGS_caffe2_cuda_memory_pool == "cub") {
-    // Sets up cub.
-    g_cuda_memory_pool_type = CudaMemoryPoolType::CUB;
-    SetUpCub();
-  }*/ 
-  else {
-    CAFFE_THROW("Unrecognized HIP memory pool type: ",
-                FLAGS_caffe2_hip_memory_pool);
-  }
+static void Caffe2SetHIPMemoryPool()
+{
+    if(FLAGS_caffe2_hip_memory_pool == "" || FLAGS_caffe2_hip_memory_pool == "none")
+    {
+        g_hip_memory_pool_type = HipMemoryPoolType::NONE;
+    }
+    else if(FLAGS_caffe2_hip_memory_pool == "cnmem")
+    {
+        CAFFE_THROW("CNMEM is no longer used by Caffe2. Use cub instead. "
+                    "This error message may go away in the future.");
+    } /*else if (FLAGS_caffe2_cuda_memory_pool == "cub") {
+      // Sets up cub.
+      g_cuda_memory_pool_type = CudaMemoryPoolType::CUB;
+      SetUpCub();
+    }*/
+    else
+    {
+        CAFFE_THROW("Unrecognized HIP memory pool type: ", FLAGS_caffe2_hip_memory_pool);
+    }
 }
 
 // An initialization function that sets the CPU side to use pinned cpu
 // allocator.
-void Caffe2UsePinnedCPUAllocator() {
+void Caffe2UsePinnedCPUAllocator()
+{
 #if CAFFE2_ASAN_ENABLED
-  // Note(jiayq): for more details, see
-  //     https://github.com/google/sanitizers/issues/629
-  LOG(WARNING) << "There are known issues between address sanitizer and "
-                  "hipHostMalloc. As a result, caffe2 will not enable pinned "
-                  "memory allocation in asan mode. If you are expecting any "
-                  "behavior that depends on asan, be advised that it is not "
-                  "turned on.";
+    // Note(jiayq): for more details, see
+    //     https://github.com/google/sanitizers/issues/629
+    LOG(WARNING) << "There are known issues between address sanitizer and "
+                    "hipHostMalloc. As a result, caffe2 will not enable pinned "
+                    "memory allocation in asan mode. If you are expecting any "
+                    "behavior that depends on asan, be advised that it is not "
+                    "turned on.";
 #else
-  if (!HasHipGPU()) {
-    VLOG(1) << "No GPU present. I won't use pinned allocator then.";
-    return;
-  }
-  VLOG(1) << "Caffe2 gpu: setting CPUAllocator to PinnedCPUAllocator.";
-  SetCPUAllocator(new PinnedCPUAllocator());
+    if(!HasHipGPU())
+    {
+        VLOG(1) << "No GPU present. I won't use pinned allocator then.";
+        return;
+    }
+    VLOG(1) << "Caffe2 gpu: setting CPUAllocator to PinnedCPUAllocator.";
+    SetCPUAllocator(new PinnedCPUAllocator());
 #endif
 }
 
@@ -228,159 +226,177 @@ void Caffe2UsePinnedCPUAllocator() {
 // HIPContext is initialized or HIPContext::New is called. It then runs
 // all the related cuda initialization functions.
 namespace {
-struct Caffe2HipInitializerHelper {
-  Caffe2HipInitializerHelper() {
-    // We cannot use bool because nvcc changes bool to __nv_bool which does
-    // not have a std::atomic instantiation.
-    static std::atomic<char> first_call(1);
-    if (first_call.fetch_and((char)0)) {
-      Caffe2InitializeHip();
-      Caffe2SetHIPMemoryPool();
-      Caffe2UsePinnedCPUAllocator();
+struct Caffe2HipInitializerHelper
+{
+    Caffe2HipInitializerHelper()
+    {
+        // We cannot use bool because nvcc changes bool to __nv_bool which does
+        // not have a std::atomic instantiation.
+        static std::atomic<char> first_call(1);
+        if(first_call.fetch_and((char)0))
+        {
+            Caffe2InitializeHip();
+            Caffe2SetHIPMemoryPool();
+            Caffe2UsePinnedCPUAllocator();
+        }
     }
-  }
 };
-}  // namespace
+} // namespace
 
 HIPContext::HIPContext(const int gpu_id)
-    : gpu_id_(gpu_id == -1 ? GetDefaultGPUID() : gpu_id),
-      random_seed_(RandomNumberSeed()) {
-  static Caffe2HipInitializerHelper g_hip_initializer_;
+    : gpu_id_(gpu_id == -1 ? GetDefaultGPUID() : gpu_id), random_seed_(RandomNumberSeed())
+{
+    static Caffe2HipInitializerHelper g_hip_initializer_;
 }
 
 HIPContext::HIPContext(const DeviceOption& option)
-    : gpu_id_(
-          option.has_hip_gpu_id() ? option.hip_gpu_id() : GetDefaultGPUID()),
-      random_seed_(
-          option.has_random_seed() ? option.random_seed()
-                                   : RandomNumberSeed()) {
-  static Caffe2HipInitializerHelper g_hip_initializer_;
-  DCHECK_EQ(option.device_type(), HIP);
+    : gpu_id_(option.has_hip_gpu_id() ? option.hip_gpu_id() : GetDefaultGPUID()),
+      random_seed_(option.has_random_seed() ? option.random_seed() : RandomNumberSeed())
+{
+    static Caffe2HipInitializerHelper g_hip_initializer_;
+    DCHECK_EQ(option.device_type(), HIP);
 }
 
 // shared mutex to lock out alloc / free during NCCL launches
-std::mutex& HIPContext::mutex() {
-  static std::mutex m;
-  return m;
+std::mutex& HIPContext::mutex()
+{
+    static std::mutex m;
+    return m;
 }
 
-std::vector<long> HIPContext::TotalMemoryByGpu() {
-  std::lock_guard<std::mutex> lock(HIPContext::mutex());
-  CAFFE_ENFORCE(
-      FLAGS_caffe2_gpu_memory_tracking,
-      "Pass --caffe2_gpu_memory_tracking to enable memory stats");
-  return g_total_by_gpu_map;
+std::vector<long> HIPContext::TotalMemoryByGpu()
+{
+    std::lock_guard<std::mutex> lock(HIPContext::mutex());
+    CAFFE_ENFORCE(FLAGS_caffe2_gpu_memory_tracking,
+                  "Pass --caffe2_gpu_memory_tracking to enable memory stats");
+    return g_total_by_gpu_map;
 }
 
-std::vector<long> HIPContext::MaxMemoryByGpu() {
-  std::lock_guard<std::mutex> lock(HIPContext::mutex());
-  CAFFE_ENFORCE(
-      FLAGS_caffe2_gpu_memory_tracking,
-      "Pass --caffe2_gpu_memory_tracking to enable memory stats");
-  return g_max_by_gpu_map;
+std::vector<long> HIPContext::MaxMemoryByGpu()
+{
+    std::lock_guard<std::mutex> lock(HIPContext::mutex());
+    CAFFE_ENFORCE(FLAGS_caffe2_gpu_memory_tracking,
+                  "Pass --caffe2_gpu_memory_tracking to enable memory stats");
+    return g_max_by_gpu_map;
 }
 
 namespace {
-void TrackMemoryAlloc(size_t nbytes) {
-  int this_gpu = CaffeHipGetDevice();
-  g_total_by_gpu_map[this_gpu] += nbytes;
-  g_max_by_gpu_map[this_gpu] =
-      std::max(g_max_by_gpu_map[this_gpu], g_total_by_gpu_map[this_gpu]);
-  g_total_mem += nbytes;
-  if (g_total_mem - g_last_rep >
-      FLAGS_caffe2_gpu_memory_report_interval_mb * 1024 * 1024) {
-    for (int gpu = 0; gpu < g_total_by_gpu_map.size(); gpu++) {
-      long t = g_total_by_gpu_map[gpu];
-      long max_t = g_max_by_gpu_map[gpu];
-      if (max_t > 0) {
-        if (max_t != t) {
-          LOG(INFO) << "GPU " << gpu << ": " << t / 1024 / 1024 << " MB"
-                    << " (max: " << max_t / 1024 / 1024 << " MB)";
-        } else {
-          LOG(INFO) << "GPU " << gpu << ": " << t / 1024 / 1024 << " MB";
+void TrackMemoryAlloc(size_t nbytes)
+{
+    int this_gpu = CaffeHipGetDevice();
+    g_total_by_gpu_map[this_gpu] += nbytes;
+    g_max_by_gpu_map[this_gpu] = std::max(g_max_by_gpu_map[this_gpu], g_total_by_gpu_map[this_gpu]);
+    g_total_mem += nbytes;
+    if(g_total_mem - g_last_rep > FLAGS_caffe2_gpu_memory_report_interval_mb * 1024 * 1024)
+    {
+        for(int gpu = 0; gpu < g_total_by_gpu_map.size(); gpu++)
+        {
+            long t     = g_total_by_gpu_map[gpu];
+            long max_t = g_max_by_gpu_map[gpu];
+            if(max_t > 0)
+            {
+                if(max_t != t)
+                {
+                    LOG(INFO) << "GPU " << gpu << ": " << t / 1024 / 1024 << " MB"
+                              << " (max: " << max_t / 1024 / 1024 << " MB)";
+                }
+                else
+                {
+                    LOG(INFO) << "GPU " << gpu << ": " << t / 1024 / 1024 << " MB";
+                }
+            }
         }
-      }
+        LOG(INFO) << "Total: " << g_total_mem / 1024 / 1024 << " MB";
+        g_last_rep = g_total_mem;
     }
-    LOG(INFO) << "Total: " << g_total_mem / 1024 / 1024 << " MB";
-    g_last_rep = g_total_mem;
-  }
 }
 }
 
-std::pair<void*, MemoryDeleter> HIPContext::New(size_t nbytes) {
-  // Lock the mutex
-  std::lock_guard<std::mutex> lock(HIPContext::mutex());
-  // A one-time caffe2 cuda initializer.
-  static Caffe2HipInitializerHelper g_hip_initializer_;
-  void* ptr = nullptr;
+std::pair<void*, MemoryDeleter> HIPContext::New(size_t nbytes)
+{
+    // Lock the mutex
+    std::lock_guard<std::mutex> lock(HIPContext::mutex());
+    // A one-time caffe2 cuda initializer.
+    static Caffe2HipInitializerHelper g_hip_initializer_;
+    void* ptr = nullptr;
 
-  if (FLAGS_caffe2_gpu_memory_tracking) {
-    TrackMemoryAlloc(nbytes);
-  }
-  switch (g_hip_memory_pool_type) {
-  case HipMemoryPoolType::NONE:
-    HIP_ENFORCE(hipMalloc(&ptr, nbytes));
-    if (FLAGS_caffe2_gpu_memory_tracking) {
-      g_size_map[ptr] = nbytes;
-      g_hip_device_affiliation[ptr] = CaffeHipGetDevice();
+    if(FLAGS_caffe2_gpu_memory_tracking)
+    {
+        TrackMemoryAlloc(nbytes);
     }
-    return {ptr, Delete};
-  /*case CudaMemoryPoolType::CUB:
-    CUDA_ENFORCE(g_cub_allocator->DeviceAllocate(&ptr, nbytes));
-    g_cuda_device_affiliation[ptr] = CaffeCudaGetDevice();
-    VLOG(2) << "CUB allocating pointer " << ptr << " on device "
-            << CaffeCudaGetDevice();
-    if (FLAGS_caffe2_gpu_memory_tracking) {
-      g_size_map[ptr] = nbytes;
+    switch(g_hip_memory_pool_type)
+    {
+    case HipMemoryPoolType::NONE:
+        HIP_ENFORCE(hipMalloc(&ptr, nbytes));
+        if(FLAGS_caffe2_gpu_memory_tracking)
+        {
+            g_size_map[ptr]               = nbytes;
+            g_hip_device_affiliation[ptr] = CaffeHipGetDevice();
+        }
+        return {ptr, Delete};
+        /*case CudaMemoryPoolType::CUB:
+          CUDA_ENFORCE(g_cub_allocator->DeviceAllocate(&ptr, nbytes));
+          g_cuda_device_affiliation[ptr] = CaffeCudaGetDevice();
+          VLOG(2) << "CUB allocating pointer " << ptr << " on device "
+                  << CaffeCudaGetDevice();
+          if (FLAGS_caffe2_gpu_memory_tracking) {
+            g_size_map[ptr] = nbytes;
+          }
+          return {ptr, Delete};*/
     }
-    return {ptr, Delete};*/
-  }
-  return {nullptr, Delete};
+    return {nullptr, Delete};
 }
 
-void HIPContext::Delete(void* ptr) {
-  // lock the mutex
-  std::lock_guard<std::mutex> lock(HIPContext::mutex());
+void HIPContext::Delete(void* ptr)
+{
+    // lock the mutex
+    std::lock_guard<std::mutex> lock(HIPContext::mutex());
 
-  if (FLAGS_caffe2_gpu_memory_tracking) {
-    auto sz_it = g_size_map.find(ptr);
-    DCHECK(sz_it != g_size_map.end());
-    auto aff_it = g_hip_device_affiliation.find(ptr);
-    DCHECK(aff_it != g_hip_device_affiliation.end());
-    g_total_mem -= sz_it->second;
-    g_total_by_gpu_map[aff_it->second] -= sz_it->second;
-    g_size_map.erase(sz_it);
-  }
-
-  switch (g_hip_memory_pool_type) {
-  case HipMemoryPoolType::NONE: {
-    // If memory pool is not set up, use simple hipFree.
-    hipError_t error = hipFree(ptr);
-    // For some reason, in Python runtime we sometimes delete a data pointer
-    // after the cuda runtime exits - this is odd but is probably caused by
-    // a static workspace that pycaffe2 uses, and the destruction got
-    // entangled in some race condition. Anyway, since cuda runtime is exiting
-    // anyway, we will not need to worry about memory leak, so we basically
-    // ignore it. This is definitely not ideal but works for now.
-    if (error != hipSuccess) {
-      LOG(FATAL) << "Error at: " << __FILE__ << ":" << __LINE__ << ": "
-                 << hipGetErrorString(error);
+    if(FLAGS_caffe2_gpu_memory_tracking)
+    {
+        auto sz_it = g_size_map.find(ptr);
+        DCHECK(sz_it != g_size_map.end());
+        auto aff_it = g_hip_device_affiliation.find(ptr);
+        DCHECK(aff_it != g_hip_device_affiliation.end());
+        g_total_mem -= sz_it->second;
+        g_total_by_gpu_map[aff_it->second] -= sz_it->second;
+        g_size_map.erase(sz_it);
     }
 
-    if (FLAGS_caffe2_gpu_memory_tracking) {
-      g_hip_device_affiliation.erase(g_hip_device_affiliation.find(ptr));
-    }
+    switch(g_hip_memory_pool_type)
+    {
+    case HipMemoryPoolType::NONE:
+    {
+        // If memory pool is not set up, use simple hipFree.
+        hipError_t error = hipFree(ptr);
+        // For some reason, in Python runtime we sometimes delete a data pointer
+        // after the cuda runtime exits - this is odd but is probably caused by
+        // a static workspace that pycaffe2 uses, and the destruction got
+        // entangled in some race condition. Anyway, since cuda runtime is exiting
+        // anyway, we will not need to worry about memory leak, so we basically
+        // ignore it. This is definitely not ideal but works for now.
+        if(error != hipSuccess)
+        {
+            LOG(FATAL) << "Error at: " << __FILE__ << ":" << __LINE__ << ": "
+                       << hipGetErrorString(error);
+        }
 
-    break; }
-  /*case CudaMemoryPoolType::CUB: {
-    auto it = g_cuda_device_affiliation.find(ptr);
-    DCHECK(it != g_cuda_device_affiliation.end());
-    VLOG(2) << "CUB freeing pointer " << ptr << " on device " << it->second;
-    CUDA_ENFORCE(g_cub_allocator->DeviceFree(it->second, ptr));
-    g_cuda_device_affiliation.erase(it);
-    break;
-  }*/
-  }
+        if(FLAGS_caffe2_gpu_memory_tracking)
+        {
+            g_hip_device_affiliation.erase(g_hip_device_affiliation.find(ptr));
+        }
+
+        break;
+    }
+        /*case CudaMemoryPoolType::CUB: {
+          auto it = g_cuda_device_affiliation.find(ptr);
+          DCHECK(it != g_cuda_device_affiliation.end());
+          VLOG(2) << "CUB freeing pointer " << ptr << " on device " << it->second;
+          CUDA_ENFORCE(g_cub_allocator->DeviceFree(it->second, ptr));
+          g_cuda_device_affiliation.erase(it);
+          break;
+        }*/
+    }
 }
 
-}  // namespace caffe2
+} // namespace caffe2

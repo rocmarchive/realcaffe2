@@ -20,8 +20,6 @@
 
 namespace caffe2 {
 
-REGISTER_HIP_OPERATOR(
-    FileStoreHandlerCreate,
-    FileStoreHandlerCreateOp<HIPContext>);
+REGISTER_HIP_OPERATOR(FileStoreHandlerCreate, FileStoreHandlerCreateOp<HIPContext>);
 
 } // namespace caffe2

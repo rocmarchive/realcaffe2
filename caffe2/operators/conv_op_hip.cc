@@ -30,4 +30,4 @@ REGISTER_HIP_OPERATOR(Conv2DGradient, ConvGradientOp<float, HIPContext>);
 
 REGISTER_HIP_OPERATOR(Conv3D, ConvOp<float, HIPContext>);
 REGISTER_HIP_OPERATOR(Conv3DGradient, ConvGradientOp<float, HIPContext>);
-}  // namespace caffe2
+} // namespace caffe2

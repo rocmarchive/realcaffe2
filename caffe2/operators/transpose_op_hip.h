@@ -22,13 +22,12 @@
 namespace caffe2 {
 
 template <typename T>
-bool TransposeHIP(
-    vector<int>& axes,
-    HIPContext& context,
-    const Tensor<HIPContext>& input,
-    Tensor<HIPContext>* output,
-    TensorCPU& buffer_cpu,
-    Tensor<HIPContext>& buffer);
+bool TransposeHIP(vector<int>& axes,
+                  HIPContext& context,
+                  const Tensor<HIPContext>& input,
+                  Tensor<HIPContext>* output,
+                  TensorCPU& buffer_cpu,
+                  Tensor<HIPContext>& buffer);
 }
 
 #endif // CAFFE2_OPERATORS_TRANSPOSE_H_

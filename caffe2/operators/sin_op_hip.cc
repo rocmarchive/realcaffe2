@@ -23,48 +23,54 @@
 namespace caffe2 {
 
 template <typename T>
-__global__ void SinKernel(const int N, const T* X, T* Y) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    Y[i] = sin(X[i]);
-  }
+__global__ void SinKernel(const int N, const T* X, T* Y)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { Y[i] = sin(X[i]); }
 }
 
 template <typename T>
-__global__ void SinGradientKernel(const int N, const T* X, const T* dY, T* dX) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    dX[i] = dY[i] * cos(X[i]);
-  }
+__global__ void SinGradientKernel(const int N, const T* X, const T* dY, T* dX)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { dX[i] = dY[i] * cos(X[i]); }
 }
 
-struct SinHIPFunctor {
-  template <typename T>
-  inline void
-  operator()(const int n, const T* x, T* y, HIPContext* device_context) {
-    hipLaunchKernelGGL((SinKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, y);
-    return;
-  }
+struct SinHIPFunctor
+{
+    template <typename T>
+    inline void operator()(const int n, const T* x, T* y, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((SinKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           y);
+        return;
+    }
 };
 
-struct SinGradientHIPFunctor {
-  template <typename T>
-  inline void Run(
-      const int n,
-      const T* x,
-      const T* dy,
-      T* dx,
-      HIPContext* device_context) {
-    hipLaunchKernelGGL((SinGradientKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, dy, dx);
-    return;
-  }
+struct SinGradientHIPFunctor
+{
+    template <typename T>
+    inline void Run(const int n, const T* x, const T* dy, T* dx, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((SinGradientKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           dy,
+                           dx);
+        return;
+    }
 };
 
-REGISTER_HIP_OPERATOR(
-    Sin,
-    UnaryElementwiseOp<TensorTypes<float>, HIPContext, SinHIPFunctor>);
+REGISTER_HIP_OPERATOR(Sin, UnaryElementwiseOp<TensorTypes<float>, HIPContext, SinHIPFunctor>);
 REGISTER_HIP_OPERATOR(
     SinGradient,
-    BinaryElementwiseOp<
-        TensorTypes<float>,
-        HIPContext,
-        WithoutBroadcast<SinGradientHIPFunctor>>);
+    BinaryElementwiseOp<TensorTypes<float>, HIPContext, WithoutBroadcast<SinGradientHIPFunctor>>);
 } // namespace caffe2

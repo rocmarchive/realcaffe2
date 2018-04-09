@@ -22,46 +22,57 @@
 namespace caffe2 {
 
 namespace {
-__global__ void FillRangeKernel(const int n, float* data) {
-  HIP_1D_KERNEL_LOOP(index, n) {
-    data[index] = index;
-  }
+__global__ void FillRangeKernel(const int n, float* data)
+{
+    HIP_1D_KERNEL_LOOP(index, n) { data[index] = index; }
 }
 
 template <typename T>
-__global__ void FillDiagonalKernel(
-    const int num_diagonal_elements,
-    const TIndex step_size,
-    const T value,
-    T* data) {
-  HIP_1D_KERNEL_LOOP(index, num_diagonal_elements) {
-    data[index * step_size] = value;
-  }
+__global__ void
+FillDiagonalKernel(const int num_diagonal_elements, const TIndex step_size, const T value, T* data)
+{
+    HIP_1D_KERNEL_LOOP(index, num_diagonal_elements) { data[index * step_size] = value; }
 }
 }
 
 template <>
-bool RangeFillOp<float, HIPContext>::Fill(TensorHIP* output) {
-  int N = output->size();
-  hipLaunchKernelGGL((FillRangeKernel), dim3(CAFFE_GET_BLOCKS(N)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), N, output->mutable_data<float>());
-  return true;
+bool RangeFillOp<float, HIPContext>::Fill(TensorHIP* output)
+{
+    int N = output->size();
+    hipLaunchKernelGGL((FillRangeKernel),
+                       dim3(CAFFE_GET_BLOCKS(N)),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       N,
+                       output->mutable_data<float>());
+    return true;
 }
 
 template <>
 template <typename T>
-bool DiagonalFillOp<HIPContext>::FillWithType(TensorHIP* output) {
-  VerifyOutputShape(output);
-  auto* data = output->template mutable_data<T>();
-  int size = output->size();
-  // first fill everything with 0
-  math::Set<T, HIPContext>(size, T(0), data, &context_);
+bool DiagonalFillOp<HIPContext>::FillWithType(TensorHIP* output)
+{
+    VerifyOutputShape(output);
+    auto* data = output->template mutable_data<T>();
+    int size   = output->size();
+    // first fill everything with 0
+    math::Set<T, HIPContext>(size, T(0), data, &context_);
 
-  T value = OperatorBase::GetSingleArgument<T>("value", 0);
-  TIndex step_size = GetStepSize(output);
-  int num_diagonal_elements = ceil((float)size / step_size);
+    T value                   = OperatorBase::GetSingleArgument<T>("value", 0);
+    TIndex step_size          = GetStepSize(output);
+    int num_diagonal_elements = ceil((float)size / step_size);
 
-  hipLaunchKernelGGL((FillDiagonalKernel), dim3(CAFFE_GET_BLOCKS(num_diagonal_elements)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), num_diagonal_elements, step_size, value, data);
-  return true;
+    hipLaunchKernelGGL((FillDiagonalKernel),
+                       dim3(CAFFE_GET_BLOCKS(num_diagonal_elements)),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       num_diagonal_elements,
+                       step_size,
+                       value,
+                       data);
+    return true;
 }
 
 REGISTER_HIP_OPERATOR(UniformFill, UniformFillOp<float, HIPContext>);

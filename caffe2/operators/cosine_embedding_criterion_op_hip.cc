@@ -21,64 +21,77 @@
 namespace caffe2 {
 namespace {
 
-
-__global__ void CECKernel(
-    const int N, const float* S, const int* Y, const float margin,
-    float* output) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    output[i] = Y[i] == 1 ? (1. - S[i]) : fmaxf(0.f, S[i] - margin);
-  }
+__global__ void
+CECKernel(const int N, const float* S, const int* Y, const float margin, float* output)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { output[i] = Y[i] == 1 ? (1. - S[i]) : fmaxf(0.f, S[i] - margin); }
 }
 
 __global__ void CECGradientKernel(
-    const int N, const float* S, const int* Y, const float* dOutput,
-    const float margin, float* dS) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    dS[i] = dOutput[i] * (Y[i] == 1 ? -1 : static_cast<float>(S[i] >= margin));
-  }
+    const int N, const float* S, const int* Y, const float* dOutput, const float margin, float* dS)
+{
+    HIP_1D_KERNEL_LOOP(i, N)
+    {
+        dS[i] = dOutput[i] * (Y[i] == 1 ? -1 : static_cast<float>(S[i] >= margin));
+    }
 }
-}  // namespace
+} // namespace
 
 template <>
-bool CosineEmbeddingCriterionOp<HIPContext>::RunOnDevice() {
-  auto& S = Input(0);
-  auto& Y = Input(1);
-  auto* output = Output(0);
-  CAFFE_ENFORCE(S.size() == Y.size(),
-                "The embedding and label should have the same size.");
-  output->ResizeLike(S);
+bool CosineEmbeddingCriterionOp<HIPContext>::RunOnDevice()
+{
+    auto& S      = Input(0);
+    auto& Y      = Input(1);
+    auto* output = Output(0);
+    CAFFE_ENFORCE(S.size() == Y.size(), "The embedding and label should have the same size.");
+    output->ResizeLike(S);
 
-  const float* Sdata = S.data<float>();
-  const int* Ydata = Y.data<int>();
-  float* output_data = output->mutable_data<float>();
- 
-  hipLaunchKernelGGL((CECKernel), dim3(CAFFE_GET_BLOCKS(S.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-      static_cast<const int>(S.size()), Sdata, Ydata, margin_, output_data);
-  return true;
+    const float* Sdata = S.data<float>();
+    const int* Ydata   = Y.data<int>();
+    float* output_data = output->mutable_data<float>();
+
+    hipLaunchKernelGGL((CECKernel),
+                       dim3(CAFFE_GET_BLOCKS(S.size())),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       static_cast<const int>(S.size()),
+                       Sdata,
+                       Ydata,
+                       margin_,
+                       output_data);
+    return true;
 }
 
 template <>
-bool CosineEmbeddingCriterionGradientOp<HIPContext>::RunOnDevice() {
-  auto& S = Input(0);
-  auto& Y = Input(1);
-  auto& dOutput = Input(2);
-  auto* dS = Output(0);
+bool CosineEmbeddingCriterionGradientOp<HIPContext>::RunOnDevice()
+{
+    auto& S       = Input(0);
+    auto& Y       = Input(1);
+    auto& dOutput = Input(2);
+    auto* dS      = Output(0);
 
-  dS->ResizeLike(S);
+    dS->ResizeLike(S);
 
-  const float* Sdata = S.data<float>();
-  const int* Ydata = Y.data<int>();
-  const float* dOutput_data = dOutput.data<float>();
-  float* dSdata = dS->mutable_data<float>();
-  hipLaunchKernelGGL((CECGradientKernel), dim3(CAFFE_GET_BLOCKS(S.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-      static_cast<const int>(S.size()), Sdata, Ydata, dOutput_data, margin_, dSdata);
-  return true;
+    const float* Sdata        = S.data<float>();
+    const int* Ydata          = Y.data<int>();
+    const float* dOutput_data = dOutput.data<float>();
+    float* dSdata             = dS->mutable_data<float>();
+    hipLaunchKernelGGL((CECGradientKernel),
+                       dim3(CAFFE_GET_BLOCKS(S.size())),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       static_cast<const int>(S.size()),
+                       Sdata,
+                       Ydata,
+                       dOutput_data,
+                       margin_,
+                       dSdata);
+    return true;
 }
 
-REGISTER_HIP_OPERATOR(
-    CosineEmbeddingCriterion,
-    CosineEmbeddingCriterionOp<HIPContext>);
-REGISTER_HIP_OPERATOR(
-    CosineEmbeddingCriterionGradient,
-    CosineEmbeddingCriterionGradientOp<HIPContext>);
-}  // namespace caffe2
+REGISTER_HIP_OPERATOR(CosineEmbeddingCriterion, CosineEmbeddingCriterionOp<HIPContext>);
+REGISTER_HIP_OPERATOR(CosineEmbeddingCriterionGradient,
+                      CosineEmbeddingCriterionGradientOp<HIPContext>);
+} // namespace caffe2

@@ -22,4 +22,4 @@ namespace caffe2 {
 
 REGISTER_HIP_OPERATOR(ImageInput, ImageInputOp<HIPContext>);
 
-}  // namespace caffe2
+} // namespace caffe2
