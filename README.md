@@ -46,13 +46,15 @@ RCOM_Caffe2 has been validated on Ubuntu 16.04 LTS and AMD Vega 56/64/MI25; with
 	For Debian based systems, like Ubuntu, configure the Debian ROCm repository as follows:
 
 	```
-	wget -qO - http://repo.radeon.com/rocm/apt/debian/rocm.gpg.key | sudo apt-key add -
+wget -qO - http://repo.radeon.com/rocm/apt/debian/rocm.gpg.key | sudo apt-key add -
 sudo sh -c 'echo deb [arch=amd64] http://repo.radeon.com/rocm/apt/debian/ xenial main > /etc/apt/sources.list.d/rocm.list'
+	``` 
+
+	The gpg key might change, so it may need to be updated when installing a new release. The current rocm.gpg.key is not avialable in a standard key ring distribution, but has the following sha1sum hash:
+
 	```
-The gpg key might change, so it may need to be updated when installing a new release. The current rocm.gpg.key is not avialable in a standard key ring distribution, but has the following sha1sum hash:
-
-	`f0d739836a9094004b0a39058d046349aacc1178 rocm.gpg.key`
-
+	f0d739836a9094004b0a39058d046349aacc1178 rocm.gpg.key
+	```
 * Install or Update ROCm
 
 	Next, update the apt-get repository list and install/update the ROCm package:
@@ -81,7 +83,6 @@ The gpg key might change, so it may need to be updated when installing a new rel
 	Once complete, reboot your system.
 
 #### Install docker
-
 A good refernce to docker installation on Ubuntu 16.04 can be found [here](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04).
 
 or try these cmd to get docker community edition.
