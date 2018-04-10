@@ -50,11 +50,10 @@ wget -qO - http://repo.radeon.com/rocm/apt/debian/rocm.gpg.key | sudo apt-key ad
 sudo sh -c 'echo deb [arch=amd64] http://repo.radeon.com/rocm/apt/debian/ xenial main > /etc/apt/sources.list.d/rocm.list'
 	``` 
 
-	The gpg key might change, so it may need to be updated when installing a new release. The current rocm.gpg.key is not avialable in a standard key ring distribution, but has the following sha1sum hash:
-
-	```
-	f0d739836a9094004b0a39058d046349aacc1178 rocm.gpg.key
-	```
+	The gpg key might change, so it may need to be updated when installing a new release. The current rocm.gpg.key is not avialable in a standard key ring distribution, but has the following sha1sum hash: 
+	
+	`f0d739836a9094004b0a39058d046349aacc1178 rocm.gpg.key`
+	
 * Install or Update ROCm
 
 	Next, update the apt-get repository list and install/update the ROCm package:
