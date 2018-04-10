@@ -45,15 +45,13 @@ node("rocmtest") {
                     cd build/bin
                     total_test_count=$(ls | wc -l)
                     echo $total_test_count
-                    // passed_tests=()
                     passed_count=0
                     failed_tests=()
                     for T in $(ls); do
                         echo $T
                         ./$T
                         if [ $? -eq 0 ]; then
-                            passed_count=$((passed_count+1))
-                            // passed_tests+=($T)
+                            passed_count=$((passed_count+1)) 
                         else
                             failed_tests+=($T)
                         fi
