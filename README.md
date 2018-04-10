@@ -142,7 +142,8 @@ or try these cmd to get docker community edition.
 	
 * Test the Caffe2 Installation 
 
-	Run this to see if your Caffe2 installation was successful.
+	Run this to see if your Caffe2 installation was successful. 
+	
 	`cd ~ && python -c 'from caffe2.python import core' 2>/dev/null && echo "Success" || echo "Failure"`
 
 
