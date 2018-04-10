@@ -1,6 +1,7 @@
 node("rocmtest") {
-    docker.image('petrex/rocm_caffe2')
-    withDockerContainer(image: "petrex/rocm_caffe2", args: '--device=/dev/kfd --device=/dev/dri --group-add video') {
+    sh ''' docker login --username rohith612 --password rohith612 '''
+    docker.image('rohith612/rocm_caffe2:clang-format')
+    withDockerContainer(image: "rohith612/rocm_caffe2:clang-format", args: '--device=/dev/kfd --device=/dev/dri --group-add video') {
         timeout(time: 2, unit: 'HOURS'){
             stage("checkout") {
                 checkout scm
@@ -12,7 +13,7 @@ node("rocmtest") {
                     cd caffe2
                     find . -iname *miopen* -o -iname *hip* \
                     | grep -v 'build/' \
-                    | xargs -n 1 -P 1 -I{} -t sh -c \'clang-format-3.8 -style=file {} | diff - {}'
+                    | xargs -n 1 -P 1 -I{} -t sh -c 'clang-format-3.8 -style=file {} | diff - {}'
                 '''
             }
             stage("build_release") {
@@ -41,21 +42,17 @@ node("rocmtest") {
             */
             stage("binary_tests") {
                 sh '''
-                    //set -e
                     cd build/bin
                     total_test_count=$(ls | wc -l)
                     echo $total_test_count
-                    passed_tests=()
                     passed_count=0
-                    failed_tests=()
                     for T in $(ls); do
                         echo $T
                         ./$T
                         if [ $? -eq 0 ]; then
-                            passed_count=$((passed_count+1))
-                            passed_tests+=($T)
-                        else
-                            failed_tests+=($T)
+                            passed_count=$((passed_count+1)) 
+                        // else
+                           // failed_tests+=($T)
                         fi
 
                     done
@@ -63,8 +60,12 @@ node("rocmtest") {
                         echo "All passed"
                         exit 0
                     else
-                        echo "Failed tests..."
-                        echo ${failed_test[*]}
+                        // echo "Failed tests..."
+                        // echo ${failed_test[*]}
+                        echo "passed_count:"
+                        echo $passed_count
+                        echo "total_count:"
+                        echo $total_test_count
                         exit 1
                     fi
                     echo "done"
