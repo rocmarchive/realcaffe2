@@ -46,14 +46,13 @@ node("rocmtest") {
                     total_test_count=$(ls | wc -l)
                     echo $total_test_count
                     passed_count=0
-                    failed_tests=()
                     for T in $(ls); do
                         echo $T
                         ./$T
                         if [ $? -eq 0 ]; then
                             passed_count=$((passed_count+1)) 
-                        else
-                            failed_tests+=($T)
+                        // else
+                           // failed_tests+=($T)
                         fi
 
                     done
@@ -61,8 +60,12 @@ node("rocmtest") {
                         echo "All passed"
                         exit 0
                     else
-                        echo "Failed tests..."
-                        echo ${failed_test[*]}
+                        // echo "Failed tests..."
+                        // echo ${failed_test[*]}
+                        echo "passed_count:"
+                        echo $passed_count
+                        echo "total_count:"
+                        echo $total_test_count
                         exit 1
                     fi
                     echo "done"
