@@ -1,4 +1,4 @@
-node("rocmtest10") {
+node("rocmtest14") {
     sh ''' docker login --username rohith612 --password 123456 '''
     docker.image('rohith612/rocm_caffe2:clang-format')
     withDockerContainer(image: "rohith612/rocm_caffe2:clang-format", args: '--device=/dev/kfd --device=/dev/dri --group-add video') {
