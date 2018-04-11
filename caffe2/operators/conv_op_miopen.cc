@@ -252,7 +252,7 @@ bool MIOPENConvOp::DoRunWithType() {
         X.template data<T_X>(), weight_desc_, Weight.template data<T_W>(),
         conv_desc_, top_desc_, Y->template mutable_data<T_Y>(),
         requestAlgoCount_, &returnedAlgoCount_, &perf_, fwdConvWs,
-        fwdConvWsSize_, exhaustive_search_));
+        fwdConvWsSize_, false));
 
     bestAlgoFound_ = true;
   }
@@ -382,7 +382,7 @@ bool MIOPENConvGradientOp::DoRunWithType() {
               conv_desc_, bottom_desc_, dX->template data<T_DX>()+ i * group_offset_X, requestAlgoCount_,
               &returnedAlgoCount_, &perf_,
               bwdDataWs,
-              bwdDataWsSize_, exhaustive_search_));
+              bwdDataWsSize_, false));
 
       bestDataAlgoFound_ = true;
     }
@@ -402,7 +402,7 @@ bool MIOPENConvGradientOp::DoRunWithType() {
               dY.template data<T_DY>()+ i * group_offset_Y, bottom_desc_, X.template data<T_X>()+ i * group_offset_X,
               conv_desc_, weight_desc_, dW->template mutable_data<T_DW>()+ i * group_offset_filter,
               requestAlgoCount_, &returnedAlgoCount_, &perf_, bwdWeightWs,
-              bwdWeightWsSize_, exhaustive_search_));
+              bwdWeightWsSize_, false));
       bestWeightAlgoFound_ = true;
     }
     MIOPEN_ENFORCE(miopenConvolutionBackwardWeights(
