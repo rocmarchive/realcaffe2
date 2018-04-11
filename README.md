@@ -43,7 +43,7 @@ RCOM_Caffe2 has been validated on Ubuntu 16.04 LTS and AMD Vega 56/64/MI25; with
 
 * Add the Repo Server 
 
-	For Debian based systems, like Ubuntu, configure the Debian ROCm repository as follows:
+	For Debian based systems, like Ubuntu, configure the Debian ROCm repository. See the steps [here](https://rocm.github.io/install.html).
 	
 	
 * Install or Update ROCm
