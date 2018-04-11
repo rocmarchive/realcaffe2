@@ -15,10 +15,10 @@ RCOM_Caffe2 has been validated on Ubuntu 16.04 LTS and AMD Vega 56/64/MI25; with
 * A ROCM enable platform. More info [here](https://rocm.github.io/install.html).
 
 ### ROCM_CAFFE2 Quick Start
-1. [Install ROCM Software Stack](https://github.com/petrex/rocm_caffe2/blob/documentation/rocm_docs/caffe2-install-basic.md)
-2. [Install Docker](https://github.com/petrex/rocm_caffe2/blob/documentation/rocm_docs/caffe2-docker.md)
-3. [Build the Caffe2 Project](https://github.com/petrex/rocm_caffe2/blob/documentation/rocm_docs/caffe2-build.md)
-4. [Run Caffe2 Tests/Workload](https://github.com/petrex/rocm_caffe2/blob/documentation/rocm_docs/caffe2-quickstart.md)
+1. [Install ROCM Software Stack](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-install-basic.md)
+2. [Install Docker](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-docker.md)
+3. [Build the Caffe2 Project](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-build.md)
+4. [Run Caffe2 Tests/Workload](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-quickstart.md)
 
 ## Questions and Feedback
 
