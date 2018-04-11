@@ -214,6 +214,19 @@ Next, Navigate to <caffe2_home>/build/bin run the binaries corresponding to the 
 * Inference
 * Training
 
+
+#### Known Issues / Workarounds
+X freezes under load
+ROCm 1.7.1 a kernel parameter `noretry` has been set to 1 to improve overall system performance. However it has been proven to bring instability to graphics driver shipped with Ubuntu. This is an ongoing issue and we are looking into it.
+
+Before that, please try apply this change by changing `noretry` bit to 0.
+`echo 0 | sudo tee /sys/module/amdkfd/parameters/noretry` 
+Files under /sys won't be preserved after reboot so you'll need to do it every time.
+
+One way to keep noretry=0 is to change `/etc/modprobe.d/amdkfd.conf` and make it be:
+`options amdkfd noretry=0`
+Once it's done, run sudo `update-initramfs -u`. Reboot and verify` /sys/module/amdkfd/parameters/noretry` stays as 0.
+
 ## Questions and Feedback
 
 Please use Github issues (https://github.com/caffe2/caffe2/issues) to ask questions, report bugs, and request new features.
