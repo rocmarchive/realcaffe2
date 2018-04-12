@@ -18,6 +18,7 @@ Next, Navigate to <caffe2_home>/build/bin run the binaries corresponding to the 
 * common_subexpression_elimination_test
 * common_test
 * context_hip_test
+* context_test
 * conv_to_nnpack_transform_test
 * conv_transpose_op_mobile_test
 * cpuid_test
@@ -33,6 +34,7 @@ Next, Navigate to <caffe2_home>/build/bin run the binaries corresponding to the 
 * init_test
 * logging_test
 * math_hip_test
+* math_test
 * module_test
 * mpi_test
 * net_test
