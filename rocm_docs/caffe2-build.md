@@ -28,8 +28,8 @@ git clone --recursive https://github.com/ROCmSoftwarePlatform/rocm_caffe2.git
 ```
 git clone --recursive git@github.com:ROCmSoftwarePlatform/rocm_caffe2.git
 ```
-## Pull the Thrust and cub-hip  
-Some operators in rocm_caffe2 utilize Thrust library to achieve parallelism. Thrust can be pulled using:
+## Pull Thrust and cub-hip libraries  
+Some operators in ROCm_Caffe2 utilize Thrust library to achieve parallelism. Thrust can be pulled using:
 
 ```
 git clone --recursive https://github.com/ROCmSoftwarePlatform/Thrust.git
@@ -70,7 +70,12 @@ export THRUST_ROOT=/work/Thrust
 	`sudo make install`
 	
 * Test the Caffe2 Installation 
-
+	
+	Before running the tests, make sure that the required environment variables are set:
+	```
+	export PYTHONPATH=/usr/local:<caffe2_home>/build:$PYTHONPATH 
+	export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+	```
 	Run this to see if your Caffe2 installation was successful. 
 	
 	`cd ~ && python -c 'from caffe2.python import core' 2>/dev/null && echo "Success" || echo "Failure"`
