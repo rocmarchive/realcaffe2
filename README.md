@@ -6,16 +6,16 @@
 
 Caffe2 is a lightweight, modular, and scalable deep learning framework. Building on the original [Caffe](http://caffe.berkeleyvision.org), Caffe2 is designed with expression, speed, and modularity in mind.
 
-## Rocm_Caffe2
-Rocm_Caffe2 is the official caffe2 port on AMD platform. The is made posible through HIP and ROCM software stack. AMD also provides native libraries for machine intelligent and deep learning workload. 
+## ROCm_Caffe2
+ROCm_Caffe2 is the official caffe2 port on AMD platform. The is made posible through HIP and ROCm software stack. AMD also provides native libraries for machine intelligent and deep learning workload. 
 
-RCOM_Caffe2 has been validated on Ubuntu 16.04 LTS and AMD Vega 56/64/MI25; with rocm 1.71 amd MIOPEN 1.3 as of now.
+ROCm_Caffe2 has been validated on Ubuntu 16.04 LTS and AMD Vega 56/64/MI25; with rocm 1.71 amd MIOPEN 1.3 as of now.
 
 ### Prerequisites
-* A ROCM enable platform. More info [here](https://rocm.github.io/install.html).
+* A ROCm enable platform. More info [here](https://rocm.github.io/install.html).
 
-### ROCM_CAFFE2 Quick Start
-1. [Install ROCM Software Stack](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-install-basic.md)
+### ROCm_Caffe2 Quick Start
+1. [Install ROCm Software Stack](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-install-basic.md)
 2. [Install Docker](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-docker.md)
 3. [Build the Caffe2 Project](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-build.md)
 4. [Run Caffe2 Tests/Workload](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-quickstart.md)
