@@ -7,7 +7,7 @@
 Caffe2 is a lightweight, modular, and scalable deep learning framework. Building on the original [Caffe](http://caffe.berkeleyvision.org), Caffe2 is designed with expression, speed, and modularity in mind.
 
 ## ROCm_Caffe2
-Rocm_Caffe2 is the official caffe2 port on AMD platform. The is made posible through HIP and ROCM software stack. AMD also provides native libraries for machine intelligent and deep learning workload. 
+ROCm_Caffe2 is the official caffe2 port on AMD platform. The is made posible through HIP and ROCm software stack. AMD also provides native libraries for machine intelligent and deep learning workload. 
 
 ROCm_Caffe2 has been validated on Ubuntu 16.04 LTS and AMD Vega 56/64/MI25; with rocm 1.71 amd MIOPEN 1.3 as of now.
 
