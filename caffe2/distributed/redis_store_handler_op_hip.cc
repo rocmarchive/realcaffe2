@@ -20,8 +20,6 @@
 
 namespace caffe2 {
 
-REGISTER_HIP_OPERATOR(
-    RedisStoreHandlerCreate,
-    RedisStoreHandlerCreateOp<HIPContext>);
+REGISTER_HIP_OPERATOR(RedisStoreHandlerCreate, RedisStoreHandlerCreateOp<HIPContext>);
 
 } // namespace caffe2

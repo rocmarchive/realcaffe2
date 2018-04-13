@@ -20,7 +20,5 @@
 
 namespace caffe2 {
 REGISTER_HIP_OPERATOR(ConvTranspose, ConvTransposeOp<float, HIPContext>);
-REGISTER_HIP_OPERATOR(
-    ConvTransposeGradient,
-    ConvTransposeGradientOp<float, HIPContext>);
+REGISTER_HIP_OPERATOR(ConvTransposeGradient, ConvTransposeGradientOp<float, HIPContext>);
 } // namespace caffe2

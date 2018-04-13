@@ -30,76 +30,89 @@ namespace {
 // TODO(jiayq): one possible optimization is to copy the buffer into a shared
 // memory location to speed up access.
 template <typename Dtype>
-__global__ void transpose_gpu(const int nthreads, const Dtype* from_data,
-  Dtype* to_data, const int* buffer, const int num_axes) {
-  int from_inds[COMPILE_TIME_HIP_MAX_TRANSPOSE_DIMS];
-  const int* from_counts = buffer;
-  const int* to_counts = buffer + num_axes;
-  const int* axes = buffer + num_axes * 2;
-  HIP_1D_KERNEL_LOOP(index, nthreads) {
-    int from_index = index, to_index = 0;
-    for (int i = num_axes - 1; i >= 0; --i) {
-      from_inds[i] = from_index % from_counts[i];
-      from_index = from_index / from_counts[i];
+__global__ void transpose_gpu(const int nthreads,
+                              const Dtype* from_data,
+                              Dtype* to_data,
+                              const int* buffer,
+                              const int num_axes)
+{
+    int from_inds[COMPILE_TIME_HIP_MAX_TRANSPOSE_DIMS];
+    const int* from_counts = buffer;
+    const int* to_counts   = buffer + num_axes;
+    const int* axes        = buffer + num_axes * 2;
+    HIP_1D_KERNEL_LOOP(index, nthreads)
+    {
+        int from_index = index, to_index = 0;
+        for(int i = num_axes - 1; i >= 0; --i)
+        {
+            from_inds[i] = from_index % from_counts[i];
+            from_index   = from_index / from_counts[i];
+        }
+        for(int i = 0; i < num_axes - 1; i++)
+        {
+            to_index = (to_index + from_inds[axes[i]]) * to_counts[i + 1];
+        }
+        to_index += from_inds[axes[num_axes - 1]];
+        to_data[to_index] = from_data[index];
     }
-    for (int i = 0; i < num_axes - 1; i++) {
-      to_index = (to_index + from_inds[axes[i]]) * to_counts[i + 1];
-    }
-    to_index += from_inds[axes[num_axes - 1]];
-    to_data[to_index] = from_data[index];
-  }
 }
-}  // namespace
+} // namespace
 
 template <>
 template <typename T>
-bool TransposeOp<HIPContext>::DoRunWithType() {
-  const auto& input = Input(0);
-  auto* output = Output(0);
-  return TransposeHIP<T>(axes_, context_, input, output, buffer_cpu_, buffer_);
+bool TransposeOp<HIPContext>::DoRunWithType()
+{
+    const auto& input = Input(0);
+    auto* output      = Output(0);
+    return TransposeHIP<T>(axes_, context_, input, output, buffer_cpu_, buffer_);
 }
 
 template <typename T>
-bool TransposeHIP(
-    vector<int>& axes,
-    HIPContext& context,
-    const Tensor<HIPContext>& input,
-    Tensor<HIPContext>* output,
-    TensorCPU& buffer_cpu,
-    Tensor<HIPContext>& buffer) {
-  int count = input.size();
-  int ndim = input.ndim();
-  CAFFE_ENFORCE(
-      count < std::numeric_limits<int>::max(),
-      "Transpose op on GPU only supports int32");
-  CAFFE_ENFORCE(
-      ndim <= COMPILE_TIME_HIP_MAX_TRANSPOSE_DIMS,
-      "Input ndim exceeds compile time max.");
+bool TransposeHIP(vector<int>& axes,
+                  HIPContext& context,
+                  const Tensor<HIPContext>& input,
+                  Tensor<HIPContext>* output,
+                  TensorCPU& buffer_cpu,
+                  Tensor<HIPContext>& buffer)
+{
+    int count = input.size();
+    int ndim  = input.ndim();
+    CAFFE_ENFORCE(count < std::numeric_limits<int>::max(),
+                  "Transpose op on GPU only supports int32");
+    CAFFE_ENFORCE(ndim <= COMPILE_TIME_HIP_MAX_TRANSPOSE_DIMS,
+                  "Input ndim exceeds compile time max.");
 
-  // Buffer contains the following data:
-  // (1) the dimenions of the inputs
-  // (2) the dimension of the outputs
-  // (3) the axis mapping from inputs to outputs
-  buffer_cpu.Resize(3 * ndim);
-  int* buffer_data = buffer_cpu.mutable_data<int>();
-  for (int i = 0; i < ndim; ++i) {
-    *(buffer_data++) = input.dim32(i);
-  }
-  for (int i = 0; i < ndim; ++i) {
-    *(buffer_data++) = output->dim32(i);
-  }
-  for (int i = 0; i < ndim; ++i) {
-    *(buffer_data++) = axes[i];
-  }
-  // Copy the dimension information to GPU.
-  buffer.CopyFrom(buffer_cpu, &context);
-  hipLaunchKernelGGL((transpose_gpu<T>), dim3(CAFFE_GET_BLOCKS(count)), dim3(CAFFE_HIP_NUM_THREADS), 0, context.hip_stream(), 
-          count,
-          input.template data<T>(),
-          output->template mutable_data<T>(),
-          buffer.data<int>(),
-          ndim);
-  return true;
+    // Buffer contains the following data:
+    // (1) the dimenions of the inputs
+    // (2) the dimension of the outputs
+    // (3) the axis mapping from inputs to outputs
+    buffer_cpu.Resize(3 * ndim);
+    int* buffer_data = buffer_cpu.mutable_data<int>();
+    for(int i = 0; i < ndim; ++i)
+    {
+        *(buffer_data++) = input.dim32(i);
+    }
+    for(int i = 0; i < ndim; ++i)
+    {
+        *(buffer_data++) = output->dim32(i);
+    }
+    for(int i = 0; i < ndim; ++i)
+    {
+        *(buffer_data++) = axes[i];
+    }
+    // Copy the dimension information to GPU.
+    buffer.CopyFrom(buffer_cpu, &context);
+    hipLaunchKernelGGL((transpose_gpu<T>),
+                       dim3(CAFFE_GET_BLOCKS(count)),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context.hip_stream(),
+                       count,
+                       input.template data<T>(),
+                       output->template mutable_data<T>(),
+                       buffer.data<int>(),
+                       ndim);
+    return true;
 }
 
 REGISTER_HIP_OPERATOR(Transpose, TransposeOp<HIPContext>);

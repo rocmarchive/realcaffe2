@@ -18,7 +18,5 @@
 #include "caffe2/operators/recurrent_network_blob_fetcher_op.h"
 
 namespace caffe2 {
-REGISTER_HIP_OPERATOR(
-    RecurrentNetworkBlobFetcher,
-    RecurrentNetworkBlobFetcherOp<HIPContext>);
+REGISTER_HIP_OPERATOR(RecurrentNetworkBlobFetcher, RecurrentNetworkBlobFetcherOp<HIPContext>);
 } // namespace caffe2

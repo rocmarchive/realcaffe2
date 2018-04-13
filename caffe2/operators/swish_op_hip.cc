@@ -24,59 +24,71 @@
 namespace caffe2 {
 
 template <typename T>
-__global__ void SwishKernel(const int N, const T* x, T* y) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    y[i] = x[i] / (1. + exp(-x[i]));
-  }
+__global__ void SwishKernel(const int N, const T* x, T* y)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { y[i] = x[i] / (1. + exp(-x[i])); }
 }
 
 template <typename T>
-__global__ void
-SwishGradientKernel(const int N, const T* x, const T* y, const T* dy, T* dx) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    dx[i] = dy[i] * (y[i] + (1. - y[i]) / (1. + exp(-x[i])));
-  }
+__global__ void SwishGradientKernel(const int N, const T* x, const T* y, const T* dy, T* dx)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { dx[i] = dy[i] * (y[i] + (1. - y[i]) / (1. + exp(-x[i]))); }
 }
 
-struct SwishHIPFunctor {
-  template <typename T>
-  inline void
-  operator()(const int n, const T* x, T* y, HIPContext* device_context) {
-    hipLaunchKernelGGL((SwishKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, y);
-    return;
-  }
+struct SwishHIPFunctor
+{
+    template <typename T>
+    inline void operator()(const int n, const T* x, T* y, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((SwishKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           y);
+        return;
+    }
 };
 
 template <>
 template <typename T>
-bool SwishGradientOp<HIPContext>::DoRunWithType() {
-  auto& Xin = Input(X);
-  auto& Yin = Input(Y);
-  auto& DYin = Input(DY);
-  auto* DXout = Output(DX);
-  CAFFE_ENFORCE_EQ(Xin.size(), Yin.size());
-  CAFFE_ENFORCE_EQ(DYin.size(), Yin.size());
-  DXout->ResizeLike(Yin);
+bool SwishGradientOp<HIPContext>::DoRunWithType()
+{
+    auto& Xin   = Input(X);
+    auto& Yin   = Input(Y);
+    auto& DYin  = Input(DY);
+    auto* DXout = Output(DX);
+    CAFFE_ENFORCE_EQ(Xin.size(), Yin.size());
+    CAFFE_ENFORCE_EQ(DYin.size(), Yin.size());
+    DXout->ResizeLike(Yin);
 
-  const int n = Xin.size();
-  const T* x = Xin.template data<T>();
-  const T* y = Yin.template data<T>();
-  const T* dy = DYin.template data<T>();
-  T* dx = DXout->template mutable_data<T>();
-  hipLaunchKernelGGL((SwishGradientKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), n, x, y, dy, dx);
-  return true;
+    const int n = Xin.size();
+    const T* x  = Xin.template data<T>();
+    const T* y  = Yin.template data<T>();
+    const T* dy = DYin.template data<T>();
+    T* dx       = DXout->template mutable_data<T>();
+    hipLaunchKernelGGL((SwishGradientKernel<T>),
+                       dim3(CAFFE_GET_BLOCKS(n)),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       n,
+                       x,
+                       y,
+                       dy,
+                       dx);
+    return true;
 }
 
 template <>
-bool SwishGradientOp<HIPContext>::RunOnDevice() {
-  return DispatchHelper<TensorTypes<float, double>>::call(this, Input(X));
+bool SwishGradientOp<HIPContext>::RunOnDevice()
+{
+    return DispatchHelper<TensorTypes<float, double>>::call(this, Input(X));
 }
 
-REGISTER_HIP_OPERATOR(
-    Swish,
-    UnaryElementwiseOp<
-        TensorTypes<float, double>,
-        HIPContext,
-        SwishHIPFunctor>);
+REGISTER_HIP_OPERATOR(Swish,
+                      UnaryElementwiseOp<TensorTypes<float, double>, HIPContext, SwishHIPFunctor>);
 REGISTER_HIP_OPERATOR(SwishGradient, SwishGradientOp<HIPContext>);
 } // namespace caffe2

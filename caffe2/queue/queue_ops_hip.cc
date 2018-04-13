@@ -28,5 +28,4 @@ REGISTER_HIP_OPERATOR(CloseBlobsQueue, CloseBlobsQueueOp<HIPContext>);
 
 REGISTER_HIP_OPERATOR(SafeEnqueueBlobs, SafeEnqueueBlobsOp<HIPContext>);
 REGISTER_HIP_OPERATOR(SafeDequeueBlobs, SafeDequeueBlobsOp<HIPContext>);
-
 }

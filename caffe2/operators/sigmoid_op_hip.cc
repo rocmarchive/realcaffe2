@@ -23,43 +23,56 @@
 namespace caffe2 {
 
 template <typename T>
-__global__ void SigmoidKernel(const int N, const T* x, T* y) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    y[i] = 1. / (1. + exp(-x[i]));
-  }
+__global__ void SigmoidKernel(const int N, const T* x, T* y)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { y[i] = 1. / (1. + exp(-x[i])); }
 }
 
 template <typename T>
-__global__ void SigmoidGradientKernel(const int N, const T* y, const T* dy,
-                              T* dx) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    dx[i] = dy[i] * y[i] * (1. - y[i]);
-  }
+__global__ void SigmoidGradientKernel(const int N, const T* y, const T* dy, T* dx)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { dx[i] = dy[i] * y[i] * (1. - y[i]); }
 }
 
-struct SigmoidHIPFunctor {
-  template <typename T>
-  inline void operator()(const int n, const T* x,
-                         T* y, HIPContext* device_context) {
-    hipLaunchKernelGGL((SigmoidKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, y);
-    return;
-  }
+struct SigmoidHIPFunctor
+{
+    template <typename T>
+    inline void operator()(const int n, const T* x, T* y, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((SigmoidKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           y);
+        return;
+    }
 };
 
-struct SigmoidGradientHIPFunctor {
-  template <typename T>
-  inline void Run(const int n, const T* y, const T* dy,
-                  T* dx, HIPContext* device_context) {
-    hipLaunchKernelGGL((SigmoidGradientKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, y, dy, dx);
-    return;
-  }
+struct SigmoidGradientHIPFunctor
+{
+    template <typename T>
+    inline void Run(const int n, const T* y, const T* dy, T* dx, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((SigmoidGradientKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           y,
+                           dy,
+                           dx);
+        return;
+    }
 };
 
-REGISTER_HIP_OPERATOR(
-    Sigmoid,
-    UnaryElementwiseOp<TensorTypes<float>, HIPContext, SigmoidHIPFunctor>);
-REGISTER_HIP_OPERATOR(
-    SigmoidGradient, BinaryElementwiseOp<
-        TensorTypes<float>, HIPContext,
-        WithoutBroadcast<SigmoidGradientHIPFunctor>>);
-}  // namespace caffe2
+REGISTER_HIP_OPERATOR(Sigmoid,
+                      UnaryElementwiseOp<TensorTypes<float>, HIPContext, SigmoidHIPFunctor>);
+REGISTER_HIP_OPERATOR(SigmoidGradient,
+                      BinaryElementwiseOp<TensorTypes<float>,
+                                          HIPContext,
+                                          WithoutBroadcast<SigmoidGradientHIPFunctor>>);
+} // namespace caffe2

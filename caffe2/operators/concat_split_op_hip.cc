@@ -24,4 +24,4 @@ REGISTER_HIP_OPERATOR(Concat, ConcatOp<HIPContext>);
 // Backward compatibility settings
 REGISTER_HIP_OPERATOR(DepthSplit, SplitOp<HIPContext>);
 REGISTER_HIP_OPERATOR(DepthConcat, ConcatOp<HIPContext>);
-}  // namespace caffe2
+} // namespace caffe2

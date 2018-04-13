@@ -88,152 +88,178 @@ typedef TIndex index_t;
 typedef std::vector<TIndex> TShape;
 
 template <typename DType>
-__device__ DType deformable_im2col_bilinear(
-    const DType* bottom_data,
-    const int data_width,
-    const int height,
-    const int width,
-    DType h,
-    DType w) {
-  int h_low = floor(h);
-  int w_low = floor(w);
-  int h_high;
-  int w_high;
-  if (h_low >= height - 1) {
-    h_high = h_low = height - 1;
-    h = (DType)h_low;
-  } else {
-    h_high = h_low + 1;
-  }
+__device__ DType deformable_im2col_bilinear(const DType* bottom_data,
+                                            const int data_width,
+                                            const int height,
+                                            const int width,
+                                            DType h,
+                                            DType w)
+{
+    int h_low = floor(h);
+    int w_low = floor(w);
+    int h_high;
+    int w_high;
+    if(h_low >= height - 1)
+    {
+        h_high = h_low = height - 1;
+        h              = (DType)h_low;
+    }
+    else
+    {
+        h_high = h_low + 1;
+    }
 
-  if (w_low >= width - 1) {
-    w_high = w_low = width - 1;
-    w = (DType)w_low;
-  } else {
-    w_high = w_low + 1;
-  }
+    if(w_low >= width - 1)
+    {
+        w_high = w_low = width - 1;
+        w              = (DType)w_low;
+    }
+    else
+    {
+        w_high = w_low + 1;
+    }
 
-  DType lh = h - h_low;
-  DType lw = w - w_low;
-  DType hh = 1 - lh, hw = 1 - lw;
+    DType lh = h - h_low;
+    DType lw = w - w_low;
+    DType hh = 1 - lh, hw = 1 - lw;
 
-  DType v1 = bottom_data[h_low * data_width + w_low];
-  DType v2 = bottom_data[h_low * data_width + w_high];
-  DType v3 = bottom_data[h_high * data_width + w_low];
-  DType v4 = bottom_data[h_high * data_width + w_high];
-  DType w1 = hh * hw, w2 = hh * lw, w3 = lh * hw, w4 = lh * lw;
+    DType v1 = bottom_data[h_low * data_width + w_low];
+    DType v2 = bottom_data[h_low * data_width + w_high];
+    DType v3 = bottom_data[h_high * data_width + w_low];
+    DType v4 = bottom_data[h_high * data_width + w_high];
+    DType w1 = hh * hw, w2 = hh * lw, w3 = lh * hw, w4 = lh * lw;
 
-  DType val = (w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4);
-  return val;
+    DType val = (w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4);
+    return val;
 }
 
 template <typename DType>
 __device__ DType get_gradient_weight(
-    DType argmax_h,
-    DType argmax_w,
-    const int h,
-    const int w,
-    const int height,
-    const int width) {
-  if (argmax_h < 0 || argmax_h > height || argmax_w < 0 || argmax_w > width) {
-    // empty
-    return 0;
-  }
-
-  argmax_h = max(argmax_h, (DType)0.0f);
-  argmax_w = max(argmax_w, (DType)0.0f);
-
-  int argmax_h_low = (int)argmax_h;
-  int argmax_w_low = (int)argmax_w;
-  int argmax_h_high;
-  int argmax_w_high;
-  if (argmax_h_low >= height - 1) {
-    argmax_h_high = argmax_h_low = height - 1;
-    argmax_h = (DType)argmax_h_low;
-  } else {
-    argmax_h_high = argmax_h_low + 1;
-  }
-  if (argmax_w_low >= width - 1) {
-    argmax_w_high = argmax_w_low = width - 1;
-    argmax_w = (DType)argmax_w_low;
-  } else {
-    argmax_w_high = argmax_w_low + 1;
-  }
-  DType weight = 0;
-  if (h == argmax_h_low) {
-    if (w == argmax_w_low) {
-      weight = (h + 1 - argmax_h) * (w + 1 - argmax_w);
-    } else if (w == argmax_w_high) {
-      weight = (h + 1 - argmax_h) * (argmax_w + 1 - w);
+    DType argmax_h, DType argmax_w, const int h, const int w, const int height, const int width)
+{
+    if(argmax_h < 0 || argmax_h > height || argmax_w < 0 || argmax_w > width)
+    {
+        // empty
+        return 0;
     }
-  } else if (h == argmax_h_high) {
-    if (w == argmax_w_low) {
-      weight = (argmax_h + 1 - h) * (w + 1 - argmax_w);
-    } else if (w == argmax_w_high) {
-      weight = (argmax_h + 1 - h) * (argmax_w + 1 - w);
+
+    argmax_h = max(argmax_h, (DType)0.0f);
+    argmax_w = max(argmax_w, (DType)0.0f);
+
+    int argmax_h_low = (int)argmax_h;
+    int argmax_w_low = (int)argmax_w;
+    int argmax_h_high;
+    int argmax_w_high;
+    if(argmax_h_low >= height - 1)
+    {
+        argmax_h_high = argmax_h_low = height - 1;
+        argmax_h                     = (DType)argmax_h_low;
     }
-  }
-  return weight;
+    else
+    {
+        argmax_h_high = argmax_h_low + 1;
+    }
+    if(argmax_w_low >= width - 1)
+    {
+        argmax_w_high = argmax_w_low = width - 1;
+        argmax_w                     = (DType)argmax_w_low;
+    }
+    else
+    {
+        argmax_w_high = argmax_w_low + 1;
+    }
+    DType weight = 0;
+    if(h == argmax_h_low)
+    {
+        if(w == argmax_w_low)
+        {
+            weight = (h + 1 - argmax_h) * (w + 1 - argmax_w);
+        }
+        else if(w == argmax_w_high)
+        {
+            weight = (h + 1 - argmax_h) * (argmax_w + 1 - w);
+        }
+    }
+    else if(h == argmax_h_high)
+    {
+        if(w == argmax_w_low)
+        {
+            weight = (argmax_h + 1 - h) * (w + 1 - argmax_w);
+        }
+        else if(w == argmax_w_high)
+        {
+            weight = (argmax_h + 1 - h) * (argmax_w + 1 - w);
+        }
+    }
+    return weight;
 }
 
 template <typename DType>
-__device__ DType get_coordinate_weight(
-    DType argmax_h,
-    DType argmax_w,
-    const int height,
-    const int width,
-    const DType* im_data,
-    const int data_width,
-    const int bp_dir) {
-  if (argmax_h < 0 || argmax_h > height || argmax_w < 0 || argmax_w > width) {
-    // empty
-    return 0;
-  }
+__device__ DType get_coordinate_weight(DType argmax_h,
+                                       DType argmax_w,
+                                       const int height,
+                                       const int width,
+                                       const DType* im_data,
+                                       const int data_width,
+                                       const int bp_dir)
+{
+    if(argmax_h < 0 || argmax_h > height || argmax_w < 0 || argmax_w > width)
+    {
+        // empty
+        return 0;
+    }
 
-  if (argmax_h < 0)
-    argmax_h = 0;
-  if (argmax_w < 0)
-    argmax_w = 0;
+    if(argmax_h < 0)
+        argmax_h = 0;
+    if(argmax_w < 0)
+        argmax_w = 0;
 
-  int argmax_h_low = (int)argmax_h;
-  int argmax_w_low = (int)argmax_w;
-  int argmax_h_high;
-  int argmax_w_high;
-  if (argmax_h_low >= height - 1) {
-    argmax_h_high = argmax_h_low = height - 1;
-    argmax_h = (DType)argmax_h_low;
-  } else {
-    argmax_h_high = argmax_h_low + 1;
-  }
-  if (argmax_w_low >= width - 1) {
-    argmax_w_high = argmax_w_low = width - 1;
-    argmax_w = (DType)argmax_w_low;
-  } else {
-    argmax_w_high = argmax_w_low + 1;
-  }
-  DType weight = 0;
+    int argmax_h_low = (int)argmax_h;
+    int argmax_w_low = (int)argmax_w;
+    int argmax_h_high;
+    int argmax_w_high;
+    if(argmax_h_low >= height - 1)
+    {
+        argmax_h_high = argmax_h_low = height - 1;
+        argmax_h                     = (DType)argmax_h_low;
+    }
+    else
+    {
+        argmax_h_high = argmax_h_low + 1;
+    }
+    if(argmax_w_low >= width - 1)
+    {
+        argmax_w_high = argmax_w_low = width - 1;
+        argmax_w                     = (DType)argmax_w_low;
+    }
+    else
+    {
+        argmax_w_high = argmax_w_low + 1;
+    }
+    DType weight = 0;
 
-  if (bp_dir == 0) {
-    weight += -1 * (argmax_w_low + 1 - argmax_w) *
-        im_data[argmax_h_low * data_width + argmax_w_low];
-    weight += -1 * (argmax_w - argmax_w_low) *
-        im_data[argmax_h_low * data_width + argmax_w_high];
-    weight += (argmax_w_low + 1 - argmax_w) *
-        im_data[argmax_h_high * data_width + argmax_w_low];
-    weight += (argmax_w - argmax_w_low) *
-        im_data[argmax_h_high * data_width + argmax_w_high];
-  } else if (bp_dir == 1) {
-    weight += -1 * (argmax_h_low + 1 - argmax_h) *
-        im_data[argmax_h_low * data_width + argmax_w_low];
-    weight += (argmax_h_low + 1 - argmax_h) *
-        im_data[argmax_h_low * data_width + argmax_w_high];
-    weight += -1 * (argmax_h - argmax_h_low) *
-        im_data[argmax_h_high * data_width + argmax_w_low];
-    weight += (argmax_h - argmax_h_low) *
-        im_data[argmax_h_high * data_width + argmax_w_high];
-  }
+    if(bp_dir == 0)
+    {
+        weight +=
+            -1 * (argmax_w_low + 1 - argmax_w) * im_data[argmax_h_low * data_width + argmax_w_low];
+        weight +=
+            -1 * (argmax_w - argmax_w_low) * im_data[argmax_h_low * data_width + argmax_w_high];
+        weight +=
+            (argmax_w_low + 1 - argmax_w) * im_data[argmax_h_high * data_width + argmax_w_low];
+        weight += (argmax_w - argmax_w_low) * im_data[argmax_h_high * data_width + argmax_w_high];
+    }
+    else if(bp_dir == 1)
+    {
+        weight +=
+            -1 * (argmax_h_low + 1 - argmax_h) * im_data[argmax_h_low * data_width + argmax_w_low];
+        weight +=
+            (argmax_h_low + 1 - argmax_h) * im_data[argmax_h_low * data_width + argmax_w_high];
+        weight +=
+            -1 * (argmax_h - argmax_h_low) * im_data[argmax_h_high * data_width + argmax_w_low];
+        weight += (argmax_h - argmax_h_low) * im_data[argmax_h_high * data_width + argmax_w_high];
+    }
 
-  return weight;
+    return weight;
 }
 
 /*!
@@ -241,68 +267,69 @@ __device__ DType get_coordinate_weight(
  * DO NOT call this directly. Use wrapper function im2col() instead;
  */
 template <typename DType>
-__global__ void deformable_im2col_gpu_kernel(
-    const int n,
-    const DType* data_im,
-    const DType* data_offset,
-    const int height,
-    const int width,
-    const int kernel_h,
-    const int kernel_w,
-    const int pad_h,
-    const int pad_w,
-    const int stride_h,
-    const int stride_w,
-    const int dilation_h,
-    const int dilation_w,
-    const int channel_per_deformable_group,
-    const int height_col,
-    const int width_col,
-    DType* data_col) {
-  HIP_1D_KERNEL_LOOP(index, n) {
-    // index index of output matrix
-    const int w_col = index % width_col;
-    const int h_col = (index / width_col) % height_col;
-    const int c_im = (index / width_col) / height_col;
-    const int c_col = c_im * kernel_h * kernel_w;
+__global__ void deformable_im2col_gpu_kernel(const int n,
+                                             const DType* data_im,
+                                             const DType* data_offset,
+                                             const int height,
+                                             const int width,
+                                             const int kernel_h,
+                                             const int kernel_w,
+                                             const int pad_h,
+                                             const int pad_w,
+                                             const int stride_h,
+                                             const int stride_w,
+                                             const int dilation_h,
+                                             const int dilation_w,
+                                             const int channel_per_deformable_group,
+                                             const int height_col,
+                                             const int width_col,
+                                             DType* data_col)
+{
+    HIP_1D_KERNEL_LOOP(index, n)
+    {
+        // index index of output matrix
+        const int w_col = index % width_col;
+        const int h_col = (index / width_col) % height_col;
+        const int c_im  = (index / width_col) / height_col;
+        const int c_col = c_im * kernel_h * kernel_w;
 
-    // compute deformable group index
-    const int deformable_group_index = c_im / channel_per_deformable_group;
+        // compute deformable group index
+        const int deformable_group_index = c_im / channel_per_deformable_group;
 
-    const int h_in = h_col * stride_h - pad_h;
-    const int w_in = w_col * stride_w - pad_w;
-    DType* data_col_ptr =
-        data_col + (c_col * height_col + h_col) * width_col + w_col;
-    const DType* data_im_ptr = data_im + (c_im * height + h_in) * width + w_in;
-    const DType* data_offset_ptr = data_offset +
-        deformable_group_index * 2 * kernel_h * kernel_w * height_col *
-            width_col;
+        const int h_in           = h_col * stride_h - pad_h;
+        const int w_in           = w_col * stride_w - pad_w;
+        DType* data_col_ptr      = data_col + (c_col * height_col + h_col) * width_col + w_col;
+        const DType* data_im_ptr = data_im + (c_im * height + h_in) * width + w_in;
+        const DType* data_offset_ptr =
+            data_offset + deformable_group_index * 2 * kernel_h * kernel_w * height_col * width_col;
 
-    for (int i = 0; i < kernel_h; ++i) {
-      for (int j = 0; j < kernel_w; ++j) {
-        const int data_offset_h_ptr =
-            ((2 * (i * kernel_w + j)) * height_col + h_col) * width_col + w_col;
-        const int data_offset_w_ptr =
-            ((2 * (i * kernel_w + j) + 1) * height_col + h_col) * width_col +
-            w_col;
-        const DType offset_h = data_offset_ptr[data_offset_h_ptr];
-        const DType offset_w = data_offset_ptr[data_offset_w_ptr];
-        DType val = static_cast<DType>(0);
-        const DType h_im = h_in + i * dilation_h + offset_h;
-        const DType w_im = w_in + j * dilation_w + offset_w;
-        if (h_im >= 0 && w_im >= 0 && h_im < height && w_im < width) {
-          const DType map_h = i * dilation_h + offset_h;
-          const DType map_w = j * dilation_w + offset_w;
-          const int cur_height = height - h_in;
-          const int cur_width = width - w_in;
-          val = deformable_im2col_bilinear(
-              data_im_ptr, width, cur_height, cur_width, map_h, map_w);
+        for(int i = 0; i < kernel_h; ++i)
+        {
+            for(int j = 0; j < kernel_w; ++j)
+            {
+                const int data_offset_h_ptr =
+                    ((2 * (i * kernel_w + j)) * height_col + h_col) * width_col + w_col;
+                const int data_offset_w_ptr =
+                    ((2 * (i * kernel_w + j) + 1) * height_col + h_col) * width_col + w_col;
+                const DType offset_h = data_offset_ptr[data_offset_h_ptr];
+                const DType offset_w = data_offset_ptr[data_offset_w_ptr];
+                DType val            = static_cast<DType>(0);
+                const DType h_im     = h_in + i * dilation_h + offset_h;
+                const DType w_im     = w_in + j * dilation_w + offset_w;
+                if(h_im >= 0 && w_im >= 0 && h_im < height && w_im < width)
+                {
+                    const DType map_h    = i * dilation_h + offset_h;
+                    const DType map_w    = j * dilation_w + offset_w;
+                    const int cur_height = height - h_in;
+                    const int cur_width  = width - w_in;
+                    val                  = deformable_im2col_bilinear(
+                        data_im_ptr, width, cur_height, cur_width, map_h, map_w);
+                }
+                *data_col_ptr = val;
+                data_col_ptr += height_col * width_col;
+            }
         }
-        *data_col_ptr = val;
-        data_col_ptr += height_col * width_col;
-      }
     }
-  }
 }
 
 /*!\brief
@@ -318,37 +345,41 @@ __global__ void deformable_im2col_gpu_kernel(
  * data_col column buffer pointer
  */
 template <typename DType, typename Context>
-void DeformConvOpBase<DType, Context>::DeformableIm2col(
-    const DType* data_im,
-    const DType* data_offset,
-    const std::vector<TIndex>& im_shape,
-    const std::vector<TIndex>& col_shape,
-    DType* data_col) {
-  CHECK_LT(2, CAFFE_HIP_NUM_THREADS);
-  CAFFE_ENFORCE_EQ(pad_t(), pad_b());
-  CAFFE_ENFORCE_EQ(pad_l(), pad_r());
-  const int pad_h = pad_t();
-  const int pad_w = pad_l();
-  index_t channel_per_deformable_group = im_shape[1] / deformable_group_;
-  index_t num_kernels = im_shape[1] * size_from_dim_(1, col_shape);
-  hipLaunchKernelGGL((deformable_im2col_gpu_kernel<DType>), dim3(CAFFE_GET_BLOCKS(num_kernels)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-          static_cast<const int>(num_kernels),
-          data_im,
-          data_offset,
-          static_cast<const int>(im_shape[2]),
-          static_cast<const int>(im_shape[3]),
-          static_cast<const int>(kernel_h()),
-          static_cast<const int>(kernel_w()),
-          pad_h,
-          pad_w,
-          static_cast<const int>(stride_h()),
-          static_cast<const int>(stride_w()),
-          static_cast<const int>(dilation_h()),
-          static_cast<const int>(dilation_w()),
-          static_cast<const int>(channel_per_deformable_group),
-          static_cast<const int>(col_shape[1]),
-          static_cast<const int>(col_shape[2]),
-          data_col);
+void DeformConvOpBase<DType, Context>::DeformableIm2col(const DType* data_im,
+                                                        const DType* data_offset,
+                                                        const std::vector<TIndex>& im_shape,
+                                                        const std::vector<TIndex>& col_shape,
+                                                        DType* data_col)
+{
+    CHECK_LT(2, CAFFE_HIP_NUM_THREADS);
+    CAFFE_ENFORCE_EQ(pad_t(), pad_b());
+    CAFFE_ENFORCE_EQ(pad_l(), pad_r());
+    const int pad_h                      = pad_t();
+    const int pad_w                      = pad_l();
+    index_t channel_per_deformable_group = im_shape[1] / deformable_group_;
+    index_t num_kernels                  = im_shape[1] * size_from_dim_(1, col_shape);
+    hipLaunchKernelGGL((deformable_im2col_gpu_kernel<DType>),
+                       dim3(CAFFE_GET_BLOCKS(num_kernels)),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       static_cast<const int>(num_kernels),
+                       data_im,
+                       data_offset,
+                       static_cast<const int>(im_shape[2]),
+                       static_cast<const int>(im_shape[3]),
+                       static_cast<const int>(kernel_h()),
+                       static_cast<const int>(kernel_w()),
+                       pad_h,
+                       pad_w,
+                       static_cast<const int>(stride_h()),
+                       static_cast<const int>(stride_w()),
+                       static_cast<const int>(dilation_h()),
+                       static_cast<const int>(dilation_w()),
+                       static_cast<const int>(channel_per_deformable_group),
+                       static_cast<const int>(col_shape[1]),
+                       static_cast<const int>(col_shape[2]),
+                       data_col);
 }
 
 /*!
@@ -357,72 +388,69 @@ void DeformConvOpBase<DType, Context>::DeformableIm2col(
  * instead;
  */
 template <typename DType>
-__global__ void deformable_col2im_gpu_kernel(
-    const int n,
-    const DType* data_col,
-    const DType* data_offset,
-    const int channels,
-    const int height,
-    const int width,
-    const int kernel_h,
-    const int kernel_w,
-    const int pad_h,
-    const int pad_w,
-    const int stride_h,
-    const int stride_w,
-    const int dilation_h,
-    const int dilation_w,
-    const int channel_per_deformable_group,
-    const int height_col,
-    const int width_col,
-    DType* grad_im) {
-  HIP_1D_KERNEL_LOOP(index, n) {
-    const int j = (index / width_col / height_col) % kernel_w;
-    const int i = (index / width_col / height_col / kernel_w) % kernel_h;
-    const int c = index / width_col / height_col / kernel_w / kernel_h;
-    // compute the start and end of the output
+__global__ void deformable_col2im_gpu_kernel(const int n,
+                                             const DType* data_col,
+                                             const DType* data_offset,
+                                             const int channels,
+                                             const int height,
+                                             const int width,
+                                             const int kernel_h,
+                                             const int kernel_w,
+                                             const int pad_h,
+                                             const int pad_w,
+                                             const int stride_h,
+                                             const int stride_w,
+                                             const int dilation_h,
+                                             const int dilation_w,
+                                             const int channel_per_deformable_group,
+                                             const int height_col,
+                                             const int width_col,
+                                             DType* grad_im)
+{
+    HIP_1D_KERNEL_LOOP(index, n)
+    {
+        const int j = (index / width_col / height_col) % kernel_w;
+        const int i = (index / width_col / height_col / kernel_w) % kernel_h;
+        const int c = index / width_col / height_col / kernel_w / kernel_h;
+        // compute the start and end of the output
 
-    const int deformable_group_index = c / channel_per_deformable_group;
+        const int deformable_group_index = c / channel_per_deformable_group;
 
-    int w_out = index % width_col;
-    int h_out = (index / width_col) % height_col;
-    int w_in = w_out * stride_w - pad_w;
-    int h_in = h_out * stride_h - pad_h;
+        int w_out = index % width_col;
+        int h_out = (index / width_col) % height_col;
+        int w_in  = w_out * stride_w - pad_w;
+        int h_in  = h_out * stride_h - pad_h;
 
-    const DType* data_offset_ptr = data_offset +
-        deformable_group_index * 2 * kernel_h * kernel_w * height_col *
-            width_col;
-    const int data_offset_h_ptr =
-        ((2 * (i * kernel_w + j)) * height_col + h_out) * width_col + w_out;
-    const int data_offset_w_ptr =
-        ((2 * (i * kernel_w + j) + 1) * height_col + h_out) * width_col + w_out;
-    const DType offset_h = data_offset_ptr[data_offset_h_ptr];
-    const DType offset_w = data_offset_ptr[data_offset_w_ptr];
-    const DType cur_inv_h_data = h_in + i * dilation_h + offset_h;
-    const DType cur_inv_w_data = w_in + j * dilation_w + offset_w;
+        const DType* data_offset_ptr =
+            data_offset + deformable_group_index * 2 * kernel_h * kernel_w * height_col * width_col;
+        const int data_offset_h_ptr =
+            ((2 * (i * kernel_w + j)) * height_col + h_out) * width_col + w_out;
+        const int data_offset_w_ptr =
+            ((2 * (i * kernel_w + j) + 1) * height_col + h_out) * width_col + w_out;
+        const DType offset_h       = data_offset_ptr[data_offset_h_ptr];
+        const DType offset_w       = data_offset_ptr[data_offset_w_ptr];
+        const DType cur_inv_h_data = h_in + i * dilation_h + offset_h;
+        const DType cur_inv_w_data = w_in + j * dilation_w + offset_w;
 
-    const DType cur_top_grad = data_col[index];
-    const int cur_h = (int)cur_inv_h_data;
-    const int cur_w = (int)cur_inv_w_data;
-    for (int dy = -2; dy <= 2; dy++) {
-      for (int dx = -2; dx <= 2; dx++) {
-        if (cur_h + dy >= 0 && cur_h + dy < height && cur_w + dx >= 0 &&
-            cur_w + dx < width && abs(cur_inv_h_data - (cur_h + dy)) < 1 &&
-            abs(cur_inv_w_data - (cur_w + dx)) < 1) {
-          int cur_bottom_grad_pos =
-              (c * height + cur_h + dy) * width + cur_w + dx;
-          DType weight = get_gradient_weight(
-              cur_inv_h_data,
-              cur_inv_w_data,
-              cur_h + dy,
-              cur_w + dx,
-              height,
-              width);
-          atomicAdd(grad_im + cur_bottom_grad_pos, weight * cur_top_grad);
+        const DType cur_top_grad = data_col[index];
+        const int cur_h          = (int)cur_inv_h_data;
+        const int cur_w          = (int)cur_inv_w_data;
+        for(int dy = -2; dy <= 2; dy++)
+        {
+            for(int dx = -2; dx <= 2; dx++)
+            {
+                if(cur_h + dy >= 0 && cur_h + dy < height && cur_w + dx >= 0 &&
+                   cur_w + dx < width && abs(cur_inv_h_data - (cur_h + dy)) < 1 &&
+                   abs(cur_inv_w_data - (cur_w + dx)) < 1)
+                {
+                    int cur_bottom_grad_pos = (c * height + cur_h + dy) * width + cur_w + dx;
+                    DType weight            = get_gradient_weight(
+                        cur_inv_h_data, cur_inv_w_data, cur_h + dy, cur_w + dx, height, width);
+                    atomicAdd(grad_im + cur_bottom_grad_pos, weight * cur_top_grad);
+                }
+            }
         }
-      }
     }
-  }
 }
 
 /*!\brief
@@ -440,43 +468,47 @@ __global__ void deformable_col2im_gpu_kernel(
  * \param grad_im pointer of a image (C, H, W,...) in the image batch
  */
 template <typename DType, typename Context>
-void DeformConvOpBase<DType, Context>::DeformableCol2im(
-    const DType* data_col,
-    const DType* data_offset,
-    const std::vector<TIndex>& im_shape,
-    const std::vector<TIndex>& col_shape,
-    DType* grad_im) {
-  CAFFE_ENFORCE_EQ(pad_t(), pad_b());
-  CAFFE_ENFORCE_EQ(pad_l(), pad_r());
-  const int pad_h = pad_t();
-  const int pad_w = pad_l();
-  index_t im_size = size_from_dim_(1, im_shape);
-  index_t channel_per_deformable_group = im_shape[1] / deformable_group_;
-  index_t num_kernels = size_from_dim_(0, col_shape);
-  // num_axes should be smaller than block size
-  CHECK_LT(2, CAFFE_HIP_NUM_THREADS);
-  // To avoid involving atomic operations, we will launch one kernel per
-  // bottom dimension, and then in the kernel add up the top dimensions.
-  // NOLINT_NEXT_LINE(whitespace/operators)
-  hipLaunchKernelGGL((deformable_col2im_gpu_kernel<DType>), dim3(CAFFE_GET_BLOCKS(num_kernels)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-          static_cast<const int>(num_kernels),
-          data_col,
-          data_offset,
-          static_cast<const int>(im_shape[1]),
-          static_cast<const int>(im_shape[2]),
-          static_cast<const int>(im_shape[3]),
-          static_cast<const int>(kernel_h()),
-          static_cast<const int>(kernel_w()),
-          pad_h,
-          pad_w,
-          static_cast<const int>(stride_h()),
-          static_cast<const int>(stride_w()),
-          static_cast<const int>(dilation_h()),
-          static_cast<const int>(dilation_w()),
-          static_cast<const int>(channel_per_deformable_group),
-          static_cast<const int>(col_shape[1]),
-          static_cast<const int>(col_shape[2]),
-          grad_im);
+void DeformConvOpBase<DType, Context>::DeformableCol2im(const DType* data_col,
+                                                        const DType* data_offset,
+                                                        const std::vector<TIndex>& im_shape,
+                                                        const std::vector<TIndex>& col_shape,
+                                                        DType* grad_im)
+{
+    CAFFE_ENFORCE_EQ(pad_t(), pad_b());
+    CAFFE_ENFORCE_EQ(pad_l(), pad_r());
+    const int pad_h                      = pad_t();
+    const int pad_w                      = pad_l();
+    index_t im_size                      = size_from_dim_(1, im_shape);
+    index_t channel_per_deformable_group = im_shape[1] / deformable_group_;
+    index_t num_kernels                  = size_from_dim_(0, col_shape);
+    // num_axes should be smaller than block size
+    CHECK_LT(2, CAFFE_HIP_NUM_THREADS);
+    // To avoid involving atomic operations, we will launch one kernel per
+    // bottom dimension, and then in the kernel add up the top dimensions.
+    // NOLINT_NEXT_LINE(whitespace/operators)
+    hipLaunchKernelGGL((deformable_col2im_gpu_kernel<DType>),
+                       dim3(CAFFE_GET_BLOCKS(num_kernels)),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       static_cast<const int>(num_kernels),
+                       data_col,
+                       data_offset,
+                       static_cast<const int>(im_shape[1]),
+                       static_cast<const int>(im_shape[2]),
+                       static_cast<const int>(im_shape[3]),
+                       static_cast<const int>(kernel_h()),
+                       static_cast<const int>(kernel_w()),
+                       pad_h,
+                       pad_w,
+                       static_cast<const int>(stride_h()),
+                       static_cast<const int>(stride_w()),
+                       static_cast<const int>(dilation_h()),
+                       static_cast<const int>(dilation_w()),
+                       static_cast<const int>(channel_per_deformable_group),
+                       static_cast<const int>(col_shape[1]),
+                       static_cast<const int>(col_shape[2]),
+                       grad_im);
 }
 
 /*!
@@ -485,85 +517,79 @@ void DeformConvOpBase<DType, Context>::DeformableCol2im(
  * deformable_col2im_coord() instead;
  */
 template <typename DType>
-__global__ void deformable_col2im_coord_gpu_kernel(
-    const int n,
-    const DType* data_col,
-    const DType* data_im,
-    const DType* data_offset,
-    const int channels,
-    const int height,
-    const int width,
-    const int kernel_h,
-    const int kernel_w,
-    const int pad_h,
-    const int pad_w,
-    const int stride_h,
-    const int stride_w,
-    const int dilation_h,
-    const int dilation_w,
-    const int channel_per_deformable_group,
-    const int height_col,
-    const int width_col,
-    DType* grad_offset) {
-  HIP_1D_KERNEL_LOOP(index, n) {
-    DType val = 0;
-    int w = index % width_col;
-    int h = (index / width_col) % height_col;
-    int c = index / width_col / height_col;
-    // compute the start and end of the output
+__global__ void deformable_col2im_coord_gpu_kernel(const int n,
+                                                   const DType* data_col,
+                                                   const DType* data_im,
+                                                   const DType* data_offset,
+                                                   const int channels,
+                                                   const int height,
+                                                   const int width,
+                                                   const int kernel_h,
+                                                   const int kernel_w,
+                                                   const int pad_h,
+                                                   const int pad_w,
+                                                   const int stride_h,
+                                                   const int stride_w,
+                                                   const int dilation_h,
+                                                   const int dilation_w,
+                                                   const int channel_per_deformable_group,
+                                                   const int height_col,
+                                                   const int width_col,
+                                                   DType* grad_offset)
+{
+    HIP_1D_KERNEL_LOOP(index, n)
+    {
+        DType val = 0;
+        int w     = index % width_col;
+        int h     = (index / width_col) % height_col;
+        int c     = index / width_col / height_col;
+        // compute the start and end of the output
 
-    const int deformable_group_index = c / (2 * kernel_h * kernel_w);
-    const int col_step = kernel_h * kernel_w;
-    int cnt = 0;
-    const DType* data_col_ptr = data_col +
-        deformable_group_index * channel_per_deformable_group * width_col *
-            height_col;
-    const DType* data_im_ptr = data_im +
-        deformable_group_index * channel_per_deformable_group / kernel_h /
-            kernel_w * height * width;
-    const DType* data_offset_ptr = data_offset +
-        deformable_group_index * 2 * kernel_h * kernel_w * height_col *
-            width_col;
+        const int deformable_group_index = c / (2 * kernel_h * kernel_w);
+        const int col_step               = kernel_h * kernel_w;
+        int cnt                          = 0;
+        const DType* data_col_ptr =
+            data_col +
+            deformable_group_index * channel_per_deformable_group * width_col * height_col;
+        const DType* data_im_ptr = data_im +
+                                   deformable_group_index * channel_per_deformable_group /
+                                       kernel_h / kernel_w * height * width;
+        const DType* data_offset_ptr =
+            data_offset + deformable_group_index * 2 * kernel_h * kernel_w * height_col * width_col;
 
-    const int offset_c = c - deformable_group_index * 2 * kernel_h * kernel_w;
+        const int offset_c = c - deformable_group_index * 2 * kernel_h * kernel_w;
 
-    for (int col_c = (offset_c / 2); col_c < channel_per_deformable_group;
-         col_c += col_step) {
-      const int col_pos = ((col_c * height_col) + h) * width_col + w;
-      const int bp_dir = offset_c % 2;
+        for(int col_c = (offset_c / 2); col_c < channel_per_deformable_group; col_c += col_step)
+        {
+            const int col_pos = ((col_c * height_col) + h) * width_col + w;
+            const int bp_dir  = offset_c % 2;
 
-      int j = (col_pos / width_col / height_col) % kernel_w;
-      int i = (col_pos / width_col / height_col / kernel_w) % kernel_h;
-      int w_out = col_pos % width_col;
-      int h_out = (col_pos / width_col) % height_col;
-      int w_in = w_out * stride_w - pad_w;
-      int h_in = h_out * stride_h - pad_h;
-      const int data_offset_h_ptr =
-          (((2 * (i * kernel_w + j)) * height_col + h_out) * width_col + w_out);
-      const int data_offset_w_ptr =
-          (((2 * (i * kernel_w + j) + 1) * height_col + h_out) * width_col +
-           w_out);
-      const DType offset_h = data_offset_ptr[data_offset_h_ptr];
-      const DType offset_w = data_offset_ptr[data_offset_w_ptr];
-      DType inv_h = h_in + i * dilation_h + offset_h;
-      DType inv_w = w_in + j * dilation_w + offset_w;
-      if (inv_h < 0 || inv_w < 0 || inv_h >= height || inv_w >= width) {
-        inv_h = inv_w = -1;
-      }
-      const DType weight = get_coordinate_weight(
-          inv_h,
-          inv_w,
-          height,
-          width,
-          data_im_ptr + cnt * height * width,
-          width,
-          bp_dir);
-      val += weight * data_col_ptr[col_pos];
-      cnt += 1;
+            int j     = (col_pos / width_col / height_col) % kernel_w;
+            int i     = (col_pos / width_col / height_col / kernel_w) % kernel_h;
+            int w_out = col_pos % width_col;
+            int h_out = (col_pos / width_col) % height_col;
+            int w_in  = w_out * stride_w - pad_w;
+            int h_in  = h_out * stride_h - pad_h;
+            const int data_offset_h_ptr =
+                (((2 * (i * kernel_w + j)) * height_col + h_out) * width_col + w_out);
+            const int data_offset_w_ptr =
+                (((2 * (i * kernel_w + j) + 1) * height_col + h_out) * width_col + w_out);
+            const DType offset_h = data_offset_ptr[data_offset_h_ptr];
+            const DType offset_w = data_offset_ptr[data_offset_w_ptr];
+            DType inv_h          = h_in + i * dilation_h + offset_h;
+            DType inv_w          = w_in + j * dilation_w + offset_w;
+            if(inv_h < 0 || inv_w < 0 || inv_h >= height || inv_w >= width)
+            {
+                inv_h = inv_w = -1;
+            }
+            const DType weight = get_coordinate_weight(
+                inv_h, inv_w, height, width, data_im_ptr + cnt * height * width, width, bp_dir);
+            val += weight * data_col_ptr[col_pos];
+            cnt += 1;
+        }
+
+        grad_offset[index] = val;
     }
-
-    grad_offset[index] = val;
-  }
 }
 
 /*!\brief
@@ -582,50 +608,52 @@ __global__ void deformable_col2im_coord_gpu_kernel(
  * \param grad_offset pointer of the offset (C, H, W,...) in the offset batch
  */
 template <typename DType, typename Context>
-void DeformConvOpBase<DType, Context>::DeformableCol2imCoord(
-    const DType* data_col,
-    const DType* data_im,
-    const DType* data_offset,
-    const std::vector<TIndex>& im_shape,
-    const std::vector<TIndex>& col_shape,
-    DType* grad_offset) {
-  CAFFE_ENFORCE_EQ(pad_t(), pad_b());
-  CAFFE_ENFORCE_EQ(pad_l(), pad_r());
-  const int pad_h = pad_t();
-  const int pad_w = pad_l();
-  index_t num_kernels = col_shape[1] * col_shape[2] * 2 * kernel_h() *
-      kernel_w() * deformable_group_;
-  index_t channel_per_deformable_group = col_shape[0] / deformable_group_;
-  // num_axes should be smaller than block size
-  CHECK_LT(2, CAFFE_HIP_NUM_THREADS);
-  // To avoid involving atomic operations, we will launch one kernel per
-  // bottom dimension, and then in the kernel add up the top dimensions.
-  // NOLINT_NEXT_LINE(whitespace/operators)
-  hipLaunchKernelGGL((deformable_col2im_coord_gpu_kernel<DType>), dim3(CAFFE_GET_BLOCKS(num_kernels)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-          num_kernels,
-          data_col,
-          data_im,
-          data_offset,
-          im_shape[1],
-          im_shape[2],
-          im_shape[3],
-          kernel_h(),
-          kernel_w(),
-          pad_h,
-          pad_w,
-          stride_h(),
-          stride_w(),
-          dilation_h(),
-          dilation_w(),
-          channel_per_deformable_group,
-          col_shape[1],
-          col_shape[2],
-          grad_offset);
+void DeformConvOpBase<DType, Context>::DeformableCol2imCoord(const DType* data_col,
+                                                             const DType* data_im,
+                                                             const DType* data_offset,
+                                                             const std::vector<TIndex>& im_shape,
+                                                             const std::vector<TIndex>& col_shape,
+                                                             DType* grad_offset)
+{
+    CAFFE_ENFORCE_EQ(pad_t(), pad_b());
+    CAFFE_ENFORCE_EQ(pad_l(), pad_r());
+    const int pad_h = pad_t();
+    const int pad_w = pad_l();
+    index_t num_kernels =
+        col_shape[1] * col_shape[2] * 2 * kernel_h() * kernel_w() * deformable_group_;
+    index_t channel_per_deformable_group = col_shape[0] / deformable_group_;
+    // num_axes should be smaller than block size
+    CHECK_LT(2, CAFFE_HIP_NUM_THREADS);
+    // To avoid involving atomic operations, we will launch one kernel per
+    // bottom dimension, and then in the kernel add up the top dimensions.
+    // NOLINT_NEXT_LINE(whitespace/operators)
+    hipLaunchKernelGGL((deformable_col2im_coord_gpu_kernel<DType>),
+                       dim3(CAFFE_GET_BLOCKS(num_kernels)),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       num_kernels,
+                       data_col,
+                       data_im,
+                       data_offset,
+                       im_shape[1],
+                       im_shape[2],
+                       im_shape[3],
+                       kernel_h(),
+                       kernel_w(),
+                       pad_h,
+                       pad_w,
+                       stride_h(),
+                       stride_w(),
+                       dilation_h(),
+                       dilation_w(),
+                       channel_per_deformable_group,
+                       col_shape[1],
+                       col_shape[2],
+                       grad_offset);
 }
 
 REGISTER_HIP_OPERATOR(DeformConv, DeformConvOp<float, HIPContext>);
-REGISTER_HIP_OPERATOR(
-    DeformConvGradient,
-    DeformConvGradientOp<float, HIPContext>);
+REGISTER_HIP_OPERATOR(DeformConvGradient, DeformConvGradientOp<float, HIPContext>);
 
 } // namespace caffe2

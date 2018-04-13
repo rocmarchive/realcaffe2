@@ -20,36 +20,38 @@
 
 namespace caffe2 {
 
-struct SqrHIPFunctor {
-  template <typename T>
-  inline void
-  operator()(const int n, const T* x, T* y, HIPContext* device_context) {
-    math::Sqr<T, HIPContext>(n, x, y, device_context);
-  }
+struct SqrHIPFunctor
+{
+    template <typename T>
+    inline void operator()(const int n, const T* x, T* y, HIPContext* device_context)
+    {
+        math::Sqr<T, HIPContext>(n, x, y, device_context);
+    }
 };
 
 template <typename T>
-__global__ void SignKernel(int n, const T* x, T* y) {
-  HIP_1D_KERNEL_LOOP(i, n) {
-    y[i] = (-T(1) * (x[i] < 0)) + (x[i] > 0);
-  }
+__global__ void SignKernel(int n, const T* x, T* y)
+{
+    HIP_1D_KERNEL_LOOP(i, n) { y[i] = (-T(1) * (x[i] < 0)) + (x[i] > 0); }
 }
 
-struct SignHIPFunctor {
-  template <typename T>
-  inline void
-  operator()(const int n, const T* x, T* y, HIPContext* device_context) {
-    hipLaunchKernelGGL((SignKernel), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, y);
-  }
+struct SignHIPFunctor
+{
+    template <typename T>
+    inline void operator()(const int n, const T* x, T* y, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((SignKernel),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           y);
+    }
 };
 
-REGISTER_HIP_OPERATOR(
-    Sqr,
-    UnaryElementwiseOp<TensorTypes<float>, HIPContext, SqrHIPFunctor>);
-REGISTER_HIP_OPERATOR(
-    Sign,
-    UnaryElementwiseOp<TensorTypes<float>, HIPContext, SignHIPFunctor>);
-REGISTER_HIP_OPERATOR(
-    Pow,
-    UnaryElementwiseWithArgsOp<TensorTypes<float>, HIPContext, PowFunctor>);
+REGISTER_HIP_OPERATOR(Sqr, UnaryElementwiseOp<TensorTypes<float>, HIPContext, SqrHIPFunctor>);
+REGISTER_HIP_OPERATOR(Sign, UnaryElementwiseOp<TensorTypes<float>, HIPContext, SignHIPFunctor>);
+REGISTER_HIP_OPERATOR(Pow, UnaryElementwiseWithArgsOp<TensorTypes<float>, HIPContext, PowFunctor>);
 }

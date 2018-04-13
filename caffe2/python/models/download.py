@@ -154,7 +154,7 @@ def validModelName(name):
     invalid_names = ['__init__']
     if name in invalid_names:
         return False
-    if not re.match("^[a-zA-Z_]+$", name):
+    if not re.match("^[a-zA-Z0-9_]+$", name):
         return False
     return True
 
