@@ -107,7 +107,7 @@ print("CHW Image Shape: " , img.shape)
 img = img[(2, 1, 0), :, :]
 
 # remove mean for better results
-img = img * 255 - mean
+#img = img * 255 - mean
 
 # add batch size axis which completes the formation of the NCHW shaped input that we want
 img = img[np.newaxis, :, :, :].astype(np.float32)
