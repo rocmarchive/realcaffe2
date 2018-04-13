@@ -16,21 +16,10 @@ node("rocmtest14") {
                     | xargs -n 1 -P 1 -I{} -t sh -c 'clang-format-3.8 -style=file {} | diff - {}'
                 '''
             }
-            stage("build_release") {
+            stage("build_debug") {
 
                 sh '''
                     export HCC_AMDGPU_TARGET=gfx900
-                    rm -rf build
-                    mkdir build
-                    cd build
-                    cmake -DCMAKE_BUILD_TYPE='Release' ..
-                    make -j8
-                    make DESTDIR=./install install
-                '''
-            }
-            /*
-            stage("build_debug") {
-                sh '''
                     rm -rf build
                     mkdir build
                     cd build
@@ -39,11 +28,20 @@ node("rocmtest14") {
                     make DESTDIR=./install install
                 '''
             }
-            */
+            stage("build_release") {
+                sh '''
+                    rm -rf build
+                    mkdir build
+                    cd build
+                    cmake -DCMAKE_BUILD_TYPE='Release' ..
+                    make -j8
+                    make DESTDIR=./install install
+                '''
+            }
             stage("binary_tests") {
                 sh ''' 
                     cd build/bin
-                    ../../test.sh
+                    ../../tests/test.sh
                 '''
             }
             stage("inference_test"){
