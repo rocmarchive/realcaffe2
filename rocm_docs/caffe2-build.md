@@ -15,7 +15,7 @@ export HIP_PATH=/opt/rocm/hip
 export PATH=$HCC_HOME/bin:$HIP_PATH/bin:$PATH
 ```
 
-## Pull the Latest Rocm_Caffe2 Src
+## Pull the Latest ROCm_Caffe2 Src
 * using https
 
 ```
@@ -32,7 +32,7 @@ git clone --recursive git@github.com:ROCmSoftwarePlatform/rocm_caffe2.git
 	
 `docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video -v $HOME/rocm_caffe2:/rocm_caffe2 petrex/rocm_caffe2`
 
-## Build the Rocm_caff2 Project from Src
+## Build the ROCm_Caffe2 Project from Src
 
 * Create a directory to put Caffe2's build files in 
 
@@ -47,6 +47,11 @@ git clone --recursive git@github.com:ROCmSoftwarePlatform/rocm_caffe2.git
 	`sudo make install`
 	
 * Test the Caffe2 Installation 
+	Before running the tests, make sure that the required environment variables are set:
+	```
+	export PYTHONPATH=/usr/local:<caffe2_home>/build:$PYTHONPATH 
+	export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+	```
 
 	Run this to see if your Caffe2 installation was successful. 
 	
