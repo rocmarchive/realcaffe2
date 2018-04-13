@@ -1,4 +1,4 @@
-# Caffe2 ROCm port: Docker Installation
+# Rocaffe2: Docker Installation
 
 ## Install docker
 A good refernce to docker installation on Ubuntu 16.04 can be found [here](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04).
@@ -17,10 +17,10 @@ or try these cmd to get docker community edition.
 		
 
 ### Pull the Official docker image 
-* The fatest way to start ROCKING is through docker. You can pull the latest official docker image for rocm_caffe2 proejct:
+* The fatest way to start ROCKING is through docker. You can pull the latest official docker image for Rocaffe2 proejct:
 
 ```
-docker pull petrex/rocm_caffe2
+docker pull petrex/rocaffe2:developer_preview
 ```
 
 This docker image has all dependencies for caffe2 and ROCM software stack for AMD platform.

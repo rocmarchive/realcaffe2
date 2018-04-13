@@ -1,4 +1,4 @@
-# Caffe2 ROCm port Quickstart Guide
+# Rocaffe2 Quickstart Guide
 
 
 ## Running Core Tests
