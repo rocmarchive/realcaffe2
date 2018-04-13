@@ -15,10 +15,10 @@ Rocaffe2 has been validated on Ubuntu 16.04 LTS and AMD Vega 56/64/MI25; with RO
 * A ROCm enable platform. More info [here](https://rocm.github.io/install.html).
 
 ### Rocaffe2 Quick Start
-1. [Install ROCm Software Stack](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-install-basic.md)
-2. [Install Docker](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-docker.md)
-3. [Build the Rocaffe2 Project](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-build.md)
-4. [Run Rocaffe2 Tests/Workload](https://github.com/ROCmSoftwarePlatform/rocm_caffe2/blob/AMD_develop/rocm_docs/caffe2-quickstart.md)
+1. [Install ROCm Software Stack](https://github.com/ROCmSoftwarePlatform/Rocaffe2/blob/developer_preview/rocm_docs/caffe2-install-basic.md)
+2. [Install Docker](https://github.com/ROCmSoftwarePlatform/Rocaffe2/blob/developer_preview/rocm_docs/caffe2-docker.md)
+3. [Build the Rocaffe2 Project](https://github.com/ROCmSoftwarePlatform/Rocaffe2/blob/developer_preview/rocm_docs/caffe2-build.md)
+4. [Run Rocaffe2 Tests/Workload](https://github.com/ROCmSoftwarePlatform/Rocaffe2/blob/developer_preview/rocm_docs/caffe2-quickstart.md)
 
 ## Questions and Feedback
 
