@@ -8,7 +8,7 @@ node("rocmtest14") {
                 sh 'git submodule update --init'
             }
             
-            stage('Clang Format') {
+            stage('clang_format') {
                 sh '''
                     cd caffe2
                     find . -iname *miopen* -o -iname *hip* \
@@ -45,32 +45,17 @@ node("rocmtest14") {
                     cd build/bin
                     ../../test.sh
                 '''
-                /*
+            }
+            stage("inference_test"){
                 sh '''
-                    cd build/bin
-                    total_test_count=$(ls | wc -l)
-                    echo $total_test_count
-                    passed_count=0
-                    for T in $(ls); do
-                        echo $T
-                        ./$T
-                        if [ $? -eq 0 ]; then
-                            passed_count=$((passed_count+1)) 
-                        fi
-                    done
-                    if [ $passed_count -eq $total_test_count ]; then
-                        echo "All passed"
-                        exit 0
-                    else
-                        echo "passed_count:"
-                        echo $passed_count
-                        echo "total_count:"
-                        echo $total_test_count
-                        exit 1
-                    fi
-                    echo "done"
+                export PYTHONPATH=$PYTHONPATH:~/build
+                export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+                model=resnet50
+                python caffe2/python/models/download.py $model    
+                cd build/bin
+                python ../../tests/inference_test.py 
                 '''
-                */
+
             }
         }
     }
