@@ -1,4 +1,4 @@
-# Rocaffe2 (Caffe2 ROCm port): Basic installation
+# rocm-caffe2 (Caffe2 ROCm port): Basic installation
 
 ## Intro
 This instruction provides a starting point for Caffe2 ROCm port (mostly via deb packages).

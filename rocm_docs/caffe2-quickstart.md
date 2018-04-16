@@ -1,4 +1,4 @@
-# Rocaffe2 Quickstart Guide
+# rocm-caffe2 Quickstart Guide
 
 
 ## Running Core Tests

@@ -1,7 +1,7 @@
-# Rocaffe2: Docker Installation
+# rocm-caffe2: Docker Installation
 
 ## Install docker
-A good refernce to docker installation on Ubuntu 16.04 can be found [here](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04).
+A good reference to docker installation on Ubuntu 16.04 can be found [here](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04).
 
 or try these cmd to get docker community edition.
 
@@ -17,7 +17,7 @@ or try these cmd to get docker community edition.
 		
 
 ### Pull the Official docker image 
-* The fatest way to start ROCKING is through docker. You can pull the latest official docker image for Rocaffe2 proejct:
+* The fastest way to start ROCKING is through docker. You can pull the latest official docker image for rocm-caffe2 project:
 
 ```
 docker pull petrex/rocaffe2:developer_preview
