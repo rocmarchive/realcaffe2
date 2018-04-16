@@ -35,6 +35,8 @@ node("rocmtest14") {
             }
             stage("build_release") {
                 sh '''
+                    export THRUST_ROOT=/data/Thrust
+                    echo $THRUST_ROOT
                     rm -rf build
                     mkdir build
                     cd build
