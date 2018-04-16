@@ -23,13 +23,14 @@ node("rocmtest14") {
                 sh '''
                     export HCC_AMDGPU_TARGET=gfx900
                     ls /data/Thrust
+                    export THRUST_ROOT=/data/Thrust
                     echo $THRUST_ROOT
                     rm -rf build
                     mkdir build
                     cd build
                     cmake -DCMAKE_BUILD_TYPE='Debug' ..
-                    sudo -E make -j16
-                    sudo -E make DESTDIR=./install install
+                    make -j16
+                    make DESTDIR=./install install
                 '''
             }
             stage("build_release") {
@@ -38,8 +39,8 @@ node("rocmtest14") {
                     mkdir build
                     cd build
                     cmake -DCMAKE_BUILD_TYPE='Release' ..
-                    sudo -E make -j16
-                    sudo -E DESTDIR=./install install
+                    make -j16
+                    DESTDIR=./install install
                 '''
             }
             stage("binary_tests") {
