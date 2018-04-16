@@ -6,19 +6,19 @@
 
 Caffe2 is a lightweight, modular, and scalable deep learning framework. Building on the original [Caffe](http://caffe.berkeleyvision.org), Caffe2 is designed with expression, speed, and modularity in mind.
 
-# Rocaffe2
-Rocaffe2 is the official Caffe2 port on AMD platform. The is made possible through HIP and ROCm software stack. AMD also provides native libraries for machine intelligent and deep learning workload. 
+# rocm-caffe2
+rocm-caffe2 is the official Caffe2 port on AMD platform. The is made possible through HIP and ROCm software stack. AMD also provides native libraries for machine intelligent and deep learning workload. 
 
-Rocaffe2 has been validated on Ubuntu 16.04 LTS and AMD Vega 56/64/MI25; with ROCm 1.7.1 amd MIOPEN 1.3 as of now.
+rocm-caffe2 has been validated on Ubuntu 16.04 LTS and AMD Vega 56/64/MI25; with ROCm 1.7.1 amd MIOPEN 1.3 as of now.
 
 ### Prerequisites
 * A ROCm enable platform. More info [here](https://rocm.github.io/install.html).
 
-### Rocaffe2 Quick Start
-1. [Install ROCm Software Stack](https://github.com/ROCmSoftwarePlatform/Rocaffe2/blob/developer_preview/rocm_docs/caffe2-install-basic.md)
-2. [Install Docker](https://github.com/ROCmSoftwarePlatform/Rocaffe2/blob/developer_preview/rocm_docs/caffe2-docker.md)
-3. [Build the Rocaffe2 Project](https://github.com/ROCmSoftwarePlatform/Rocaffe2/blob/developer_preview/rocm_docs/caffe2-build.md)
-4. [Run Rocaffe2 Tests/Workload](https://github.com/ROCmSoftwarePlatform/Rocaffe2/blob/developer_preview/rocm_docs/caffe2-quickstart.md)
+### rocm-caffe2 Quick Start
+1. [Install ROCm Software Stack](https://github.com/ROCmSoftwarePlatform/rocm-caffe2/blob/developer_preview/rocm_docs/caffe2-install-basic.md)
+2. [Install Docker](https://github.com/ROCmSoftwarePlatform/rocm-caffe2/blob/developer_preview/rocm_docs/caffe2-docker.md)
+3. [Build the rocm-caffe2 Project](https://github.com/ROCmSoftwarePlatform/rocm-caffe2/blob/developer_preview/rocm_docs/caffe2-build.md)
+4. [Run rocm-caffe2 Tests/Workload](https://github.com/ROCmSoftwarePlatform/rocm-caffe2/blob/developer_preview/rocm_docs/caffe2-quickstart.md)
 
 ## Questions and Feedback
 
