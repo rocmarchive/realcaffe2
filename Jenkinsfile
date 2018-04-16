@@ -1,6 +1,6 @@
 node("rocmtest") {
     sh ''' docker login --username rohith612 --password 123456 '''
-    docker.image('petrex/rocaffe2:developer_preview')
+    // docker.image('petrex/rocaffe2:developer_preview')
     
         stage("checkout") {
             checkout scm
@@ -11,9 +11,8 @@ node("rocmtest") {
             stage('clang_format') {
                 sh '''
                     pwd
-                    ls /
-                    ls /var/jenkins/workspace/
-                    cd /rocm_caffe2/caffe2
+                    ls /data
+                    cd caffe2
                     find . -iname *miopen* -o -iname *hip* \
                     | grep -v 'build/' \
                     | xargs -n 1 -P 1 -I{} -t sh -c 'clang-format-3.8 -style=file {} | diff - {}'
