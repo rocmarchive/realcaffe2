@@ -42,7 +42,7 @@ node("rocmtest14") {
                     cd build
                     cmake -DCMAKE_BUILD_TYPE='Release' ..
                     make -j16
-                    DESTDIR=./install install
+                    make DESTDIR=./install install
                 '''
             }
             stage("binary_tests") {
@@ -55,9 +55,10 @@ node("rocmtest14") {
                 sh '''
                 export PYTHONPATH=$PYTHONPATH:~/build
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+                echo $(pwd)
                 model=resnet50
                 python caffe2/python/models/download.py $model
-                echo $(pwd)
+                ls
                 ls tests/    
                 cd build/bin
                 python ../../tests/inference_test.py -m ../../$model -s 224 -e 1
