@@ -21,45 +21,57 @@
 namespace caffe2 {
 namespace {
 template <typename T>
-__global__ void ReluKernel(const int N, const T* X, T* Y) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    Y[i] = X[i] > 0 ? X[i] : 0;
-  }
+__global__ void ReluKernel(const int N, const T* X, T* Y)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { Y[i] = X[i] > 0 ? X[i] : 0; }
 }
 
 template <typename T>
-__global__ void ReluGradientKernel(const int N, const T* Y, const T* dY,
-                              T* dX) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    dX[i] = Y[i] > 0 ? dY[i] : 0;
-  }
+__global__ void ReluGradientKernel(const int N, const T* Y, const T* dY, T* dX)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { dX[i] = Y[i] > 0 ? dY[i] : 0; }
 }
-}  // namespace
+} // namespace
 
 template <>
-bool ReluOp<float, HIPContext>::RunOnDevice() {
-  auto& X = Input(0);
-  auto* Y = Output(0);
-  CAFFE_ENFORCE_GT(X.size(), 0);
-  Y->ResizeLike(X);
-  hipLaunchKernelGGL((ReluKernel), dim3(CAFFE_GET_BLOCKS(X.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
-      static_cast<const int>(X.size()), static_cast<const float*>(X.data<float>()), static_cast<float*>(Y->mutable_data<float>()));
-  return true;
+bool ReluOp<float, HIPContext>::RunOnDevice()
+{
+    auto& X = Input(0);
+    auto* Y = Output(0);
+    CAFFE_ENFORCE_GT(X.size(), 0);
+    Y->ResizeLike(X);
+    hipLaunchKernelGGL((ReluKernel),
+                       dim3(CAFFE_GET_BLOCKS(X.size())),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       static_cast<const int>(X.size()),
+                       static_cast<const float*>(X.data<float>()),
+                       static_cast<float*>(Y->mutable_data<float>()));
+    return true;
 }
 
 template <>
-bool ReluGradientOp<float, HIPContext>::RunOnDevice() {
-  auto& Y = Input(0);
-  auto& dY = Input(1);
-  auto* dX = Output(0);
-  CAFFE_ENFORCE_GT(Y.size(), 0);
-  CAFFE_ENFORCE_EQ(dY.size(), Y.size());
-  dX->ResizeLike(Y);
-  hipLaunchKernelGGL((ReluGradientKernel), dim3(CAFFE_GET_BLOCKS(Y.size())), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(),
-     static_cast<const int>(Y.size()), static_cast<const float*>(Y.data<float>()), static_cast<const float*>(dY.data<float>()), static_cast<float*>(dX->mutable_data<float>()));
-  return true;
+bool ReluGradientOp<float, HIPContext>::RunOnDevice()
+{
+    auto& Y  = Input(0);
+    auto& dY = Input(1);
+    auto* dX = Output(0);
+    CAFFE_ENFORCE_GT(Y.size(), 0);
+    CAFFE_ENFORCE_EQ(dY.size(), Y.size());
+    dX->ResizeLike(Y);
+    hipLaunchKernelGGL((ReluGradientKernel),
+                       dim3(CAFFE_GET_BLOCKS(Y.size())),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       static_cast<const int>(Y.size()),
+                       static_cast<const float*>(Y.data<float>()),
+                       static_cast<const float*>(dY.data<float>()),
+                       static_cast<float*>(dX->mutable_data<float>()));
+    return true;
 }
 
 REGISTER_HIP_OPERATOR(Relu, ReluOp<float, HIPContext>);
 REGISTER_HIP_OPERATOR(ReluGradient, ReluGradientOp<float, HIPContext>);
-}  // namespace caffe2
+} // namespace caffe2

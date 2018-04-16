@@ -28,36 +28,42 @@
 
 namespace caffe2 {
 
-class MaxPoolWithIndexOp final : public ConvPoolOpBase<HIPContext> {
- public:
-  USE_CONV_POOL_BASE_FUNCTIONS(HIPContext);
-  MaxPoolWithIndexOp(const OperatorDef& operator_def, Workspace* ws)
-      : ConvPoolOpBase<HIPContext>(operator_def, ws) {}
-  ~MaxPoolWithIndexOp() {}
+class MaxPoolWithIndexOp final : public ConvPoolOpBase<HIPContext>
+{
+    public:
+    USE_CONV_POOL_BASE_FUNCTIONS(HIPContext);
+    MaxPoolWithIndexOp(const OperatorDef& operator_def, Workspace* ws)
+        : ConvPoolOpBase<HIPContext>(operator_def, ws)
+    {
+    }
+    ~MaxPoolWithIndexOp() {}
 
-  template <typename T>
-  bool DoRunWithType();
+    template <typename T>
+    bool DoRunWithType();
 
-  bool RunOnDevice() override;
+    bool RunOnDevice() override;
 
-  // Input: X
-  // Output: Y, mask
+    // Input: X
+    // Output: Y, mask
 };
 
-class MaxPoolWithIndexGradientOp final : public ConvPoolOpBase<HIPContext> {
- public:
-  USE_CONV_POOL_BASE_FUNCTIONS(HIPContext);
-  MaxPoolWithIndexGradientOp(const OperatorDef& operator_def, Workspace* ws)
-      : ConvPoolOpBase<HIPContext>(operator_def, ws) {}
-  ~MaxPoolWithIndexGradientOp() {}
+class MaxPoolWithIndexGradientOp final : public ConvPoolOpBase<HIPContext>
+{
+    public:
+    USE_CONV_POOL_BASE_FUNCTIONS(HIPContext);
+    MaxPoolWithIndexGradientOp(const OperatorDef& operator_def, Workspace* ws)
+        : ConvPoolOpBase<HIPContext>(operator_def, ws)
+    {
+    }
+    ~MaxPoolWithIndexGradientOp() {}
 
-  template <typename T>
-  bool DoRunWithType();
+    template <typename T>
+    bool DoRunWithType();
 
-  bool RunOnDevice() override;
+    bool RunOnDevice() override;
 
-  // Input: X, dY, mask
-  // Output: dX
+    // Input: X, dY, mask
+    // Output: dX
 };
 
 }; // namespace caffe2

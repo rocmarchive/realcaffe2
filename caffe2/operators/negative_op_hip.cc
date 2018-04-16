@@ -21,23 +21,29 @@
 namespace caffe2 {
 
 template <typename T>
-__global__ void NegativeKernel(const int N, const T* x, T* y) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    y[i] = -x[i];
-  }
+__global__ void NegativeKernel(const int N, const T* x, T* y)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { y[i] = -x[i]; }
 }
 
-struct NegativeCUDAFunctor {
-  template <typename T>
-  inline void operator()(const int n, const T* x,
-                         T* y, HIPContext* device_context) {
-    hipLaunchKernelGGL((NegativeKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, y);
-    return;
-  }
+struct NegativeCUDAFunctor
+{
+    template <typename T>
+    inline void operator()(const int n, const T* x, T* y, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((NegativeKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           y);
+        return;
+    }
 };
 
 REGISTER_HIP_OPERATOR(
-    Negative, UnaryElementwiseOp<
-        TensorTypes<float, double, int, long>, HIPContext,
-        NegativeCUDAFunctor>);
-}  // namespace caffe2
+    Negative,
+    UnaryElementwiseOp<TensorTypes<float, double, int, long>, HIPContext, NegativeCUDAFunctor>);
+} // namespace caffe2

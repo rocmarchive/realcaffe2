@@ -21,74 +21,86 @@
 namespace caffe2 {
 
 template <>
-bool FullyConnectedOp<HIPContext>::RunOnDevice() {
-  if (Input(0).IsType<float>()) {
-    return DoRunWithType<
-        float, // X
-        float, // W
-        float, // B
-        float, // Y
-        float>(); // Math
-  } else if (Input(0).IsType<float16>()) {
-    if (float16_compute_) {
-      return DoRunWithType<
-          float16, // X
-          float16, // W
-          float16, // B
-          float16, // Y
-          float16>(); // Math
-    } else {
-      return DoRunWithType<
-          float16, // X
-          float16, // W
-          float16, // B
-          float16, // Y
-          float>(); // Math
+bool FullyConnectedOp<HIPContext>::RunOnDevice()
+{
+    if(Input(0).IsType<float>())
+    {
+        return DoRunWithType<float,    // X
+                             float,    // W
+                             float,    // B
+                             float,    // Y
+                             float>(); // Math
     }
-  } else {
-    CAFFE_THROW("Unsupported type");
-  }
-  return false;
+    else if(Input(0).IsType<float16>())
+    {
+        if(float16_compute_)
+        {
+            return DoRunWithType<float16,    // X
+                                 float16,    // W
+                                 float16,    // B
+                                 float16,    // Y
+                                 float16>(); // Math
+        }
+        else
+        {
+            return DoRunWithType<float16,  // X
+                                 float16,  // W
+                                 float16,  // B
+                                 float16,  // Y
+                                 float>(); // Math
+        }
+    }
+    else
+    {
+        CAFFE_THROW("Unsupported type");
+    }
+    return false;
 }
 
 template <>
-bool FullyConnectedGradientOp<HIPContext>::RunOnDevice() {
-  if (Input(0).IsType<float>()) {
-    return DoRunWithType<
-        float, //  X
-        float, //  W
-        float, // dY
-        float, //  B
-        float, // dX
-        float, // dW
-        float, // dB
-        float>(); // Math
-  } else if (Input(0).IsType<float16>()) {
-    if (float16_compute_) {
-      return DoRunWithType<
-          float16, //  X
-          float16, //  W
-          float16, // dY
-          float16, //  B
-          float16, // dX
-          float16, // dW
-          float16, // dB
-          float16>(); // Math
-    } else {
-      return DoRunWithType<
-          float16, //  X
-          float16, //  W
-          float16, // dY
-          float16, //  B
-          float16, // dX
-          float16, // dW
-          float16, // dB
-          float>(); // Math
+bool FullyConnectedGradientOp<HIPContext>::RunOnDevice()
+{
+    if(Input(0).IsType<float>())
+    {
+        return DoRunWithType<float,    //  X
+                             float,    //  W
+                             float,    // dY
+                             float,    //  B
+                             float,    // dX
+                             float,    // dW
+                             float,    // dB
+                             float>(); // Math
     }
-  } else {
-    CAFFE_THROW("Unsupported type");
-  }
-  return false;
+    else if(Input(0).IsType<float16>())
+    {
+        if(float16_compute_)
+        {
+            return DoRunWithType<float16,    //  X
+                                 float16,    //  W
+                                 float16,    // dY
+                                 float16,    //  B
+                                 float16,    // dX
+                                 float16,    // dW
+                                 float16,    // dB
+                                 float16>(); // Math
+        }
+        else
+        {
+            return DoRunWithType<float16,  //  X
+                                 float16,  //  W
+                                 float16,  // dY
+                                 float16,  //  B
+                                 float16,  // dX
+                                 float16,  // dW
+                                 float16,  // dB
+                                 float>(); // Math
+        }
+    }
+    else
+    {
+        CAFFE_THROW("Unsupported type");
+    }
+    return false;
 }
 
 REGISTER_HIP_OPERATOR(FC, FullyConnectedOp<HIPContext>);

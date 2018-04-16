@@ -21,8 +21,8 @@
 #ifndef CAFFE_HAS_CUDA_FP16
 #if CUDA_VERSION >= 7050
 #define CAFFE_HAS_CUDA_FP16
-#endif  // CUDA_VERSION >= 7050
-#endif  // CAFFE_HAS_CUDA_FP16
+#endif // CUDA_VERSION >= 7050
+#endif // CAFFE_HAS_CUDA_FP16
 
 #ifdef CAFFE_HAS_CUDA_FP16
 #include <hip/hip_fp16.h>
@@ -128,7 +128,7 @@ void DeviceQuery(const int deviceid);
  * This function returns false if anything wrong happens during the query of
  * the GPU access pattern.
  */
-bool GetHipPeerAccessPattern(vector<vector<bool> >* pattern);
+bool GetHipPeerAccessPattern(vector<vector<bool>>* pattern);
 
 /**
  * Return the availability of TensorCores for math
@@ -146,85 +146,90 @@ const char* hiprandGetErrorString(hiprandStatus_t error);
 const char* rocblasGetErrorString(rocblas_status error);
 
 // HIP: various checks for different function calls.
-#define HIP_ENFORCE(condition, ...)     \
-  do {                              \
-    hipError_t error = condition;  \
-    CAFFE_ENFORCE_EQ(               \
-        error,                      \
-        hipSuccess,                \
-        "Error at: ",               \
-        __FILE__,                   \
-        ":",                        \
-        __LINE__,                   \
-        ": ",                       \
-        hipGetErrorString(error), ##__VA_ARGS__); \
-  } while (0)
-#define HIP_CHECK(condition)                                 \
-  do {                                                        \
-    hipError_t error = condition;                            \
-    CHECK(error == hipSuccess) << hipGetErrorString(error); \
-  } while (0)
+#define HIP_ENFORCE(condition, ...)                \
+    do                                             \
+    {                                              \
+        hipError_t error = condition;              \
+        CAFFE_ENFORCE_EQ(error,                    \
+                         hipSuccess,               \
+                         "Error at: ",             \
+                         __FILE__,                 \
+                         ":",                      \
+                         __LINE__,                 \
+                         ": ",                     \
+                         hipGetErrorString(error), \
+                         ##__VA_ARGS__);           \
+    } while(0)
+#define HIP_CHECK(condition)                                    \
+    do                                                          \
+    {                                                           \
+        hipError_t error = condition;                           \
+        CHECK(error == hipSuccess) << hipGetErrorString(error); \
+    } while(0)
 
 #if 0 // Ashish TBD: Fix this
-#define CUDA_DRIVERAPI_ENFORCE(condition)                            \
-  do {                                                               \
-    CUresult result = condition;                                     \
-    if (result != CUDA_SUCCESS) {                                    \
-      const char* msg;                                               \
-      cuGetErrorName(result, &msg);                                  \
-      CAFFE_THROW("Error at: ", __FILE__, ":", __LINE__, ": ", msg); \
-    }                                                                \
-  } while (0)
-#define CUDA_DRIVERAPI_CHECK(condition)                                 \
-  do {                                                                  \
-    CUresult result = condition;                                        \
-    if (result != CUDA_SUCCESS) {                                       \
-      const char* msg;                                                  \
-      cuGetErrorName(result, &msg);                                     \
-      LOG(FATAL) << "Error at: " << __FILE__ << ":" << __LINE__ << ": " \
-                 << msg;                                                \
-    }                                                                   \
-  } while (0)
+#define CUDA_DRIVERAPI_ENFORCE(condition)                                  \
+    do                                                                     \
+    {                                                                      \
+        CUresult result = condition;                                       \
+        if(result != CUDA_SUCCESS)                                         \
+        {                                                                  \
+            const char* msg;                                               \
+            cuGetErrorName(result, &msg);                                  \
+            CAFFE_THROW("Error at: ", __FILE__, ":", __LINE__, ": ", msg); \
+        }                                                                  \
+    } while(0)
+#define CUDA_DRIVERAPI_CHECK(condition)                                               \
+    do                                                                                \
+    {                                                                                 \
+        CUresult result = condition;                                                  \
+        if(result != CUDA_SUCCESS)                                                    \
+        {                                                                             \
+            const char* msg;                                                          \
+            cuGetErrorName(result, &msg);                                             \
+            LOG(FATAL) << "Error at: " << __FILE__ << ":" << __LINE__ << ": " << msg; \
+        }                                                                             \
+    } while(0)
 #endif
 
-#define ROCBLAS_ENFORCE(condition)                \
-  do {                                           \
-    rocblas_status status = condition;           \
-    CAFFE_ENFORCE_EQ(                            \
-        status,                                  \
-        rocblas_status_success,                   \
-        "Error at: ",                            \
-        __FILE__,                                \
-        ":",                                     \
-        __LINE__,                                \
-        ": ",                                    \
-        ::caffe2::rocblasGetErrorString(status)); \
-  } while (0)
+#define ROCBLAS_ENFORCE(condition)                                 \
+    do                                                             \
+    {                                                              \
+        rocblas_status status = condition;                         \
+        CAFFE_ENFORCE_EQ(status,                                   \
+                         rocblas_status_success,                   \
+                         "Error at: ",                             \
+                         __FILE__,                                 \
+                         ":",                                      \
+                         __LINE__,                                 \
+                         ": ",                                     \
+                         ::caffe2::rocblasGetErrorString(status)); \
+    } while(0)
 
-#define ROCBLAS_CHECK(condition)                    \
-  do {                                             \
-    rocblas_status status = condition;             \
-    CHECK(status == rocblas_status_success)         \
-        << ::caffe2::rocblasGetErrorString(status); \
-  } while (0)
+#define ROCBLAS_CHECK(condition)                                                            \
+    do                                                                                      \
+    {                                                                                       \
+        rocblas_status status = condition;                                                  \
+        CHECK(status == rocblas_status_success) << ::caffe2::rocblasGetErrorString(status); \
+    } while(0)
 
-#define HIPRAND_ENFORCE(condition)                \
-  do {                                           \
-    hiprandStatus_t status = condition;           \
-    CAFFE_ENFORCE_EQ(                            \
-        status,                                  \
-        HIPRAND_STATUS_SUCCESS,                   \
-        "Error at: ",                            \
-        __FILE__,                                \
-        ":",                                     \
-        __LINE__,                                \
-        ": ",                                    \
-        ::caffe2::hiprandGetErrorString(status)); \
-  } while (0)
+#define HIPRAND_ENFORCE(condition)                                 \
+    do                                                             \
+    {                                                              \
+        hiprandStatus_t status = condition;                        \
+        CAFFE_ENFORCE_EQ(status,                                   \
+                         HIPRAND_STATUS_SUCCESS,                   \
+                         "Error at: ",                             \
+                         __FILE__,                                 \
+                         ":",                                      \
+                         __LINE__,                                 \
+                         ": ",                                     \
+                         ::caffe2::hiprandGetErrorString(status)); \
+    } while(0)
 
-#define HIP_1D_KERNEL_LOOP(i, n)                                 \
-  for (size_t i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x; i < (n); \
-       i += hipBlockDim_x * hipGridDim_x)
+#define HIP_1D_KERNEL_LOOP(i, n)                                            \
+    for(size_t i = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x; i < (n); \
+        i += hipBlockDim_x * hipGridDim_x)
 
 // CUDA_KERNEL_ASSERT is a macro that wraps an assert() call inside cuda
 // kernels. This is not supported by Apple platforms so we special case it.
@@ -232,9 +237,9 @@ const char* rocblasGetErrorString(rocblas_status error);
 #if 0 // TBD Ashish: Disabling assert(..) which is under development for device code
 #ifdef __APPLE__
 #define HIP_KERNEL_ASSERT(...)
-#else  // __APPLE__
+#else // __APPLE__
 #define HIP_KERNEL_ASSERT(...) assert(__VA_ARGS__)
-#endif  // __APPLE__
+#endif // __APPLE__
 #endif
 #define HIP_KERNEL_ASSERT(...)
 
@@ -264,26 +269,28 @@ constexpr int CAFFE_MAXIMUM_NUM_BLOCKS = 4096;
 /**
  * @brief Compute the number of blocks needed to run N threads.
  */
-inline int CAFFE_GET_BLOCKS(const int N) {
-  return std::min((N + CAFFE_HIP_NUM_THREADS - 1) / CAFFE_HIP_NUM_THREADS,
-                  CAFFE_MAXIMUM_NUM_BLOCKS);
+inline int CAFFE_GET_BLOCKS(const int N)
+{
+    return std::min((N + CAFFE_HIP_NUM_THREADS - 1) / CAFFE_HIP_NUM_THREADS,
+                    CAFFE_MAXIMUM_NUM_BLOCKS);
 }
 
-class DeviceGuard {
- public:
-  explicit DeviceGuard(int newDevice) : previous_(CaffeHipGetDevice()) {
-    if (previous_ != newDevice) {
-      CaffeHipSetDevice(newDevice);
+class DeviceGuard
+{
+    public:
+    explicit DeviceGuard(int newDevice) : previous_(CaffeHipGetDevice())
+    {
+        if(previous_ != newDevice)
+        {
+            CaffeHipSetDevice(newDevice);
+        }
     }
-  }
 
-  ~DeviceGuard() noexcept {
-    CaffeHipSetDevice(previous_);
-  }
+    ~DeviceGuard() noexcept { CaffeHipSetDevice(previous_); }
 
- private:
-  int previous_;
+    private:
+    int previous_;
 };
 
-}  // namespace caffe2
-#endif  // CAFFE2_CORE_COMMON_HIP_H_
+} // namespace caffe2
+#endif // CAFFE2_CORE_COMMON_HIP_H_

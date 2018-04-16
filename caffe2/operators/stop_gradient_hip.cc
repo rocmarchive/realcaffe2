@@ -19,4 +19,4 @@
 
 namespace caffe2 {
 REGISTER_HIP_OPERATOR(StopGradient, StopGradientOp<HIPContext>);
-}  // namespace caffe2
+} // namespace caffe2

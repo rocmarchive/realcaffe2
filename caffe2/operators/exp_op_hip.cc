@@ -22,24 +22,28 @@
 namespace caffe2 {
 
 template <typename T>
-__global__ void ExpKernel(const int N, const T* X, T* Y) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    Y[i] = expf(X[i]);
-  }
+__global__ void ExpKernel(const int N, const T* X, T* Y)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { Y[i] = expf(X[i]); }
 }
 
-struct ExpHIPFunctor {
-  template <typename T>
-  inline void operator()(const int n, const T* x,
-                         T* y, HIPContext* device_context) {
-    hipLaunchKernelGGL((ExpKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, y);
-    return;
-  }
-  inline bool InplaceAllowed() {
-    return true;
-  }
+struct ExpHIPFunctor
+{
+    template <typename T>
+    inline void operator()(const int n, const T* x, T* y, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((ExpKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           y);
+        return;
+    }
+    inline bool InplaceAllowed() { return true; }
 };
 
-REGISTER_HIP_OPERATOR(
-    Exp, UnaryElementwiseOp<TensorTypes<float>, HIPContext, ExpHIPFunctor>);
-}  // namespace caffe2
+REGISTER_HIP_OPERATOR(Exp, UnaryElementwiseOp<TensorTypes<float>, HIPContext, ExpHIPFunctor>);
+} // namespace caffe2

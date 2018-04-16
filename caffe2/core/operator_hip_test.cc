@@ -6,26 +6,20 @@
 
 namespace caffe2 {
 
-class JustTest : public OperatorBase {
- public:
-  using OperatorBase::OperatorBase;
-  bool Run(int /* unused */ /*stream_id*/) override {
-    return true;
-  }
-  virtual std::string type() {
-    return "BASE";
-  }
+class JustTest : public OperatorBase
+{
+    public:
+    using OperatorBase::OperatorBase;
+    bool Run(int /* unused */ /*stream_id*/) override { return true; }
+    virtual std::string type() { return "BASE"; }
 };
 
-class JustTestHIP : public JustTest {
- public:
-  using JustTest::JustTest;
-  bool Run(int /* unused */ /*stream_id*/) override {
-    return true;
-  }
-  std::string type() override {
-    return "HIP";
-  }
+class JustTestHIP : public JustTest
+{
+    public:
+    using JustTest::JustTest;
+    bool Run(int /* unused */ /*stream_id*/) override { return true; }
+    std::string type() override { return "HIP"; }
 };
 
 #if 0 // Ashish TBD: Add MIOpen here
@@ -47,13 +41,14 @@ REGISTER_HIP_OPERATOR(JustTest, JustTestHIP);
 REGISTER_CUDNN_OPERATOR(JustTest, JustTestCUDNN);
 #endif
 
-TEST(EnginePrefTest, GPUDeviceDefaultPreferredEngines) {
-  if (!HasHipGPU())
-    return;
-  OperatorDef op_def;
-  Workspace ws;
-  op_def.mutable_device_option()->set_device_type(HIP);
-  op_def.set_type("JustTest");
+TEST(EnginePrefTest, GPUDeviceDefaultPreferredEngines)
+{
+    if(!HasHipGPU())
+        return;
+    OperatorDef op_def;
+    Workspace ws;
+    op_def.mutable_device_option()->set_device_type(HIP);
+    op_def.set_type("JustTest");
 
 #if 0 // Ashish TBD: MIOpen here
   {
@@ -64,7 +59,6 @@ TEST(EnginePrefTest, GPUDeviceDefaultPreferredEngines) {
     EXPECT_EQ(static_cast<JustTest*>(op.get())->type(), "CUDNN");
   }
 #endif
-
 }
 
 } // namespace caffe2

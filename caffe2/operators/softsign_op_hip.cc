@@ -23,42 +23,56 @@
 namespace caffe2 {
 
 template <typename T>
-__global__ void SoftsignKernel(const int N, const T* X, T* Y) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    Y[i] = X[i] / (1 + fabsf(X[i]));
-  }
+__global__ void SoftsignKernel(const int N, const T* X, T* Y)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { Y[i] = X[i] / (1 + fabsf(X[i])); }
 }
 
 template <typename T>
-__global__ void SoftsignGradientKernel(const int N, const T* x, const T* dy,
-                              T* dx) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    dx[i] = dy[i] / pow(1 + fabsf(x[i]), 2);
-  }
+__global__ void SoftsignGradientKernel(const int N, const T* x, const T* dy, T* dx)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { dx[i] = dy[i] / pow(1 + fabsf(x[i]), 2); }
 }
 
-struct SoftsignHIPFunctor {
-  template <typename T>
-  inline void
-  operator()(const int n, const T* x, T* y, HIPContext* device_context) {
-    hipLaunchKernelGGL((SoftsignKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, y);
-    return;
-  }
+struct SoftsignHIPFunctor
+{
+    template <typename T>
+    inline void operator()(const int n, const T* x, T* y, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((SoftsignKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           y);
+        return;
+    }
 };
 
-struct SoftsignGradientHIPFunctor {
-  template <typename T>
-  inline void
-  Run(const int n, const T* x, const T* dy, T* dx, HIPContext* device_context) {
-    hipLaunchKernelGGL((SoftsignGradientKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, dy, dx);
-    return;
-  }
+struct SoftsignGradientHIPFunctor
+{
+    template <typename T>
+    inline void Run(const int n, const T* x, const T* dy, T* dx, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((SoftsignGradientKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           dy,
+                           dx);
+        return;
+    }
 };
 
-REGISTER_HIP_OPERATOR(
-    Softsign,
-    UnaryElementwiseOp<TensorTypes<float>, HIPContext, SoftsignHIPFunctor>);
-REGISTER_HIP_OPERATOR(
-    SoftsignGradient,
-    BinaryElementwiseOp<TensorTypes<float>, HIPContext, WithoutBroadcast<SoftsignGradientHIPFunctor>>);
+REGISTER_HIP_OPERATOR(Softsign,
+                      UnaryElementwiseOp<TensorTypes<float>, HIPContext, SoftsignHIPFunctor>);
+REGISTER_HIP_OPERATOR(SoftsignGradient,
+                      BinaryElementwiseOp<TensorTypes<float>,
+                                          HIPContext,
+                                          WithoutBroadcast<SoftsignGradientHIPFunctor>>);
 } // namespace caffe2

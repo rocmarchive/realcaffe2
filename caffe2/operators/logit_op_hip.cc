@@ -22,59 +22,73 @@
 namespace caffe2 {
 
 template <typename T>
-__global__ void LogitKernel(const int N, const T* X, const float eps, T* Y) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    Y[i] = fminf(X[i], (1.0 - eps));
-    Y[i] = fmaxf(Y[i], eps);
-    Y[i] = logf(Y[i] / (1.0 - Y[i]));
-  }
+__global__ void LogitKernel(const int N, const T* X, const float eps, T* Y)
+{
+    HIP_1D_KERNEL_LOOP(i, N)
+    {
+        Y[i] = fminf(X[i], (1.0 - eps));
+        Y[i] = fmaxf(Y[i], eps);
+        Y[i] = logf(Y[i] / (1.0 - Y[i]));
+    }
 }
 
-__global__ void LogitGradientKernel(
-    const int N,
-    const float* X,
-    const float* dY,
-    const float eps,
-    float* dX) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    dX[i] = (X[i] < eps || X[i] > 1.0 - eps) ? 0 : (dY[i] / X[i] / (1 - X[i]));
-  }
+__global__ void
+LogitGradientKernel(const int N, const float* X, const float* dY, const float eps, float* dX)
+{
+    HIP_1D_KERNEL_LOOP(i, N)
+    {
+        dX[i] = (X[i] < eps || X[i] > 1.0 - eps) ? 0 : (dY[i] / X[i] / (1 - X[i]));
+    }
 }
 
-struct LogitHIPFunctor {
-  explicit LogitHIPFunctor(OperatorBase& op)
-      : eps_(op.GetSingleArgument<float>("eps", 1e-6)) {
-    CAFFE_ENFORCE_GT(eps_, 0.0);
-    CAFFE_ENFORCE_LT(eps_, 0.5);
-  }
-  template <typename T>
-  inline void
-  operator()(const int n, const T* x, T* y, HIPContext* device_context) {
-    hipLaunchKernelGGL((LogitKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, eps_, y);
-    return;
-  }
+struct LogitHIPFunctor
+{
+    explicit LogitHIPFunctor(OperatorBase& op) : eps_(op.GetSingleArgument<float>("eps", 1e-6))
+    {
+        CAFFE_ENFORCE_GT(eps_, 0.0);
+        CAFFE_ENFORCE_LT(eps_, 0.5);
+    }
+    template <typename T>
+    inline void operator()(const int n, const T* x, T* y, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((LogitKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           eps_,
+                           y);
+        return;
+    }
 
- private:
-  float eps_;
+    private:
+    float eps_;
 };
 
 template <>
-bool LogitGradientOp<float, HIPContext>::RunOnDevice() {
-  auto& X = Input(0);
-  auto& dY = Input(1);
-  auto* dX = Output(0);
-  dX->ResizeLike(X);
-  int n = X.size();
-  hipLaunchKernelGGL((LogitGradientKernel), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, context_.hip_stream(), 
-      n, X.data<float>(), dY.data<float>(), eps_, dX->mutable_data<float>());
-  return true;
+bool LogitGradientOp<float, HIPContext>::RunOnDevice()
+{
+    auto& X  = Input(0);
+    auto& dY = Input(1);
+    auto* dX = Output(0);
+    dX->ResizeLike(X);
+    int n = X.size();
+    hipLaunchKernelGGL((LogitGradientKernel),
+                       dim3(CAFFE_GET_BLOCKS(n)),
+                       dim3(CAFFE_HIP_NUM_THREADS),
+                       0,
+                       context_.hip_stream(),
+                       n,
+                       X.data<float>(),
+                       dY.data<float>(),
+                       eps_,
+                       dX->mutable_data<float>());
+    return true;
 }
 
-REGISTER_HIP_OPERATOR(
-    Logit,
-    UnaryElementwiseWithArgsOp<
-        TensorTypes<float>,
-        HIPContext,
-        LogitHIPFunctor>);
+REGISTER_HIP_OPERATOR(Logit,
+                      UnaryElementwiseWithArgsOp<TensorTypes<float>, HIPContext, LogitHIPFunctor>);
 REGISTER_HIP_OPERATOR(LogitGradient, LogitGradientOp<float, HIPContext>);
 } // namespace caffe2

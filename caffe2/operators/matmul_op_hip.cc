@@ -20,5 +20,4 @@
 namespace caffe2 {
 
 REGISTER_HIP_OPERATOR(MatMul, MatMulOp<float, HIPContext>);
-
 }

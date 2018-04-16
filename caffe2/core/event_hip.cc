@@ -6,196 +6,218 @@
 
 namespace caffe2 {
 
-struct HipEventWrapper {
-  explicit HipEventWrapper(const DeviceOption& option)
-      : hip_stream_(nullptr),
-        hip_gpu_id_(option.hip_gpu_id()),
-        status_(EventStatus::EVENT_INITIALIZED) {
-    CAFFE_ENFORCE(option.device_type(), HIP);
-    DeviceGuard g(hip_gpu_id_);
-    HIP_ENFORCE(hipEventCreate(
-        &hip_event_/*, hipEventDefault | hipEventDisableTiming*/));
-  }
-  ~HipEventWrapper() {
-    DeviceGuard g(hip_gpu_id_);
-    HIP_CHECK(hipEventDestroy(hip_event_));
-  }
+struct HipEventWrapper
+{
+    explicit HipEventWrapper(const DeviceOption& option)
+        : hip_stream_(nullptr),
+          hip_gpu_id_(option.hip_gpu_id()),
+          status_(EventStatus::EVENT_INITIALIZED)
+    {
+        CAFFE_ENFORCE(option.device_type(), HIP);
+        DeviceGuard g(hip_gpu_id_);
+        HIP_ENFORCE(hipEventCreate(&hip_event_ /*, hipEventDefault | hipEventDisableTiming*/));
+    }
+    ~HipEventWrapper()
+    {
+        DeviceGuard g(hip_gpu_id_);
+        HIP_CHECK(hipEventDestroy(hip_event_));
+    }
 
-  hipEvent_t hip_event_;
-  hipStream_t hip_stream_;
-  int hip_gpu_id_;
+    hipEvent_t hip_event_;
+    hipStream_t hip_stream_;
+    int hip_gpu_id_;
 
-  std::atomic<int> status_;
-  std::mutex mutex_recorded_;
-  std::condition_variable cv_recorded_;
-  std::string err_msg_;
+    std::atomic<int> status_;
+    std::mutex mutex_recorded_;
+    std::condition_variable cv_recorded_;
+    std::string err_msg_;
 };
 
 namespace {
 const std::string kNoError = "No error";
 }
 
-void EventCreateHIP(const DeviceOption& option, Event* event) {
-  event->event_ = std::make_shared<HipEventWrapper>(option);
+void EventCreateHIP(const DeviceOption& option, Event* event)
+{
+    event->event_ = std::make_shared<HipEventWrapper>(option);
 }
 
-void EventRecordHIP(Event* event, const void* context, const char* err_msg) {
-  auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
-  {
-    std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
+void EventRecordHIP(Event* event, const void* context, const char* err_msg)
+{
+    auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
+    {
+        std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
 
-    // Possible state changes:
-    //  INITIALIZED -> SCHEDULED/FAILED
-    //  SCHEDULED -> SUCCESS/FAILED
-    //  SUCCESS/FAILED - terminal
-    //
-    // No further changes to cuda_event_ and cuda_stream_ after transitioning
-    // from INITIALIZED
-    // No further changes to err_msg_ after transitioning into FAILED
+        // Possible state changes:
+        //  INITIALIZED -> SCHEDULED/FAILED
+        //  SCHEDULED -> SUCCESS/FAILED
+        //  SUCCESS/FAILED - terminal
+        //
+        // No further changes to cuda_event_ and cuda_stream_ after transitioning
+        // from INITIALIZED
+        // No further changes to err_msg_ after transitioning into FAILED
 
-    CAFFE_ENFORCE_EQ(
-        wrapper->status_,
-        EventStatus::EVENT_INITIALIZED,
-        "Calling Record multiple times");
+        CAFFE_ENFORCE_EQ(
+            wrapper->status_, EventStatus::EVENT_INITIALIZED, "Calling Record multiple times");
 
-    if (!err_msg) {
-      // When recording, one needs to make sure that the current gpu id is
-      // correct.
-      // TODO(jiayq): move the enforce logic to the caller?
-      const auto& current_device = CaffeHipGetDevice();
-      CAFFE_ENFORCE_EQ(
-          current_device,
-          wrapper->hip_gpu_id_,
-          "When you call EventRecordHIP, your current device should be the same "
-          "as the device specified by the event.");
-      CAFFE_ENFORCE_EQ(
-          current_device,
-          static_cast<const HIPContext*>(context)->hip_gpu_id());
-      HIP_ENFORCE(hipEventRecord(
-          wrapper->hip_event_,
-          static_cast<const HIPContext*>(context)->hip_stream()));
-      wrapper->hip_stream_ =
-          static_cast<const HIPContext*>(context)->hip_stream();
-      wrapper->status_ = EventStatus::EVENT_SCHEDULED;
-    } else {
-      wrapper->err_msg_ = err_msg;
-      wrapper->status_ = EventStatus::EVENT_FAILED;
+        if(!err_msg)
+        {
+            // When recording, one needs to make sure that the current gpu id is
+            // correct.
+            // TODO(jiayq): move the enforce logic to the caller?
+            const auto& current_device = CaffeHipGetDevice();
+            CAFFE_ENFORCE_EQ(current_device,
+                             wrapper->hip_gpu_id_,
+                             "When you call EventRecordHIP, your current device should be the same "
+                             "as the device specified by the event.");
+            CAFFE_ENFORCE_EQ(current_device, static_cast<const HIPContext*>(context)->hip_gpu_id());
+            HIP_ENFORCE(hipEventRecord(wrapper->hip_event_,
+                                       static_cast<const HIPContext*>(context)->hip_stream()));
+            wrapper->hip_stream_ = static_cast<const HIPContext*>(context)->hip_stream();
+            wrapper->status_     = EventStatus::EVENT_SCHEDULED;
+        }
+        else
+        {
+            wrapper->err_msg_ = err_msg;
+            wrapper->status_  = EventStatus::EVENT_FAILED;
+        }
     }
-  }
-  wrapper->cv_recorded_.notify_all();
+    wrapper->cv_recorded_.notify_all();
 }
 
-void EventFinishHIP(const Event* event) {
-  auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
-  {
-    std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
-    while (wrapper->status_ == EventStatus::EVENT_INITIALIZED) {
-      wrapper->cv_recorded_.wait(lock);
+void EventFinishHIP(const Event* event)
+{
+    auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
+    {
+        std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
+        while(wrapper->status_ == EventStatus::EVENT_INITIALIZED)
+        {
+            wrapper->cv_recorded_.wait(lock);
+        }
     }
-  }
 
-  if (wrapper->status_ == EventStatus::EVENT_SCHEDULED) {
-    // ok, even if event is already completed and status was not yet updated
-    DeviceGuard g(wrapper->hip_gpu_id_);
-    auto hipResult = hipEventSynchronize(wrapper->hip_event_);
-    if (hipResult == hipSuccess) {
-      wrapper->status_ = EventStatus::EVENT_SUCCESS;
-    } else {
-      const auto& err_msg = hipGetErrorString(hipResult);
+    if(wrapper->status_ == EventStatus::EVENT_SCHEDULED)
+    {
+        // ok, even if event is already completed and status was not yet updated
+        DeviceGuard g(wrapper->hip_gpu_id_);
+        auto hipResult = hipEventSynchronize(wrapper->hip_event_);
+        if(hipResult == hipSuccess)
+        {
+            wrapper->status_ = EventStatus::EVENT_SUCCESS;
+        }
+        else
+        {
+            const auto& err_msg = hipGetErrorString(hipResult);
 
-      std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
-      wrapper->err_msg_ = err_msg;
-      wrapper->status_ = EventStatus::EVENT_FAILED;
+            std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
+            wrapper->err_msg_ = err_msg;
+            wrapper->status_  = EventStatus::EVENT_FAILED;
+        }
     }
-  }
 }
 
 // Both waiter and event are HIP. Non-blocking
-void EventWaitHIPHIP(const Event* event, void* context) {
-  auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
-  {
-    std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
-    while (wrapper->status_ == EventStatus::EVENT_INITIALIZED) {
-      wrapper->cv_recorded_.wait(lock);
+void EventWaitHIPHIP(const Event* event, void* context)
+{
+    auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
+    {
+        std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
+        while(wrapper->status_ == EventStatus::EVENT_INITIALIZED)
+        {
+            wrapper->cv_recorded_.wait(lock);
+        }
     }
-  }
 
-  if (wrapper->status_ == EventStatus::EVENT_SCHEDULED) {
-    // ok, even if event is already completed and status was not yet updated
-    auto context_stream = static_cast<HIPContext*>(context)->hip_stream();
-    auto event_stream = wrapper->hip_stream_;
-    if (context_stream != event_stream) {
-      // CAFFE_ENFORCE_EQ(
-      //    CaffeCudaGetDevice(),
-      //    static_cast<const CUDAContext*>(context)->cuda_gpu_id());
-      HIP_CHECK(hipStreamWaitEvent(context_stream, wrapper->hip_event_, 0));
+    if(wrapper->status_ == EventStatus::EVENT_SCHEDULED)
+    {
+        // ok, even if event is already completed and status was not yet updated
+        auto context_stream = static_cast<HIPContext*>(context)->hip_stream();
+        auto event_stream   = wrapper->hip_stream_;
+        if(context_stream != event_stream)
+        {
+            // CAFFE_ENFORCE_EQ(
+            //    CaffeCudaGetDevice(),
+            //    static_cast<const CUDAContext*>(context)->cuda_gpu_id());
+            HIP_CHECK(hipStreamWaitEvent(context_stream, wrapper->hip_event_, 0));
+        }
     }
-  }
 }
 
 // Waiter is CPU, event is HIP
-void EventWaitCPUHIP(const Event* event, void* context) {
-  EventFinishHIP(event);
-}
+void EventWaitCPUHIP(const Event* event, void* context) { EventFinishHIP(event); }
 
 // Waiter is HIP, event is CPU
-void EventWaitHIPCPU(const Event* event, void* context) {
-  event->Finish(); // calls EventFinishCPU
+void EventWaitHIPCPU(const Event* event, void* context)
+{
+    event->Finish(); // calls EventFinishCPU
 }
 
-EventStatus EventQueryHIP(const Event* event) {
-  auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
-  if (wrapper->status_ == EventStatus::EVENT_SCHEDULED) {
-    auto hipResult = hipEventQuery(wrapper->hip_event_);
-    if (hipResult == hipSuccess) {
-      wrapper->status_ = EventStatus::EVENT_SUCCESS;
-    } else if (hipResult != hipErrorNotReady) {
-      const auto& err_msg = hipGetErrorString(hipResult);
+EventStatus EventQueryHIP(const Event* event)
+{
+    auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
+    if(wrapper->status_ == EventStatus::EVENT_SCHEDULED)
+    {
+        auto hipResult = hipEventQuery(wrapper->hip_event_);
+        if(hipResult == hipSuccess)
+        {
+            wrapper->status_ = EventStatus::EVENT_SUCCESS;
+        }
+        else if(hipResult != hipErrorNotReady)
+        {
+            const auto& err_msg = hipGetErrorString(hipResult);
 
-      std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
-      wrapper->err_msg_ = err_msg;
-      wrapper->status_ = EventStatus::EVENT_FAILED;
+            std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
+            wrapper->err_msg_ = err_msg;
+            wrapper->status_  = EventStatus::EVENT_FAILED;
+        }
     }
-  }
-  return static_cast<EventStatus>(wrapper->status_.load());
+    return static_cast<EventStatus>(wrapper->status_.load());
 }
 
-const std::string& EventErrorMessageHIP(const Event* event) {
-  auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
-  // supposed to be called after EventQueryCUDA to update status first
-  if (wrapper->status_ == EventStatus::EVENT_FAILED) {
-    return wrapper->err_msg_;
-  } else {
-    return kNoError;
-  }
+const std::string& EventErrorMessageHIP(const Event* event)
+{
+    auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
+    // supposed to be called after EventQueryCUDA to update status first
+    if(wrapper->status_ == EventStatus::EVENT_FAILED)
+    {
+        return wrapper->err_msg_;
+    }
+    else
+    {
+        return kNoError;
+    }
 }
 
-void EventSetFinishedHIP(const Event* event, const char* err_msg) {
-  auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
-  {
+void EventSetFinishedHIP(const Event* event, const char* err_msg)
+{
+    auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
+    {
+        std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
+
+        CAFFE_ENFORCE_EQ(wrapper->status_,
+                         EventStatus::EVENT_INITIALIZED,
+                         "Calling SetFinished on recorded HIP event");
+
+        if(!err_msg)
+        {
+            wrapper->status_ = EventStatus::EVENT_SUCCESS;
+        }
+        else
+        {
+            wrapper->err_msg_ = err_msg;
+            wrapper->status_  = EventStatus::EVENT_FAILED;
+        }
+    }
+    wrapper->cv_recorded_.notify_all();
+}
+
+void EventResetHIP(Event* event)
+{
+    auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
     std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
-
-    CAFFE_ENFORCE_EQ(
-        wrapper->status_,
-        EventStatus::EVENT_INITIALIZED,
-        "Calling SetFinished on recorded HIP event");
-
-    if (!err_msg) {
-      wrapper->status_ = EventStatus::EVENT_SUCCESS;
-    } else {
-      wrapper->err_msg_ = err_msg;
-      wrapper->status_ = EventStatus::EVENT_FAILED;
-    }
-  }
-  wrapper->cv_recorded_.notify_all();
-}
-
-void EventResetHIP(Event* event) {
-  auto* wrapper = static_cast<HipEventWrapper*>(event->event_.get());
-  std::unique_lock<std::mutex> lock(wrapper->mutex_recorded_);
-  wrapper->status_ = EventStatus::EVENT_INITIALIZED;
-  wrapper->err_msg_ = "";
-  wrapper->hip_stream_ = nullptr;
+    wrapper->status_     = EventStatus::EVENT_INITIALIZED;
+    wrapper->err_msg_    = "";
+    wrapper->hip_stream_ = nullptr;
 }
 
 REGISTER_EVENT_CREATE_FUNCTION(HIP, EventCreateHIP);

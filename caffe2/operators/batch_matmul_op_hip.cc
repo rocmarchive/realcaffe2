@@ -4,7 +4,8 @@
 namespace caffe2 {
 
 template <>
-bool BatchMatMulOp<HIPContext, DefaultEngine>::RunOnDevice() {
+bool BatchMatMulOp<HIPContext, DefaultEngine>::RunOnDevice()
+{
     return DispatchHelper<TensorTypes<float, float16>>::call(this, Input(0));
 }
 

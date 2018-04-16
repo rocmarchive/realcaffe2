@@ -19,7 +19,5 @@
 #include "caffe2/operators/operator_fallback_hip.h"
 
 namespace caffe2 {
-REGISTER_HIP_OPERATOR(
-    LengthsRangeFill,
-    GPUFallbackOp<LengthsRangeFillOp<CPUContext>>);
+REGISTER_HIP_OPERATOR(LengthsRangeFill, GPUFallbackOp<LengthsRangeFillOp<CPUContext>>);
 }

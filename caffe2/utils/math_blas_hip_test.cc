@@ -10,276 +10,378 @@
 
 namespace caffe2 {
 
-TEST(MathROCBLASTest, GemmNoTransNoTrans) {
-  if (!HasHipGPU())
-    return;
-  Workspace ws;
-  DeviceOption option;
-  option.set_device_type(HIP);
-  HIPContext context(option);
-  
-  Blob* blobX = ws.CreateBlob("X"); 
-  Blob* blobW = ws.CreateBlob("W");
-  Blob* blobY = ws.CreateBlob("Y");
-  Blob* blobY_host = ws.CreateBlob("Y_host");
+TEST(MathROCBLASTest, GemmNoTransNoTrans)
+{
+    if(!HasHipGPU())
+        return;
+    Workspace ws;
+    DeviceOption option;
+    option.set_device_type(HIP);
+    HIPContext context(option);
 
-  vector<int> shapeX{5, 10};
-  vector<int> shapeW{10, 6};
-  vector<int> shapeY{5, 6};
-  auto* tensorX = blobX->GetMutable<Tensor<HIPContext>>();
-  tensorX->Resize(shapeX);
-  auto* tensorW = blobW->GetMutable<Tensor<HIPContext>>();
-  tensorW->Resize(shapeW);
-  auto* tensorY = blobY->GetMutable<Tensor<HIPContext>>();
-  tensorY->Resize(shapeY);
-  auto* tensorY_host = blobY_host->GetMutable<Tensor<CPUContext>>();
-  tensorY_host->Resize(shapeY);
+    Blob* blobX      = ws.CreateBlob("X");
+    Blob* blobW      = ws.CreateBlob("W");
+    Blob* blobY      = ws.CreateBlob("Y");
+    Blob* blobY_host = ws.CreateBlob("Y_host");
 
-  EXPECT_EQ(tensorX->size(), 50);
-  EXPECT_EQ(tensorW->size(), 60);
-  EXPECT_EQ(tensorY->size(), 30);
-  
-  math::Set<float, HIPContext>(tensorX->size(), 1, tensorX->mutable_data<float>(), &context);
-  math::Set<float, HIPContext>(tensorW->size(), 1, tensorW->mutable_data<float>(), &context);
+    vector<int> shapeX{5, 10};
+    vector<int> shapeW{10, 6};
+    vector<int> shapeY{5, 6};
+    auto* tensorX = blobX->GetMutable<Tensor<HIPContext>>();
+    tensorX->Resize(shapeX);
+    auto* tensorW = blobW->GetMutable<Tensor<HIPContext>>();
+    tensorW->Resize(shapeW);
+    auto* tensorY = blobY->GetMutable<Tensor<HIPContext>>();
+    tensorY->Resize(shapeY);
+    auto* tensorY_host = blobY_host->GetMutable<Tensor<CPUContext>>();
+    tensorY_host->Resize(shapeY);
 
-  const float kOne = 1.0;
-  const float kPointFive = 0.5;
-  const float kZero = 0.0;
-  math::Gemm<float, HIPContext>(CblasNoTrans, CblasNoTrans, 5, 6, 10, kOne,
-                                tensorX->template data<float>(), tensorW->template data<float>(), kZero, 
-                                tensorY->mutable_data<float>(), &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  EXPECT_EQ(tensorY_host->size(), 30);
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 10) << i;
-  }
-  
-  // Test Accumulate
-  math::Gemm<float, HIPContext>(CblasNoTrans, CblasNoTrans, 5, 6, 10, kOne,
-                                tensorX->template data<float>(), tensorW->template data<float>(), kPointFive,
-                                tensorY->mutable_data<float>(), &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  EXPECT_EQ(tensorY_host->size(), 30);
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 15) << i;
-  }
-  
-  // Test Accumulate
-  math::Gemm<float, HIPContext>(CblasNoTrans, CblasNoTrans, 5, 6, 10,
-                                kPointFive,
-                                tensorX->template data<float>(), tensorW->template data<float>(), kOne, 
-                                tensorY->mutable_data<float>(), &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  EXPECT_EQ(tensorY_host->size(), 30);
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 20) << i;
-  }
+    EXPECT_EQ(tensorX->size(), 50);
+    EXPECT_EQ(tensorW->size(), 60);
+    EXPECT_EQ(tensorY->size(), 30);
+
+    math::Set<float, HIPContext>(tensorX->size(), 1, tensorX->mutable_data<float>(), &context);
+    math::Set<float, HIPContext>(tensorW->size(), 1, tensorW->mutable_data<float>(), &context);
+
+    const float kOne       = 1.0;
+    const float kPointFive = 0.5;
+    const float kZero      = 0.0;
+    math::Gemm<float, HIPContext>(CblasNoTrans,
+                                  CblasNoTrans,
+                                  5,
+                                  6,
+                                  10,
+                                  kOne,
+                                  tensorX->template data<float>(),
+                                  tensorW->template data<float>(),
+                                  kZero,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    EXPECT_EQ(tensorY_host->size(), 30);
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 10) << i;
+    }
+
+    // Test Accumulate
+    math::Gemm<float, HIPContext>(CblasNoTrans,
+                                  CblasNoTrans,
+                                  5,
+                                  6,
+                                  10,
+                                  kOne,
+                                  tensorX->template data<float>(),
+                                  tensorW->template data<float>(),
+                                  kPointFive,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    EXPECT_EQ(tensorY_host->size(), 30);
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 15) << i;
+    }
+
+    // Test Accumulate
+    math::Gemm<float, HIPContext>(CblasNoTrans,
+                                  CblasNoTrans,
+                                  5,
+                                  6,
+                                  10,
+                                  kPointFive,
+                                  tensorX->template data<float>(),
+                                  tensorW->template data<float>(),
+                                  kOne,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    EXPECT_EQ(tensorY_host->size(), 30);
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 20) << i;
+    }
 }
 
-TEST(MathROCBLASTest, GemmNoTransTrans) {
-  if (!HasHipGPU())
-    return;
-  Workspace ws;
-  DeviceOption option;
-  option.set_device_type(HIP);
-  HIPContext context(option);
+TEST(MathROCBLASTest, GemmNoTransTrans)
+{
+    if(!HasHipGPU())
+        return;
+    Workspace ws;
+    DeviceOption option;
+    option.set_device_type(HIP);
+    HIPContext context(option);
 
-  Blob* blobX = ws.CreateBlob("X"); 
-  Blob* blobW = ws.CreateBlob("W");
-  Blob* blobY = ws.CreateBlob("Y");
-  Blob* blobY_host = ws.CreateBlob("Y_host");
-  
-  vector<int> shapeX{5, 10};
-  vector<int> shapeW{6, 10};
-  vector<int> shapeY{5, 6};
-  auto* tensorX = blobX->GetMutable<Tensor<HIPContext>>();
-  tensorX->Resize(shapeX);
-  auto* tensorW = blobW->GetMutable<Tensor<HIPContext>>();
-  tensorW->Resize(shapeW);
-  auto* tensorY = blobY->GetMutable<Tensor<HIPContext>>();
-  tensorY->Resize(shapeY);
-  auto* tensorY_host = blobY_host->GetMutable<Tensor<CPUContext>>();
-  tensorY_host->Resize(shapeY);
+    Blob* blobX      = ws.CreateBlob("X");
+    Blob* blobW      = ws.CreateBlob("W");
+    Blob* blobY      = ws.CreateBlob("Y");
+    Blob* blobY_host = ws.CreateBlob("Y_host");
 
-  EXPECT_EQ(tensorX->size(), 50);
-  EXPECT_EQ(tensorW->size(), 60);
-  EXPECT_EQ(tensorY->size(), 30);
+    vector<int> shapeX{5, 10};
+    vector<int> shapeW{6, 10};
+    vector<int> shapeY{5, 6};
+    auto* tensorX = blobX->GetMutable<Tensor<HIPContext>>();
+    tensorX->Resize(shapeX);
+    auto* tensorW = blobW->GetMutable<Tensor<HIPContext>>();
+    tensorW->Resize(shapeW);
+    auto* tensorY = blobY->GetMutable<Tensor<HIPContext>>();
+    tensorY->Resize(shapeY);
+    auto* tensorY_host = blobY_host->GetMutable<Tensor<CPUContext>>();
+    tensorY_host->Resize(shapeY);
 
-  math::Set<float, HIPContext>(tensorX->size(), 1, tensorX->mutable_data<float>(), &context);
-  math::Set<float, HIPContext>(tensorW->size(), 1, tensorW->mutable_data<float>(), &context);
+    EXPECT_EQ(tensorX->size(), 50);
+    EXPECT_EQ(tensorW->size(), 60);
+    EXPECT_EQ(tensorY->size(), 30);
 
-  const float kOne = 1.0;
-  const float kPointFive = 0.5;
-  const float kZero = 0.0;
-  math::Gemm<float, HIPContext>(CblasNoTrans, CblasTrans, 5, 6, 10, kOne,
-                                tensorX->template data<float>(), tensorW->template data<float>(), kZero, 
-                                tensorY->mutable_data<float>(), &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  EXPECT_EQ(tensorY_host->size(), 30);
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 10) << i;
-  }
+    math::Set<float, HIPContext>(tensorX->size(), 1, tensorX->mutable_data<float>(), &context);
+    math::Set<float, HIPContext>(tensorW->size(), 1, tensorW->mutable_data<float>(), &context);
 
-  // Test Accumulate
-  math::Gemm<float, HIPContext>(CblasNoTrans, CblasTrans, 5, 6, 10, kOne,
-                                tensorX->template data<float>(), tensorW->template data<float>(), kPointFive,
-                                tensorY->mutable_data<float>(), &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  EXPECT_EQ(tensorY_host->size(), 30);
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 15) << i;
-  }
+    const float kOne       = 1.0;
+    const float kPointFive = 0.5;
+    const float kZero      = 0.0;
+    math::Gemm<float, HIPContext>(CblasNoTrans,
+                                  CblasTrans,
+                                  5,
+                                  6,
+                                  10,
+                                  kOne,
+                                  tensorX->template data<float>(),
+                                  tensorW->template data<float>(),
+                                  kZero,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    EXPECT_EQ(tensorY_host->size(), 30);
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 10) << i;
+    }
 
-  math::Gemm<float, HIPContext>(CblasNoTrans, CblasTrans, 5, 6, 10, kPointFive,
-                                tensorX->template data<float>(), tensorW->template data<float>(), kOne,
-                                tensorY->mutable_data<float>(), &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  EXPECT_EQ(tensorY_host->size(), 30);
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 20) << i;
-  }
+    // Test Accumulate
+    math::Gemm<float, HIPContext>(CblasNoTrans,
+                                  CblasTrans,
+                                  5,
+                                  6,
+                                  10,
+                                  kOne,
+                                  tensorX->template data<float>(),
+                                  tensorW->template data<float>(),
+                                  kPointFive,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    EXPECT_EQ(tensorY_host->size(), 30);
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 15) << i;
+    }
+
+    math::Gemm<float, HIPContext>(CblasNoTrans,
+                                  CblasTrans,
+                                  5,
+                                  6,
+                                  10,
+                                  kPointFive,
+                                  tensorX->template data<float>(),
+                                  tensorW->template data<float>(),
+                                  kOne,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    EXPECT_EQ(tensorY_host->size(), 30);
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 20) << i;
+    }
 }
 
-TEST(MathROCBLASTest, GemvNoTrans) {
-  if (!HasHipGPU())
-    return;
-  Workspace ws;
-  DeviceOption option;
-  option.set_device_type(HIP);
-  HIPContext context(option);
+TEST(MathROCBLASTest, GemvNoTrans)
+{
+    if(!HasHipGPU())
+        return;
+    Workspace ws;
+    DeviceOption option;
+    option.set_device_type(HIP);
+    HIPContext context(option);
 
-  Blob* blobA = ws.CreateBlob("A"); 
-  Blob* blobX = ws.CreateBlob("X");
-  Blob* blobY = ws.CreateBlob("Y");
-  Blob* blobY_host = ws.CreateBlob("Y_host");
-  
-  vector<int> shapeA{5, 10};
-  vector<int> shapeX{10};
-  vector<int> shapeY{5};
-  auto* tensorA = blobA->GetMutable<Tensor<HIPContext>>();
-  tensorA->Resize(shapeA);
-  auto* tensorX = blobX->GetMutable<Tensor<HIPContext>>();
-  tensorX->Resize(shapeX);
-  auto* tensorY = blobY->GetMutable<Tensor<HIPContext>>();
-  tensorY->Resize(shapeY);
-  auto* tensorY_host = blobY_host->GetMutable<Tensor<CPUContext>>();
-  tensorY_host->Resize(shapeY);
+    Blob* blobA      = ws.CreateBlob("A");
+    Blob* blobX      = ws.CreateBlob("X");
+    Blob* blobY      = ws.CreateBlob("Y");
+    Blob* blobY_host = ws.CreateBlob("Y_host");
 
-  EXPECT_EQ(tensorA->size(), 50);
-  EXPECT_EQ(tensorX->size(), 10);
-  EXPECT_EQ(tensorY->size(), 5);
-  math::Set<float, HIPContext>(tensorA->size(), 1, tensorA->mutable_data<float>(), &context);
-  math::Set<float, HIPContext>(tensorX->size(), 1, tensorX->mutable_data<float>(), &context);
+    vector<int> shapeA{5, 10};
+    vector<int> shapeX{10};
+    vector<int> shapeY{5};
+    auto* tensorA = blobA->GetMutable<Tensor<HIPContext>>();
+    tensorA->Resize(shapeA);
+    auto* tensorX = blobX->GetMutable<Tensor<HIPContext>>();
+    tensorX->Resize(shapeX);
+    auto* tensorY = blobY->GetMutable<Tensor<HIPContext>>();
+    tensorY->Resize(shapeY);
+    auto* tensorY_host = blobY_host->GetMutable<Tensor<CPUContext>>();
+    tensorY_host->Resize(shapeY);
 
-  const float kOne = 1.0;
-  const float kPointFive = 0.5;
-  const float kZero = 0.0;
-  math::Gemv<float, HIPContext>(CblasNoTrans, 5, 10, kOne, tensorA->data<float>(), tensorX->data<float>(),
-                                kZero, tensorY->mutable_data<float>(), &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 10) << i;
-  }
+    EXPECT_EQ(tensorA->size(), 50);
+    EXPECT_EQ(tensorX->size(), 10);
+    EXPECT_EQ(tensorY->size(), 5);
+    math::Set<float, HIPContext>(tensorA->size(), 1, tensorA->mutable_data<float>(), &context);
+    math::Set<float, HIPContext>(tensorX->size(), 1, tensorX->mutable_data<float>(), &context);
 
-  // Test Accumulate
-  math::Gemv<float, HIPContext>(CblasNoTrans, 5, 10, kOne, tensorA->data<float>(), tensorX->data<float>(),
-                                kPointFive, tensorY->mutable_data<float>(), &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 15) << i;
-  }
+    const float kOne       = 1.0;
+    const float kPointFive = 0.5;
+    const float kZero      = 0.0;
+    math::Gemv<float, HIPContext>(CblasNoTrans,
+                                  5,
+                                  10,
+                                  kOne,
+                                  tensorA->data<float>(),
+                                  tensorX->data<float>(),
+                                  kZero,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 10) << i;
+    }
 
-  // Test Accumulate
-  math::Gemv<float, HIPContext>(CblasNoTrans, 5, 10, kPointFive, tensorA->data<float>(),
-                                tensorX->data<float>(), kOne, tensorY->mutable_data<float>(),
-                                &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 20) << i;
-  }
+    // Test Accumulate
+    math::Gemv<float, HIPContext>(CblasNoTrans,
+                                  5,
+                                  10,
+                                  kOne,
+                                  tensorA->data<float>(),
+                                  tensorX->data<float>(),
+                                  kPointFive,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 15) << i;
+    }
+
+    // Test Accumulate
+    math::Gemv<float, HIPContext>(CblasNoTrans,
+                                  5,
+                                  10,
+                                  kPointFive,
+                                  tensorA->data<float>(),
+                                  tensorX->data<float>(),
+                                  kOne,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 20) << i;
+    }
 }
 
-TEST(MathROCBLASTest, GemvTrans) {
-  if (!HasHipGPU())
-    return;
-  Workspace ws;
-  DeviceOption option;
-  option.set_device_type(HIP);
-  HIPContext context(option);
-  
-  Blob* blobA = ws.CreateBlob("A"); 
-  Blob* blobX = ws.CreateBlob("X");
-  Blob* blobY = ws.CreateBlob("Y");
-  Blob* blobY_host = ws.CreateBlob("Y_host");
+TEST(MathROCBLASTest, GemvTrans)
+{
+    if(!HasHipGPU())
+        return;
+    Workspace ws;
+    DeviceOption option;
+    option.set_device_type(HIP);
+    HIPContext context(option);
 
-  vector<int> shapeA{6, 10};
-  vector<int> shapeX{6};
-  vector<int> shapeY{10};
-  auto* tensorA = blobA->GetMutable<Tensor<HIPContext>>();
-  tensorA->Resize(shapeA);
-  auto* tensorX = blobX->GetMutable<Tensor<HIPContext>>();
-  tensorX->Resize(shapeX);
-  auto* tensorY = blobY->GetMutable<Tensor<HIPContext>>();
-  tensorY->Resize(shapeY);
-  auto* tensorY_host = blobY_host->GetMutable<Tensor<CPUContext>>();
-  tensorY_host->Resize(shapeY);
+    Blob* blobA      = ws.CreateBlob("A");
+    Blob* blobX      = ws.CreateBlob("X");
+    Blob* blobY      = ws.CreateBlob("Y");
+    Blob* blobY_host = ws.CreateBlob("Y_host");
 
-  EXPECT_EQ(tensorA->size(), 60);
-  EXPECT_EQ(tensorX->size(), 6);
-  EXPECT_EQ(tensorY->size(), 10);
-  math::Set<float, HIPContext>(tensorA->size(), 1, tensorA->mutable_data<float>(), &context);
-  math::Set<float, HIPContext>(tensorX->size(), 1, tensorX->mutable_data<float>(), &context);
-  
-  const float kOne = 1.0;
-  const float kPointFive = 0.5;
-  const float kZero = 0.0;
-  math::Gemv<float, HIPContext>(CblasTrans, 6, 10, kOne, tensorA->data<float>(), tensorX->data<float>(),
-                                kZero, tensorY->mutable_data<float>(), &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 6) << i;
-  }
-  
-  // Test Accumulate
-  math::Gemv<float, HIPContext>(CblasTrans, 6, 10, kOne, tensorA->data<float>(), tensorX->data<float>(),
-                                kPointFive, tensorY->mutable_data<float>(), &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 9) << i;
-  }
+    vector<int> shapeA{6, 10};
+    vector<int> shapeX{6};
+    vector<int> shapeY{10};
+    auto* tensorA = blobA->GetMutable<Tensor<HIPContext>>();
+    tensorA->Resize(shapeA);
+    auto* tensorX = blobX->GetMutable<Tensor<HIPContext>>();
+    tensorX->Resize(shapeX);
+    auto* tensorY = blobY->GetMutable<Tensor<HIPContext>>();
+    tensorY->Resize(shapeY);
+    auto* tensorY_host = blobY_host->GetMutable<Tensor<CPUContext>>();
+    tensorY_host->Resize(shapeY);
 
-  // Test Accumulate
-  math::Gemv<float, HIPContext>(CblasTrans, 6, 10, kPointFive, tensorA->data<float>(),
-                                tensorX->data<float>(), kOne, tensorY->mutable_data<float>(),
-                                &context);
-  context.FinishDeviceComputation();
-  tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
-  context.FinishDeviceComputation();
-  for (int i = 0; i < tensorY_host->size(); ++i) {
-    CHECK_EQ(tensorY_host->data<float>()[i], 12) << i;
-  }
+    EXPECT_EQ(tensorA->size(), 60);
+    EXPECT_EQ(tensorX->size(), 6);
+    EXPECT_EQ(tensorY->size(), 10);
+    math::Set<float, HIPContext>(tensorA->size(), 1, tensorA->mutable_data<float>(), &context);
+    math::Set<float, HIPContext>(tensorX->size(), 1, tensorX->mutable_data<float>(), &context);
+
+    const float kOne       = 1.0;
+    const float kPointFive = 0.5;
+    const float kZero      = 0.0;
+    math::Gemv<float, HIPContext>(CblasTrans,
+                                  6,
+                                  10,
+                                  kOne,
+                                  tensorA->data<float>(),
+                                  tensorX->data<float>(),
+                                  kZero,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 6) << i;
+    }
+
+    // Test Accumulate
+    math::Gemv<float, HIPContext>(CblasTrans,
+                                  6,
+                                  10,
+                                  kOne,
+                                  tensorA->data<float>(),
+                                  tensorX->data<float>(),
+                                  kPointFive,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 9) << i;
+    }
+
+    // Test Accumulate
+    math::Gemv<float, HIPContext>(CblasTrans,
+                                  6,
+                                  10,
+                                  kPointFive,
+                                  tensorA->data<float>(),
+                                  tensorX->data<float>(),
+                                  kOne,
+                                  tensorY->mutable_data<float>(),
+                                  &context);
+    context.FinishDeviceComputation();
+    tensorY_host->CopyFrom<HIPContext, HIPContext>(*tensorY, &context);
+    context.FinishDeviceComputation();
+    for(int i = 0; i < tensorY_host->size(); ++i)
+    {
+        CHECK_EQ(tensorY_host->data<float>()[i], 12) << i;
+    }
 }
-
 }

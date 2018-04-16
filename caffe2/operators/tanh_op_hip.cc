@@ -23,45 +23,55 @@
 namespace caffe2 {
 
 template <typename T>
-__global__ void TanhKernel(const int N, const T* X, T* Y) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    Y[i] = tanh(X[i]);
-  }
+__global__ void TanhKernel(const int N, const T* X, T* Y)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { Y[i] = tanh(X[i]); }
 }
 
 template <typename T>
-__global__ void TanhGradientKernel(const int N, const T* Y, const T* dY,
-                              T* dX) {
-  HIP_1D_KERNEL_LOOP(i, N) {
-    dX[i] = dY[i]*(1 - Y[i]*Y[i]);
-  }
+__global__ void TanhGradientKernel(const int N, const T* Y, const T* dY, T* dX)
+{
+    HIP_1D_KERNEL_LOOP(i, N) { dX[i] = dY[i] * (1 - Y[i] * Y[i]); }
 }
 
-struct TanhHIPFunctor {
-  template <typename T>
-  inline void operator()(const int n, const T* x,
-                         T* y, HIPContext* device_context) {
-    hipLaunchKernelGGL((TanhKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, x, y);
-    return;
-  }
-  inline bool InplaceAllowed() {
-    return true;
-  }
+struct TanhHIPFunctor
+{
+    template <typename T>
+    inline void operator()(const int n, const T* x, T* y, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((TanhKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           x,
+                           y);
+        return;
+    }
+    inline bool InplaceAllowed() { return true; }
 };
 
-struct TanhGradientHIPFunctor {
-  template <typename T>
-  inline void Run(const int n, const T* y, const T* dy,
-                  T* dx, HIPContext* device_context) {
-    hipLaunchKernelGGL((TanhGradientKernel<T>), dim3(CAFFE_GET_BLOCKS(n)), dim3(CAFFE_HIP_NUM_THREADS), 0, device_context->hip_stream(), n, y, dy, dx);
-    return;
-  }
+struct TanhGradientHIPFunctor
+{
+    template <typename T>
+    inline void Run(const int n, const T* y, const T* dy, T* dx, HIPContext* device_context)
+    {
+        hipLaunchKernelGGL((TanhGradientKernel<T>),
+                           dim3(CAFFE_GET_BLOCKS(n)),
+                           dim3(CAFFE_HIP_NUM_THREADS),
+                           0,
+                           device_context->hip_stream(),
+                           n,
+                           y,
+                           dy,
+                           dx);
+        return;
+    }
 };
 
+REGISTER_HIP_OPERATOR(Tanh, UnaryElementwiseOp<TensorTypes<float>, HIPContext, TanhHIPFunctor>);
 REGISTER_HIP_OPERATOR(
-    Tanh, UnaryElementwiseOp<TensorTypes<float>, HIPContext, TanhHIPFunctor>);
-REGISTER_HIP_OPERATOR(
-    TanhGradient, BinaryElementwiseOp<
-        TensorTypes<float>, HIPContext,
-        WithoutBroadcast<TanhGradientHIPFunctor>>);
-}  // namespace caffe2
+    TanhGradient,
+    BinaryElementwiseOp<TensorTypes<float>, HIPContext, WithoutBroadcast<TanhGradientHIPFunctor>>);
+} // namespace caffe2
