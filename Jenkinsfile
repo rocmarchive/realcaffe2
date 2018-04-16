@@ -53,9 +53,9 @@ node("rocmtest14") {
             }
             stage("inference_test"){
                 sh '''
-                export PYTHONPATH=$PYTHONPATH:~/build
+                export PYTHONPATH=$PYTHONPATH:$(pwd)/build
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-                echo $(pwd)
+                echo $PYTHONPATH
                 model=resnet50
                 python caffe2/python/models/download.py $model
                 ls
