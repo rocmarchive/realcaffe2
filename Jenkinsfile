@@ -11,7 +11,8 @@ node("rocmtest") {
             stage('clang_format') {
                 sh '''
                     pwd
-                    ls
+                    ls /
+                    ls /var/jenkins/workspace/
                     cd /rocm_caffe2/caffe2
                     find . -iname *miopen* -o -iname *hip* \
                     | grep -v 'build/' \
