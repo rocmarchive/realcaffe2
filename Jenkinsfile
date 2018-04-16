@@ -1,12 +1,14 @@
 node("rocmtest14") {
     sh ''' docker login --username rohith612 --password 123456 '''
-    docker.image('petrex/rocaffe2:developer_preview')
-    withDockerContainer(image: "petrex/rocaffe2:developer_preview", args: '--device=/dev/kfd --device=/dev/dri --group-add video') {
+    // docker.image('petrex/rocaffe2:developer_preview')
+    
+    stage("checkout") {
+        checkout scm
+        sh 'git submodule update --init'
+    }
+
+    withDockerContainer(image: "petrex/rocaffe2:developer_preview", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
         timeout(time: 2, unit: 'HOURS'){
-            stage("checkout") {
-                checkout scm
-                sh 'git submodule update --init'
-            }
             
             stage('clang_format') {
                 sh '''
