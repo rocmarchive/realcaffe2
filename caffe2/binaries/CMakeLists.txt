@@ -21,6 +21,11 @@ if (USE_CUDA)
   endif()
 endif()
 
+if (USE_HIP)
+  caffe2_binary_target("inspect_gpus_hip.cc")
+  target_link_libraries(inspect_gpus_hip "hip_hcc")
+endif()
+
 if (USE_ZMQ)
   caffe2_binary_target("zmq_feeder.cc")
 endif()
