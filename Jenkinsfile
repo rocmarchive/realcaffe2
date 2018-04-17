@@ -1,4 +1,4 @@
-node("rocmtest14") {
+node("rocmtest13") {
     sh ''' docker login --username rohith612 --password 123456 '''
     // docker.image('petrex/rocaffe2:developer_preview')
     
@@ -58,8 +58,6 @@ node("rocmtest14") {
                 echo $PYTHONPATH
                 model=resnet50
                 python caffe2/python/models/download.py $model
-                ls
-                ls tests/    
                 cd build/bin
                 python ../../tests/inference_test.py -m ../../$model -s 224 -e 1
                 '''
