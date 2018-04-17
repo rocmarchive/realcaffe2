@@ -365,6 +365,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
     auto* dW     = Output(FILTER_GRAD);
     auto* dX     = Output(no_bias_ ? BIAS_OR_INPUT_GRAD : INPUT_GRAD);
     dX->ResizeLike(X);
+    dW->ResizeLike(Weight);
 
     CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
     CAFFE_ENFORCE(Weight.ndim() >= 3 && Weight.ndim() <= 5);
@@ -450,7 +451,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
                 Weight.template data<T_W>() + i * group_offset_filter,
                 conv_desc_,
                 bottom_desc_,
-                dX->template data<T_DX>() + i * group_offset_X,
+                dX->template mutable_data<T_DX>() + i * group_offset_X,
                 requestAlgoCount_,
                 &returnedAlgoCount_,
                 &perf_,
