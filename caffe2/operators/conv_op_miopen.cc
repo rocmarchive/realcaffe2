@@ -255,6 +255,11 @@ bool MIOPENConvOp::DoRunWithType()
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
         top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
 
+    if(InputSize() == 3) {
+      MIOPEN_ENFORCE(
+        miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
+    }
+
     MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(miopen_wrapper_.inline_miopen_handle(),
                                                             weight_desc_,
                                                             bottom_desc_,
@@ -321,7 +326,7 @@ bool MIOPENConvOp::DoRunWithType()
                                              bias_desc_,
                                              bias.template data<T_B>() + i * group_offset_Y,
                                              &beta_,
-                                             top_desc_for_bias_,
+                                             top_desc_,
                                              Y->template mutable_data<T_Y>() + i * group_offset_Y));
         }
     }
@@ -409,6 +414,11 @@ bool MIOPENConvGradientOp::DoRunWithType()
 
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
         top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
+
+    if(!no_bias_) {
+      MIOPEN_ENFORCE(
+        miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
+    }
 
     MIOPEN_ENFORCE(
         miopenConvolutionBackwardDataGetWorkSpaceSize(miopen_wrapper_.inline_miopen_handle(),
@@ -520,7 +530,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
             MIOPEN_ENFORCE(miopenConvolutionBackwardBias(
                 miopen_wrapper_.inline_miopen_handle(),
                 &alpha_,
-                top_desc_for_bias_,
+                top_desc_,
                 dY.template data<T_DY>() + i * group_offset_Y,
                 &beta_,
                 bias_desc_,
