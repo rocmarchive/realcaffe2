@@ -24,6 +24,7 @@ endif()
 if (USE_HIP)
   caffe2_binary_target("inspect_gpus_hip.cc")
   target_link_libraries(inspect_gpus_hip "hip_hcc")
+  caffe2_binary_target("print_core_object_sizes_hip.cc")
 endif()
 
 if (USE_ZMQ)
