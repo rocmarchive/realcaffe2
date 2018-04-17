@@ -1,4 +1,4 @@
-node("rocmtest13") {
+node("rocmtest11") {
     sh ''' docker login --username rohith612 --password 123456 '''
     // docker.image('petrex/rocaffe2:developer_preview')
     
