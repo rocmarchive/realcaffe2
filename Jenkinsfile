@@ -1,4 +1,4 @@
-node("rocmtest10") {
+node("rocmtest13") {
     sh ''' docker login --username rohith612 --password 123456 '''
     // docker.image('petrex/rocaffe2:developer_preview')
     
@@ -53,6 +53,7 @@ node("rocmtest10") {
             }
             stage("inference_test"){
                 sh '''
+                chmod 777 /
                 export MIOPEN_DISABLE_CACHE=1
                 export PYTHONPATH=$PYTHONPATH:$(pwd)/build
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
