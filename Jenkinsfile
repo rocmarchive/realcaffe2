@@ -51,10 +51,10 @@ node("rocmtest13") {
                     ../../tests/test.sh
                 '''
             }
+            /*
             stage("inference_test"){
                 sh '''
-                chmod 777 /
-                export MIOPEN_DISABLE_CACHE=1
+                // export MIOPEN_DISABLE_CACHE=1
                 export PYTHONPATH=$PYTHONPATH:$(pwd)/build
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
                 echo $PYTHONPATH
@@ -65,6 +65,7 @@ node("rocmtest13") {
                 '''
 
             }
+            */
         }
     }
 }
