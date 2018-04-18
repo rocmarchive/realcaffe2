@@ -30,7 +30,14 @@ git clone --recursive git@github.com:ROCmSoftwarePlatform/rocm-caffe2.git
 
 ## Spin off the Container
 	
-`docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video -v $PWD/rocm-caffe2:/rocm-caffe2 petrex/rocaffe2:developer_preview`
+`docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video -v $PWD/rocm-caffe2:/rocm-caffe2 petrex/rocaffe2:developer_preview` 
+
+Inside the docker image, add THRUST_ROOT environment variable and navigate to rocm-caffe2 directory
+
+```
+export THRUST_ROOT=/data/Thrust
+cd /rocm-caffe2
+```
 
 ## Build the rocm-caffe2 Project from Src
 
