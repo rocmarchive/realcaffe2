@@ -255,9 +255,10 @@ bool MIOPENConvOp::DoRunWithType()
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
         top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
 
-    if(InputSize() == 3) {
-      MIOPEN_ENFORCE(
-        miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
+    if(InputSize() == 3)
+    {
+        MIOPEN_ENFORCE(
+            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
     }
 
     MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(miopen_wrapper_.inline_miopen_handle(),
@@ -415,9 +416,10 @@ bool MIOPENConvGradientOp::DoRunWithType()
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
         top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
 
-    if(!no_bias_) {
-      MIOPEN_ENFORCE(
-        miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
+    if(!no_bias_)
+    {
+        MIOPEN_ENFORCE(
+            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
     }
 
     MIOPEN_ENFORCE(
