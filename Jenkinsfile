@@ -7,7 +7,7 @@ node("rocmtest13") {
         sh 'git submodule update --init'
     }
 
-    withDockerContainer(image: "petrex/rocaffe2:developer_preview", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
+    withDockerContainer(image: "rohith612/caffe2-rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
         timeout(time: 2, unit: 'HOURS'){
             
             stage('clang_format') {
@@ -29,7 +29,7 @@ node("rocmtest13") {
                     mkdir build
                     cd build
                     cmake -DCMAKE_BUILD_TYPE='Debug' ..
-                    make -j16
+                    make -j$(nproc)
                     make DESTDIR=./install install
                 '''
             }
@@ -41,7 +41,7 @@ node("rocmtest13") {
                     mkdir build
                     cd build
                     cmake -DCMAKE_BUILD_TYPE='Release' ..
-                    make -j16
+                    make -j$(nproc)
                     make DESTDIR=./install install
                 '''
             }
@@ -51,7 +51,7 @@ node("rocmtest13") {
                     ../../tests/test.sh
                 '''
             }
-            /*
+            
             stage("inference_test"){
                 sh '''
                 // export MIOPEN_DISABLE_CACHE=1
@@ -65,7 +65,7 @@ node("rocmtest13") {
                 '''
 
             }
-            */
+            
         }
     }
 }
