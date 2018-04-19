@@ -255,6 +255,12 @@ bool MIOPENConvOp::DoRunWithType()
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
         top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
 
+    if(InputSize() == 3)
+    {
+        MIOPEN_ENFORCE(
+            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
+    }
+
     MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(miopen_wrapper_.inline_miopen_handle(),
                                                             weight_desc_,
                                                             bottom_desc_,
@@ -321,7 +327,7 @@ bool MIOPENConvOp::DoRunWithType()
                                              bias_desc_,
                                              bias.template data<T_B>() + i * group_offset_Y,
                                              &beta_,
-                                             top_desc_for_bias_,
+                                             top_desc_,
                                              Y->template mutable_data<T_Y>() + i * group_offset_Y));
         }
     }
@@ -365,6 +371,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
     auto* dW     = Output(FILTER_GRAD);
     auto* dX     = Output(no_bias_ ? BIAS_OR_INPUT_GRAD : INPUT_GRAD);
     dX->ResizeLike(X);
+    dW->ResizeLike(Weight);
 
     CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
     CAFFE_ENFORCE(Weight.ndim() >= 3 && Weight.ndim() <= 5);
@@ -409,6 +416,12 @@ bool MIOPENConvGradientOp::DoRunWithType()
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
         top_desc_, miopenTypeWrapper<T_X>::type, N_out, C_out, H_out, W_out));
 
+    if(!no_bias_)
+    {
+        MIOPEN_ENFORCE(
+            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
+    }
+
     MIOPEN_ENFORCE(
         miopenConvolutionBackwardDataGetWorkSpaceSize(miopen_wrapper_.inline_miopen_handle(),
                                                       top_desc_,
@@ -450,7 +463,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
                 Weight.template data<T_W>() + i * group_offset_filter,
                 conv_desc_,
                 bottom_desc_,
-                dX->template data<T_DX>() + i * group_offset_X,
+                dX->template mutable_data<T_DX>() + i * group_offset_X,
                 requestAlgoCount_,
                 &returnedAlgoCount_,
                 &perf_,
@@ -519,7 +532,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
             MIOPEN_ENFORCE(miopenConvolutionBackwardBias(
                 miopen_wrapper_.inline_miopen_handle(),
                 &alpha_,
-                top_desc_for_bias_,
+                top_desc_,
                 dY.template data<T_DY>() + i * group_offset_Y,
                 &beta_,
                 bias_desc_,

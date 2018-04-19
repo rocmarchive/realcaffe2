@@ -72,6 +72,12 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext>
         H = X.dim32(2);
         W = X.ndim() > 3 ? X.dim32(3) : 1;
         ConvPoolOpBase::SetOutputSize(X, Y, C);
+
+        N_out = Y->dim32(0);
+        C_out = Y->dim32(1);
+        H_out = Y->dim32(2);
+        W_out = Y->ndim() > 3 ? Y->dim32(3) : 1;
+
         if(kernel_.size() == 2)
         {
             MIOPEN_ENFORCE(miopenSet2dPoolingDescriptor(pooling_desc_,
@@ -86,9 +92,6 @@ class MIOPENPoolOp : public ConvPoolOpBase<HIPContext>
 
         MIOPEN_ENFORCE(
             miopenSet4dTensorDescriptor(bottom_desc_, miopenTypeWrapper<T>::type, N, C, H, W));
-
-        MIOPEN_ENFORCE(miopenGetPoolingForwardOutputDim(
-            pooling_desc_, bottom_desc_, &N_out, &C_out, &H_out, &W_out));
 
         MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
             top_desc_, miopenTypeWrapper<T>::type, N_out, C_out, H_out, W_out));
