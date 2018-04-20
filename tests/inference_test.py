@@ -4,17 +4,20 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from caffe2.proto import caffe2_pb2
 import numpy as np
-#import matplotlib
-#matplotlib.use('Agg')
-#from matplotlib import pyplot
-import skimage.io
-import skimage.transform
+import urllib
+import cv2
 import os, time, getopt, sys, re
 from caffe2.python import core, workspace, models
 import urllib2
 import operator
 import caffe2.python._import_c_extension as C
 import pdb
+
+def url_to_image(url):
+    resp = urllib.urlopen(url)
+    image = np.asarray(bytearray(resp.read()), dtype="uint8")
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+    return image
 
 def crop_center(img,cropx,cropy):
     y,x,c = img.shape
@@ -28,13 +31,13 @@ def rescale(img, input_height, input_width):
     if(aspect>1):
         # landscape orientation - wide image
         res = int(aspect * input_height)
-        imgScaled = skimage.transform.resize(img, (input_width, res))
+        imgScaled = cv2.resize(img, (res, input_width))
     if(aspect<1):
         # portrait orientation - tall image
         res = int(input_width/aspect)
-        imgScaled = skimage.transform.resize(img, (res, input_height))
+        imgScaled = cv2.resize(img, (res, input_height))
     if(aspect == 1):
-        imgScaled = skimage.transform.resize(img, (input_width, input_height))
+        imgScaled = cv2.resize(img, (input_width, input_height))
     return imgScaled
 
 
@@ -89,7 +92,7 @@ else:
 # Load the image as a 32-bit float
 #    Note: skimage.io.imread returns a HWC ordered RGB image of some size
 IMAGE_LOCATION =  "https://cdn.pixabay.com/photo/2015/02/10/21/28/flower-631765_1280.jpg"
-img = skimage.img_as_float(skimage.io.imread(IMAGE_LOCATION)).astype(np.float32)
+img = url_to_image(IMAGE_LOCATION)
 print("Original Image Shape: " , img.shape)
 # Rescale the image to comply with our desired input size. This will not make the image 227x227
 #    but it will make either the height or width 227 so we can get the ideal center crop.
@@ -103,8 +106,7 @@ print("Image Shape after cropping: " , img.shape)
 img = img.swapaxes(1, 2).swapaxes(0, 1)
 print("CHW Image Shape: " , img.shape)
 
-# switch to BGR (RGB --> BGR)
-img = img[(2, 1, 0), :, :]
+img = img/255.0
 
 # remove mean for better results
 #img = img * 255 - mean
