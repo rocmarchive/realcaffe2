@@ -3,9 +3,11 @@ node("rocmtest13") {
     stage("checkout") {
         checkout scm
         sh 'git submodule update --init'
+        sh 'echo $PWD'
     }
 
     stage("docker_image") {
+        sh 'echo $PWD'
         sh './docker/ubuntu-16.04-rocm171/docker-build.sh rocm171'
     }
 
