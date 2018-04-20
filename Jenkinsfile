@@ -18,6 +18,7 @@ node("rocmtest11") {
                     | xargs -n 1 -P 1 -I{} -t sh -c 'clang-format-3.8 -style=file {} | diff - {}'
                 '''
             }
+            /*
             stage("build_debug") {
 
                 sh '''
@@ -33,8 +34,10 @@ node("rocmtest11") {
                     make DESTDIR=./install install
                 '''
             }
+            */
             stage("build_release") {
                 sh '''
+                    export HCC_AMDGPU_TARGET=gfx900
                     export THRUST_ROOT=/data/Thrust
                     echo $THRUST_ROOT
                     rm -rf build
@@ -54,7 +57,6 @@ node("rocmtest11") {
             
             stage("inference_test"){
                 sh '''
-                // export MIOPEN_DISABLE_CACHE=1
                 export PYTHONPATH=$PYTHONPATH:$(pwd)/build
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
                 echo $PYTHONPATH
