@@ -54,7 +54,8 @@ node("rocmtest14") {
                 '''
             }
             stage("binary_tests") {
-                sh ''' 
+                sh '''
+                    export LD_LIBRARY_PATH=/usr/local/lib 
                     cd build/bin
                     ../../tests/test.sh
                 '''
