@@ -1,10 +1,12 @@
-node("rocmtest11") {
-    sh ''' docker login --username rohith612 --password 123456 '''
-    // docker.image('petrex/rocaffe2:developer_preview')
+node("rocmtest13") {
     
     stage("checkout") {
         checkout scm
         sh 'git submodule update --init'
+    }
+
+    stage("docker_iamge") {
+        sh './docker/ubuntu-16.04-rocm171/docker-build.sh rocm171'
     }
 
     withDockerContainer(image: "rohith612/caffe2-rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
