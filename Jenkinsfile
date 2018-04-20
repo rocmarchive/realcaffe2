@@ -5,7 +5,7 @@ node("rocmtest13") {
         sh 'git submodule update --init'
     }
 
-    stage("docker_iamge") {
+    stage("docker_image") {
         sh './docker/ubuntu-16.04-rocm171/docker-build.sh rocm171'
     }
 
@@ -56,6 +56,10 @@ node("rocmtest13") {
                     ../../tests/test.sh
                 '''
             }
+
+            /*
+            stage("")
+            */
             
             stage("inference_test"){
                 sh '''
