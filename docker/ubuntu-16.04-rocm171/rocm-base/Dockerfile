@@ -69,8 +69,8 @@ ENV OPENCL_ROOT=$ROCM_PATH/opencl
 ENV PATH="$HCC_HOME/bin:$HIP_PATH/bin:${PATH}"
 ENV PATH="$ROCM_PATH/bin:${PATH}"
 ENV PATH="$OPENCL_ROOT/bin:${PATH}"
-ADD ./base/target.lst /opt/rocm/bin
-ADD ./base/rocm_agent_enumerator /opt/rocm/bin
+ADD ./docker/ubuntu-16.04-rocm171/rocm-base/target.lst /opt/rocm/bin
+ADD ./docker/ubuntu-16.04-rocm171/rocm-base/rocm_agent_enumerator /opt/rocm/bin
 
 # Build HCC from source, cleanup the default HCC to avoid issue
 #RUN rm -rf /opt/rocm/hcc-1.0 && rm -rf /opt/rocm/lib/*.bc
