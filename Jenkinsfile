@@ -1,17 +1,18 @@
 node("rocmtest14") {
     
+    sh 'docker login --username rohith612 --password `123456'
     stage("checkout") {
         checkout scm
         sh 'git submodule update --init'
         sh 'echo $PWD'
     }
-
+    /*
     stage("docker_image") {
         sh 'echo $PWD'
         sh './docker/ubuntu-16.04-rocm171/docker-build.sh rocm171'
     }
-
-    withDockerContainer(image: "caffe2-rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
+    */
+    withDockerContainer(image: "rohith612/caffe2-rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
         timeout(time: 2, unit: 'HOURS'){
             
             stage('clang_format') {
