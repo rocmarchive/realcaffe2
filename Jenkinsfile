@@ -14,7 +14,7 @@ node("rocmtest14") {
     */
     withDockerContainer(image: "rohith612/caffe2-rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
         timeout(time: 2, unit: 'HOURS'){
-            
+            sh 'export LD_LIBRARY_PATH=/usr/local/lib'
             stage('clang_format') {
                 sh '''
                     cd caffe2
@@ -55,7 +55,8 @@ node("rocmtest14") {
             }
             stage("binary_tests") {
                 sh '''
-                    export LD_LIBRARY_PATH=/usr/local/lib 
+                    export LD_LIBRARY_PATH=/usr/local/lib
+                    echo $LD_LIBRARY_PATH 
                     cd build/bin
                     ../../tests/test.sh
                 '''
