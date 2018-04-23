@@ -5,6 +5,8 @@ node("rocmtest14") {
         checkout scm
         sh 'git submodule update --init'
         sh 'echo $PWD'
+        git clone https://github.com/rohithkrn/resnet50_c2.git
+        ls -a third_party/aten
     }
     /*
     stage("docker_image") {
@@ -78,7 +80,6 @@ node("rocmtest14") {
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
                 echo $PYTHONPATH
                 model=resnet50_c2
-                git clone https://github.com/rohithkrn/resnet50_c2.git
                 cd build/bin
                 python ../../tests/inference_test.py -m ../../$model -s 224 -e 1
                 '''
