@@ -1,4 +1,4 @@
-node("rocmtest14") {
+node("rocmtest13") {
     
     sh 'docker login --username rohith612 --password 123456'
     stage("checkout") {
