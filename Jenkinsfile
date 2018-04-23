@@ -3,7 +3,7 @@ node("rocmtest14") {
     sh 'docker login --username rohith612 --password 123456'
     stage("checkout") {
         checkout scm
-        sh 'git submodule update --init --remote'
+        sh 'git submodule update --init'
         sh 'echo $PWD'
         sh 'ls -a third_party/aten'
     }
