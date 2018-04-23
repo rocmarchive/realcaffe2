@@ -78,7 +78,7 @@ node("rocmtest14") {
                 export PYTHONPATH=$PYTHONPATH:$(pwd)/build
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
                 echo $PYTHONPATH
-                model=resnet50_c2
+                model=resnet50
                 python caffe2/python/models/download.py $model
                 cd build/bin
                 python ../../tests/inference_test.py -m ../../$model -s 224 -e 1
