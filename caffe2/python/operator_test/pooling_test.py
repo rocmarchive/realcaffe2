@@ -161,7 +161,7 @@ class TestPooling(hu.HypothesisTestCase):
         self.assertDeviceChecks(dc, op, [X], [0], threshold=0.001)
         if 'MaxPool' not in op_type:
             self.assertDeviceChecks(dc, op, [X], [0], threshold=0.001)
-
+    """
     @given(stride=st.integers(1, 3),
            pad=st.integers(0, 2),
            kernel=st.integers(1, 6),
@@ -234,7 +234,7 @@ class TestPooling(hu.HypothesisTestCase):
         self.assertDeviceChecks(dc, op, [X], [0], threshold=0.001)
         if 'MaxPool' not in op_type:
             self.assertDeviceChecks(dc, op, [X], [0], threshold=0.001)
-
+    """
     @unittest.skipIf(not workspace.has_gpu_support, "No GPU support")
     @given(stride=st.integers(1, 3),
            pad=st.integers(0, 3),
