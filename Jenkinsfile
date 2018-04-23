@@ -5,8 +5,8 @@ node("rocmtest14") {
         checkout scm
         sh 'git submodule update --init'
         sh 'echo $PWD'
-        git clone https://github.com/rohithkrn/resnet50_c2.git
-        ls -a third_party/aten
+        sh 'git clone https://github.com/rohithkrn/resnet50_c2.git'
+        sh 'ls -a third_party/aten'
     }
     /*
     stage("docker_image") {
