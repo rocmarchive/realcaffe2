@@ -5,8 +5,6 @@ node("rocmtest14") {
         checkout scm
         sh 'git submodule update --init'
         sh 'echo $PWD'
-        sh 'git clone https://github.com/rohithkrn/resnet50_c2.git'
-        sh 'ls -lh resnet50_c2/'
         sh 'ls -a third_party/aten'
     }
     /*
@@ -81,6 +79,7 @@ node("rocmtest14") {
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
                 echo $PYTHONPATH
                 model=resnet50_c2
+                python caffe2/python/models/download.py $model
                 cd build/bin
                 python ../../tests/inference_test.py -m ../../$model -s 224 -e 1
                 '''
