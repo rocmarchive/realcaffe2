@@ -14,7 +14,6 @@ node("rocmtest14") {
     */
     withDockerContainer(image: "rohith612/caffe2-rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
         timeout(time: 2, unit: 'HOURS'){
-            sh 'export LD_LIBRARY_PATH=/usr/local/lib'
             stage('clang_format') {
                 sh '''
                     cd caffe2
@@ -56,23 +55,31 @@ node("rocmtest14") {
             stage("binary_tests") {
                 sh '''
                     export LD_LIBRARY_PATH=/usr/local/lib
-                    echo $LD_LIBRARY_PATH 
                     cd build/bin
                     ../../tests/test.sh
                 '''
             }
 
-            /*
-            stage("")
-            */
+            
+            stage("python_op_tests"){
+                sh '''
+                    export LD_LIBRARY_PATH=/usr/local/lib
+                    export PYTHONPATH=$PYTHONPATH:$(pwd)/build
+                    cd build/bin
+                    ../../tests/python_tests.sh
+                '''
+
+            }
+            
             
             stage("inference_test"){
                 sh '''
                 export PYTHONPATH=$PYTHONPATH:$(pwd)/build
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
                 echo $PYTHONPATH
-                model=resnet50
-                python caffe2/python/models/download.py $model
+                model=resnet50_c2
+                // python caffe2/python/models/download.py $model
+                git clone https://github.com/rohithkrn/resnet50_c2.git
                 cd build/bin
                 python ../../tests/inference_test.py -m ../../$model -s 224 -e 1
                 '''
