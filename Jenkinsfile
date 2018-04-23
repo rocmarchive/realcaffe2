@@ -1,4 +1,4 @@
-node("rocmtest13") {
+node("rocmtest14") {
     
     sh 'docker login --username rohith612 --password 123456'
     stage("checkout") {
@@ -6,6 +6,7 @@ node("rocmtest13") {
         sh 'git submodule update --init'
         sh 'echo $PWD'
         sh 'git clone https://github.com/rohithkrn/resnet50_c2.git'
+        sh 'ls -lh resnet50_c2/'
         sh 'ls -a third_party/aten'
     }
     /*
