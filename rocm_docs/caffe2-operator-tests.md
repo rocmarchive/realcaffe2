@@ -7,7 +7,6 @@ All the tests can be run at once using pytest module. If you do not have a pytes
 
 ```
 pip install pytest
-
 ```
 
 To run the tests please navigate to build/bin directory.
@@ -19,13 +18,11 @@ From inside the bin directory operator tests can be invoked using pytest:
 
 ```
 pytest ../caffe2/python/operator_test/ 
-
 ```
 This command runs all the operator tests in operator_test directory. To ignore runnning any tests, --ignore flag can be used.
 
 ```
 pytest ../caffe2/python/operator_test/ --ignore <name_of_test_to_ignore>
-
 ```
 Multiple --ignore arguments can be passed to ingore mulitple tests. Please read pytest documentation to explore more options at https://docs.pytest.org/en/latest/usage.html 
 
@@ -37,7 +34,6 @@ To run each test separately, navigate to build\bin directory and run python test
 ```
 cd <caffe2_home>/build/bin
 python ../caffe2/operator_test/<test_name>
-
 ```
 
 When running tests separately, please ensure that the test script has a main function, else add the following lines at the end of the script.
@@ -45,7 +41,6 @@ When running tests separately, please ensure that the test script has a main fun
 if __name__ == "__main__":
     import unittest
     unittest.main()
-
 ```
 
 
