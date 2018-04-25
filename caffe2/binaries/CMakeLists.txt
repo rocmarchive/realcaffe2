@@ -21,6 +21,18 @@ if (USE_CUDA)
   endif()
 endif()
 
+if (USE_HIP)
+  caffe2_binary_target("inspect_gpus_hip.cc")
+  target_link_libraries(inspect_gpus_hip "hip_hcc")
+  caffe2_binary_target("print_core_object_sizes_hip.cc")
+
+  if (BUILD_TEST)
+    # Core overhead benchmark
+    caffe2_binary_target("core_overhead_benchmark_hip.cc")
+    target_link_libraries(core_overhead_benchmark_hip benchmark ${Caffe2_HIP_DEPENDENCY_LIBS})
+  endif()
+endif()
+
 if (USE_ZMQ)
   caffe2_binary_target("zmq_feeder.cc")
 endif()

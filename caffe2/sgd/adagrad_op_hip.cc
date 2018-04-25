@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <cub/block/block_reduce.cuh>
+#include <hipcub/hipcub.hpp>
 #include "adagrad_op.h"
 #include "caffe2/core/common_hip.h"
 #include "caffe2/core/context_hip.h"
@@ -113,7 +113,7 @@ __global__ void RowWiseSparseAdagradKernel(const int M,
                                            const float* grad,
                                            const float* lr)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ BlockReduce::TempStorage temp_storage;
     // in case gridDim is smaller than M
     for(int i = hipBlockIdx_x; i < M; i += hipGridDim_x)
