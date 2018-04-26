@@ -77,7 +77,7 @@ Please navigate to <caffe2_home/build/bin> and run the tests.
 
 * To run directed operator tests: 
 
-	`pytest ../caffe2/python/operator_test/<test_name>`
+	`pytest ../caffe2/python/operator_test/<test_name>.py`
 
 * To run all the tests present under caffe2/python/operator_test
 
@@ -85,7 +85,7 @@ Please navigate to <caffe2_home/build/bin> and run the tests.
 	
 	To ignore runnning any tests, --ignore flag can be used
 	
-	`pytest ../caffe2/python/operator_test/ --ignore <name_of_test_to_ignore>`
+	`pytest ../caffe2/python/operator_test/ --ignore <name_of_test_to_ignore>.py`
 
 	Multiple --ignore arguments can be passed to ingore mulitple tests. Please read pytest documentation to explore more options at https://docs.pytest.org/en/latest/usage.html
 	
