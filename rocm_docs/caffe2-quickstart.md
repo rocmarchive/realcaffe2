@@ -62,16 +62,32 @@ Next, Navigate to <caffe2_home>/build/bin run the binaries corresponding to the 
 * workspace_test
 
 ## Running Operator Tests
+
+To run python based operator tests, pytest module can be used. If you do not have pytest module installed, install it using:
+```
+pip install pytest
+```
 * Before running the tests, make sure that the required environment variables are set:
 
 	```
 	export PYTHONPATH=/usr/local:<caffe2_home>/build:$PYTHONPATH 
 	export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 	```
+Please navigate to <caffe2_home/build/bin> and run the tests.
 
 * To run directed operator tests: 
 
-	`python -m caffe2.python.operator_test.<test>`
+	`pytest ../caffe2/python/operator_test/<test_name>`
+
+* To run all the tests present under caffe2/python/operator_test
+
+	`pytest ../caffe2/python/operator_test/`
+	
+	To ignore runnning any tests, --ignore flag can be used
+	
+	`pytest ../caffe2/python/operator_test/ --ignore <name_of_test_to_ignore>`
+
+	Multiple --ignore arguments can be passed to ingore mulitple tests. Please read pytest documentation to explore more options at https://docs.pytest.org/en/latest/usage.html
 	
 Available operator tests are :
 
