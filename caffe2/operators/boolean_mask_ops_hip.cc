@@ -17,7 +17,7 @@
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/boolean_mask_ops.h"
 #include "hip/hip_runtime.h"
-#include <cub/cub.cuh>
+#include <hipcub/hipcub.hpp>
 
 namespace caffe2 {
 
@@ -63,8 +63,8 @@ class BooleanMaskOp<HIPContext> final : public Operator<HIPContext>
         auto* indicesData = indices_.mutable_data<TIndex>();
 
         size_t numBytes = 0;
-        cub::CountingInputIterator<int> itr(0);
-        cub::DeviceSelect::Flagged(nullptr,
+        hipcub::CountingInputIterator<int> itr(0);
+        hipcub::DeviceSelect::Flagged(nullptr,
                                    numBytes,
                                    itr,
                                    maskData,
@@ -79,7 +79,7 @@ class BooleanMaskOp<HIPContext> final : public Operator<HIPContext>
         auto* scratchData     = scratch_.mutable_data<TIndex>();
         auto* numOfOutputData = scratchData + numTIndex;
 
-        cub::DeviceSelect::Flagged(static_cast<void*>(scratchData),
+        hipcub::DeviceSelect::Flagged(static_cast<void*>(scratchData),
                                    numBytes,
                                    itr,
                                    maskData,
