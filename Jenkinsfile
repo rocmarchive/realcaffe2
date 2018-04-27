@@ -78,7 +78,9 @@ node("rocmtest14") {
                 echo $PYTHONPATH
                 model=resnet50
                 ls
-                python caffe2/python/models/download.py $model
+		if [ ! -d $model ]; then
+                    python caffe2/python/models/download.py $model
+		fi
                 cd build/bin
                 python ../../tests/inference_test.py -m ../../$model -s 224 -e 1
                 '''
