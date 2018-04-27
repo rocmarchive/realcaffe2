@@ -1,7 +1,8 @@
 # This Dockerfile provides a starting point for a ROCm installation of caffe2 aka rocm-caffe2.
-ARG base_image
-FROM ${base_image}
+#ARG base_image
+#FROM ${base_image}
 
+FROM rocm-base-rocm171
 MAINTAINER Rohith Nallamaddi <rohith.nallamaddi@amd.com>
 
 ENV HOME /rocm-caffe2
