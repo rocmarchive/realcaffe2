@@ -1,15 +1,13 @@
 node("rocmtest14") {
-
+    
     stage("checkout") {
         checkout scm
         sh 'git submodule update --init'
     }
-    
     stage("docker_image") {
-        sh './docker/ubuntu-16.04-rocm171/docker-build.sh rocm171'
+        sh './docker/ubuntu-16.04-rocm171/docker-build.sh caffe2_rocm171'
     }
-    
-    withDockerContainer(image: "caffe2-rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
+    withDockerContainer(image: "caffe2_rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
         timeout(time: 2, unit: 'HOURS'){
             stage('clang_format') {
                 sh '''
@@ -23,6 +21,7 @@ node("rocmtest14") {
 
                 sh '''
                     export HCC_AMDGPU_TARGET=gfx900
+                    ls /data/Thrust
                     export THRUST_ROOT=/data/Thrust
                     echo $THRUST_ROOT
                     rm -rf build
@@ -37,6 +36,7 @@ node("rocmtest14") {
                 sh '''
                     export HCC_AMDGPU_TARGET=gfx900
                     export THRUST_ROOT=/data/Thrust
+                    echo $THRUST_ROOT
                     rm -rf build
                     mkdir build
                     cd build
@@ -51,7 +51,7 @@ node("rocmtest14") {
                     cd build/bin
                     ../../tests/test.sh
                 '''
-            }            
+            }
             stage("python_op_tests"){
                 sh '''
                     export LD_LIBRARY_PATH=/usr/local/lib
@@ -59,12 +59,12 @@ node("rocmtest14") {
                     cd build/bin
                     ../../tests/python_tests.sh
                 '''
-
-            }            
+            }
             stage("inference_test"){
                 sh '''
                 export PYTHONPATH=$PYTHONPATH:$(pwd)/build
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+                echo $PYTHONPATH
                 model=resnet50
                 if [ ! -d $model ]; then
                     python caffe2/python/models/download.py $model
@@ -73,6 +73,7 @@ node("rocmtest14") {
                 python ../../tests/inference_test.py -m ../../$model -s 224 -e 1
                 '''
             }
+            
         }
     }
 }
