@@ -14,7 +14,8 @@ ignore_tests=("conv_test.py",
 			  "sparse_lengths_sum_benchmark.py",
 			  "spatial_bn_op_test.py",
 			  "top_k_test.py",
-			  "video_input_op_test.py")
+			  "video_input_op_test.py",
+			  "__init__.py")
 
 for test in $(ls ../caffe2/python/operator_test/); do
     if [[ "${ignore_tests[*]}" =~ "$test" ]]; then
@@ -40,4 +41,4 @@ if [ ${#failed_tests[@]} -eq 0 ]; then
 	exit 0
 else 
 	exit 1
- 
+fi 
