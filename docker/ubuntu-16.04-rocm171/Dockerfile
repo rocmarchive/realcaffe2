@@ -62,7 +62,7 @@ ENV OPENCL_ROOT=$ROCM_PATH/opencl
 ENV PATH="$HCC_HOME/bin:$HIP_PATH/bin:${PATH}"
 ENV PATH="$ROCM_PATH/bin:${PATH}"
 ENV PATH="$OPENCL_ROOT/bin:${PATH}"
-ADD ./target.lst /opt/rocm/bin
+ADD ./docker/ubuntu-16.04-rocm171/target.lst /opt/rocm/bin
 #ADD ./docker/ubuntu-16.04-rocm171/rocm-base/rocm_agent_enumerator /opt/rocm/bin
 
  
