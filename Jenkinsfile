@@ -1,4 +1,4 @@
-node("rocmtest13") {
+node("rocmtest10") {
     
     stage("checkout") {
         checkout scm
