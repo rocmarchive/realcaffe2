@@ -1,5 +1,5 @@
 #!/bin/bash
-
+rm -r ../caffe2/python/operator_test/__*
 failed_tests=()
 passed_tests=()
 ignore_tests=("conv_test.py",
@@ -15,13 +15,13 @@ ignore_tests=("conv_test.py",
 			  "spatial_bn_op_test.py",
 			  "top_k_test.py",
 			  "video_input_op_test.py",
-			  "__init__.py")
+			  "matmul_op_test.py")
 
 for test in $(ls ../caffe2/python/operator_test/); do
     if [[ "${ignore_tests[*]}" =~ "$test" ]]; then
         continue
     fi
-    pytest ../caffe2/python/operator_test/$test
+    python -m pytest ../caffe2/python/operator_test/$test
     if [ $? -eq 0 ]; then
        passed_tests+=($test)
     else
