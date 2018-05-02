@@ -395,9 +395,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
     D_out = dY.ndim() > 4 ? dY.dim32(4) : 1;
 
     CAFFE_ENFORCE_EQ(Weight.dim32(1), C / group_);
-    int group_offset_X = C / group_ * H * W * D;
-    int group_offset_Y = M / group_ * H_out * W_out * D_out;
-
+    
     CAFFE_ENFORCE(C % group_ == 0,
                   "If you set group, the number of input channels should be divisible "
                   "by group.");
@@ -422,7 +420,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
     if(!no_bias_)
     {
         MIOPEN_ENFORCE(
-            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M / group_, 1, 1));
+            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, C_out / group_, 1, 1));
     }
 
     MIOPEN_ENFORCE(
@@ -432,6 +430,9 @@ bool MIOPENConvGradientOp::DoRunWithType()
                                                       conv_desc_,
                                                       bottom_desc_,
                                                       &bwdDataWsSize_));
+
+    int group_offset_X = C / group_ * H * W * D;
+    int group_offset_Y = M / group_ * H_out * W_out * D_out;
 
     bwdDataWsSize_ = (group_ > 1) ? miopen_ws_nbytes_limit_ : bwdDataWsSize_;
     if((bwdDataWsSize_ > 0) && (bwdDataWs == nullptr))
