@@ -236,6 +236,7 @@ bool MIOPENConvOp::DoRunWithType()
                   "by group.");
 
     int group_offset_filter = Weight.size() / group_;
+    int group_offset_bias = 0;
 
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(weight_desc_,
                                                miopenTypeWrapper<T_X>::type,
@@ -256,7 +257,8 @@ bool MIOPENConvOp::DoRunWithType()
     if(InputSize() == 3)
     {
         MIOPEN_ENFORCE(
-            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M / group_, 1, 1));
+            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, C_out / group_, 1, 1));
+        group_offset_bias = C_out / group_;
     }
 
     MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(miopen_wrapper_.inline_miopen_handle(),
@@ -326,7 +328,7 @@ bool MIOPENConvOp::DoRunWithType()
                 miopenConvolutionForwardBias(miopen_wrapper_.inline_miopen_handle(),
                                              &alpha_,
                                              bias_desc_,
-                                             bias.template data<T_B>() + i * group_offset_Y,
+                                             bias.template data<T_B>() + i * group_offset_bias,
                                              &beta_,
                                              top_desc_,
                                              Y->template mutable_data<T_Y>() + i * group_offset_Y));
