@@ -404,6 +404,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
                   "by group.");
 
     int group_offset_filter = Weight.size() / group_;
+    int group_offset_bias = 0;
 
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
         weight_desc_, miopenTypeWrapper<T_X>::type, M / group_, C / group_, kernel_h(), kernel_w()));
@@ -421,6 +422,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
     {
         MIOPEN_ENFORCE(
             miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, C_out / group_, 1, 1));
+        group_offset_bias = C_out / group_;
     }
 
     MIOPEN_ENFORCE(
@@ -540,7 +542,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
                 dY.template data<T_DY>() + i * group_offset_Y,
                 &beta_,
                 bias_desc_,
-                dbias->template mutable_data<T_DB>() + i * group_offset_Y));
+                dbias->template mutable_data<T_DB>() + i * group_offset_bias));
         }
     }
     // Synchronize the work across groups.
