@@ -406,10 +406,10 @@ bool MIOPENConvGradientOp::DoRunWithType()
     int group_offset_filter = Weight.size() / group_;
 
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
-        weight_desc_, miopenTypeWrapper<T_X>::type, M, C, kernel_h(), kernel_w()));
+        weight_desc_, miopenTypeWrapper<T_X>::type, M / group_, C / group_, kernel_h(), kernel_w()));
 
     MIOPEN_ENFORCE(
-        miopenSet4dTensorDescriptor(bottom_desc_, miopenTypeWrapper<T_X>::type, N, C, H, W));
+        miopenSet4dTensorDescriptor(bottom_desc_, miopenTypeWrapper<T_X>::type, N, C / group_, H, W));
 
     MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(
         conv_desc_, bottom_desc_, weight_desc_, &N_out, &C_out, &H_out, &W_out));
@@ -420,7 +420,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
     if(!no_bias_)
     {
         MIOPEN_ENFORCE(
-            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
+            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M / group_, 1, 1));
     }
 
     MIOPEN_ENFORCE(
