@@ -227,8 +227,6 @@ bool MIOPENConvOp::DoRunWithType()
     int W_out = Y->ndim() > 3 ? Y->dim32(3) : 1;
     int D_out = Y->ndim() > 4 ? Y->dim32(4) : 1;
     CAFFE_ENFORCE_EQ(Weight.dim32(1), C / group_);
-    int group_offset_X = C / group_ * H * W * D;
-    int group_offset_Y = M / group_ * H_out * W_out * D_out;
 
     CAFFE_ENFORCE(C % group_ == 0,
                   "If you set group, the number of input channels should be divisible "
@@ -267,6 +265,9 @@ bool MIOPENConvOp::DoRunWithType()
                                                             conv_desc_,
                                                             top_desc_,
                                                             &fwdConvWsSize_));
+
+    int group_offset_X = C / group_ * H * W * D;
+    int group_offset_Y = M / group_ * H_out * W_out * D_out;
 
     fwdConvWsSize_ = (group_ > 1) ? miopen_ws_nbytes_limit_ : fwdConvWsSize_;
 
