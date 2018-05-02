@@ -247,7 +247,7 @@ bool MIOPENConvOp::DoRunWithType()
                                                kernel_w()));
 
     MIOPEN_ENFORCE(
-        miopenSet4dTensorDescriptor(bottom_desc_, miopenTypeWrapper<T_X>::type, N, C, H, W));
+        miopenSet4dTensorDescriptor(bottom_desc_, miopenTypeWrapper<T_X>::type, N, C / group_, H, W));
 
     MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(
         conv_desc_, bottom_desc_, weight_desc_, &N_out, &C_out, &H_out, &W_out));
