@@ -105,7 +105,8 @@ RUN pip install \
     pydot \
     opencv-python \ 
     hypothesis \
-    pytest
+    pytest \
+    networkx
 
 RUN apt-get install -y --no-install-recommends libgflags-dev
 
