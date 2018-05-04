@@ -333,7 +333,7 @@ class TestWorkspaceGPU(test_util.TestCase):
         self.assertEqual(type(pattern), np.ndarray)
         self.assertEqual(pattern.ndim, 2)
         self.assertEqual(pattern.shape[0], pattern.shape[1])
-        self.assertEqual(pattern.shape[0], workspace.NumCudaDevices())
+        self.assertEqual(pattern.shape[0], workspace.NumGpuDevices())
 
 
 @unittest.skipIf(not workspace.C.has_mkldnn, "No MKLDNN support.")
