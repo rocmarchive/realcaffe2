@@ -45,8 +45,8 @@ class MIOPENConvOpBase : public ConvPoolOpBase<HIPContext>
         MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_for_bias_));
         MIOPEN_ENFORCE(miopenCreateConvolutionDescriptor(&conv_desc_));
 
-        if((operator_def.type().substr(0, 6) == "Conv2D") ||
-           (operator_def.type().substr(0, 14) == "Conv2DGradient"))
+        if((operator_def.type().substr(0, 6) == "Conv") ||
+           (operator_def.type().substr(0, 14) == "ConvGradient"))
         {
             mode_ = miopenConvolution;
         }
@@ -210,7 +210,8 @@ bool MIOPENConvOp::DoRunWithType()
 
     // Figure out the output shape
     CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
-    CAFFE_ENFORCE(Weight.ndim() >= 3 && Weight.ndim() <= 5);
+    CAFFE_ENFORCE(Weight.ndim() == 4,
+		  "Conv op with MIOpen engine is supported only for 2D convolutions");
 
     const int M = Weight.dim32(0);
     ConvPoolOpBase<HIPContext>::SetOutputSize(X, Y, M);
@@ -378,7 +379,8 @@ bool MIOPENConvGradientOp::DoRunWithType()
     dW->ResizeLike(Weight);
 
     CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
-    CAFFE_ENFORCE(Weight.ndim() >= 3 && Weight.ndim() <= 5);
+    CAFFE_ENFORCE(Weight.ndim() == 4,
+		  "ConvGradient op with MIOpen engine is supported only for 2D convolutions");
 
     const int M = Weight.dim32(0);
     int N = 0, C = 0, H = 0, W = 0, D = 0, N_out = 0, C_out = 0, H_out = 0, W_out = 0, D_out = 0;
@@ -575,8 +577,8 @@ bool MIOPENConvGradientOp::RunOnDevice()
     return true;
 }
 
-REGISTER_MIOPEN_OPERATOR(Conv2D, MIOPENConvOp);
-REGISTER_MIOPEN_OPERATOR(Conv2DGradient, MIOPENConvGradientOp);
+REGISTER_MIOPEN_OPERATOR(Conv, MIOPENConvOp);
+REGISTER_MIOPEN_OPERATOR(ConvGradient, MIOPENConvGradientOp);
 REGISTER_MIOPEN_OPERATOR(Trans2D, MIOPENConvOp);
 REGISTER_MIOPEN_OPERATOR(Trans2DGradient, MIOPENConvGradientOp);
 } // namespace caffe2
