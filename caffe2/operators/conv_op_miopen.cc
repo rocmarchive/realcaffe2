@@ -211,7 +211,7 @@ bool MIOPENConvOp::DoRunWithType()
     // Figure out the output shape
     CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
     CAFFE_ENFORCE(Weight.ndim() == 4,
-		  "Conv/Trans op with MIOpen engine is supported only for 2D convolutions");
+                  "Conv/Trans op with MIOpen engine is supported only for 2D convolutions");
 
     const int M = Weight.dim32(0);
     ConvPoolOpBase<HIPContext>::SetOutputSize(X, Y, M);
@@ -327,14 +327,13 @@ bool MIOPENConvOp::DoRunWithType()
 
         CAFFE_ENFORCE_EQ(bias.ndim(), 1);
         CAFFE_ENFORCE_EQ(bias.dim32(0), M);
-        MIOPEN_ENFORCE(
-            miopenConvolutionForwardBias(miopen_wrapper_.inline_miopen_handle(),
-                                         &alpha_,
-                                         bias_desc_,
-                                         bias.template data<T_B>(),
-                                         &beta_,
-                                         top_desc_for_bias_,
-                                         Y->template mutable_data<T_Y>()));
+        MIOPEN_ENFORCE(miopenConvolutionForwardBias(miopen_wrapper_.inline_miopen_handle(),
+                                                    &alpha_,
+                                                    bias_desc_,
+                                                    bias.template data<T_B>(),
+                                                    &beta_,
+                                                    top_desc_for_bias_,
+                                                    Y->template mutable_data<T_Y>()));
     }
 
     hipDeviceSynchronize();
@@ -379,8 +378,9 @@ bool MIOPENConvGradientOp::DoRunWithType()
     dW->ResizeLike(Weight);
 
     CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
-    CAFFE_ENFORCE(Weight.ndim() == 4,
-		  "ConvGradient/TransGradient op with MIOpen engine is supported only for 2D convolutions");
+    CAFFE_ENFORCE(
+        Weight.ndim() == 4,
+        "ConvGradient/TransGradient op with MIOpen engine is supported only for 2D convolutions");
 
     const int M = Weight.dim32(0);
     int N = 0, C = 0, H = 0, W = 0, D = 0, N_out = 0, C_out = 0, H_out = 0, W_out = 0, D_out = 0;
