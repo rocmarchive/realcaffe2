@@ -50,8 +50,8 @@ class MIOPENConvOpBase : public ConvPoolOpBase<HIPContext>
         {
             mode_ = miopenConvolution;
         }
-        else if((operator_def.type().substr(0, 7) == "Trans2D") ||
-                (operator_def.type().substr(0, 15) == "Trans2DGradient"))
+        else if((operator_def.type().substr(0, 7) == "Trans") ||
+                (operator_def.type().substr(0, 15) == "TransGradient"))
         {
             mode_ = miopenTranspose;
         }
@@ -211,7 +211,7 @@ bool MIOPENConvOp::DoRunWithType()
     // Figure out the output shape
     CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
     CAFFE_ENFORCE(Weight.ndim() == 4,
-		  "Conv op with MIOpen engine is supported only for 2D convolutions");
+		  "Conv/Trans op with MIOpen engine is supported only for 2D convolutions");
 
     const int M = Weight.dim32(0);
     ConvPoolOpBase<HIPContext>::SetOutputSize(X, Y, M);
@@ -380,7 +380,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
 
     CAFFE_ENFORCE(X.ndim() >= 3 && X.ndim() <= 5);
     CAFFE_ENFORCE(Weight.ndim() == 4,
-		  "ConvGradient op with MIOpen engine is supported only for 2D convolutions");
+		  "ConvGradient/TransGradient op with MIOpen engine is supported only for 2D convolutions");
 
     const int M = Weight.dim32(0);
     int N = 0, C = 0, H = 0, W = 0, D = 0, N_out = 0, C_out = 0, H_out = 0, W_out = 0, D_out = 0;
@@ -579,6 +579,6 @@ bool MIOPENConvGradientOp::RunOnDevice()
 
 REGISTER_MIOPEN_OPERATOR(Conv, MIOPENConvOp);
 REGISTER_MIOPEN_OPERATOR(ConvGradient, MIOPENConvGradientOp);
-REGISTER_MIOPEN_OPERATOR(Trans2D, MIOPENConvOp);
-REGISTER_MIOPEN_OPERATOR(Trans2DGradient, MIOPENConvGradientOp);
+REGISTER_MIOPEN_OPERATOR(Trans, MIOPENConvOp);
+REGISTER_MIOPEN_OPERATOR(TransGradient, MIOPENConvGradientOp);
 } // namespace caffe2
