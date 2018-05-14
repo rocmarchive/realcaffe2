@@ -257,7 +257,7 @@ bool MIOPENConvOp::DoRunWithType()
     if(InputSize() == 3)
     {
         MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
-            bias_desc_, miopenTypeWrapper<T_X>::type, 1, Y->dim32(1), 1, 1));
+            bias_desc_, miopenTypeWrapper<T_B>::type, 1, Y->dim32(1), 1, 1));
         MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
             top_desc_for_bias_, miopenTypeWrapper<T_X>::type, N_out, Y->dim32(1), H_out, W_out));
     }
