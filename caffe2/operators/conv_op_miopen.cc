@@ -236,10 +236,9 @@ bool MIOPENConvOp::DoRunWithType()
                   "by group.");
 
     int group_offset_filter = Weight.size() / group_;
-    int group_offset_bias   = 0;
 
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(weight_desc_,
-                                               miopenTypeWrapper<T_X>::type,
+                                               miopenTypeWrapper<T_W>::type,
                                                M / group_,
                                                C / group_,
                                                kernel_h(),
@@ -257,8 +256,9 @@ bool MIOPENConvOp::DoRunWithType()
     if(InputSize() == 3)
     {
         MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
-            bias_desc_, miopenTypeWrapper<T_X>::type, 1, C_out / group_, 1, 1));
-        group_offset_bias = C_out / group_;
+            bias_desc_, miopenTypeWrapper<T_X>::type, 1, Y->dim32(1), 1, 1));
+        MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+            top_desc_for_bias_, miopenTypeWrapper<T_X>::type, N_out, Y->dim32(1), H_out, W_out));
     }
 
     MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(miopen_wrapper_.inline_miopen_handle(),
@@ -315,24 +315,25 @@ bool MIOPENConvOp::DoRunWithType()
                                      Y->template mutable_data<T_Y>() + i * group_offset_Y,
                                      fwdConvWs,
                                      fwdConvWsSize_));
+    }
 
-        // BIAS
-        if(InputSize() == 3)
-        {
-            auto& bias = Input(BIAS);
+    hipDeviceSynchronize();
 
-            CAFFE_ENFORCE_EQ(bias.ndim(), 1);
-            CAFFE_ENFORCE_EQ(bias.dim32(0), M);
+    // BIAS
+    if(InputSize() == 3)
+    {
+        auto& bias = Input(BIAS);
 
-            MIOPEN_ENFORCE(
-                miopenConvolutionForwardBias(miopen_wrapper_.inline_miopen_handle(),
-                                             &alpha_,
-                                             bias_desc_,
-                                             bias.template data<T_B>() + i * group_offset_bias,
-                                             &beta_,
-                                             top_desc_,
-                                             Y->template mutable_data<T_Y>() + i * group_offset_Y));
-        }
+        CAFFE_ENFORCE_EQ(bias.ndim(), 1);
+        CAFFE_ENFORCE_EQ(bias.dim32(0), M);
+        MIOPEN_ENFORCE(
+            miopenConvolutionForwardBias(miopen_wrapper_.inline_miopen_handle(),
+                                         &alpha_,
+                                         bias_desc_,
+                                         bias.template data<T_B>(),
+                                         &beta_,
+                                         top_desc_for_bias_,
+                                         Y->template mutable_data<T_Y>()));
     }
 
     hipDeviceSynchronize();
