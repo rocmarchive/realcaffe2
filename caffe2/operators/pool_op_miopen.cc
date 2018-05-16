@@ -158,7 +158,8 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext>
           miopen_wrapper_(&context_),
           alpha_(OperatorBase::GetSingleArgument<float>("alpha", 1.0)),
           beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
-          poolWsSize_(0)
+          poolWsSize_(0),
+          poolBwdScratch(nullptr)
     {
         MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bottom_desc_));
         MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&top_desc_));
@@ -233,11 +234,28 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext>
             HIP_CHECK(hipMalloc(&poolWs_, poolWsSize_));
         }
 
+        if(poolBwdScratch == nullptr)
+        {
+            HIP_CHECK(hipMalloc(&poolBwdScratch, Y.size() * sizeof(float)));
+        }
+
         // Carry out the pooling computation.
         const T* Xdata  = X.template data<T>();
         const T* Ydata  = Y.template data<T>();
         const T* dYdata = dY.template data<T>();
         T* dXdata       = dX->template mutable_data<T>();
+
+        MIOPEN_ENFORCE(miopenPoolingForward(miopen_wrapper_.inline_miopen_handle(),
+                                            pooling_desc_,
+                                            &alpha_,
+                                            bottom_desc_,
+                                            Xdata,
+                                            &beta_,
+                                            top_desc_,
+                                            poolBwdScratch,
+                                            true,
+                                            poolWs_,
+                                            poolWsSize_));
 
         MIOPEN_ENFORCE(miopenPoolingBackward(miopen_wrapper_.inline_miopen_handle(),
                                              pooling_desc_,
@@ -284,6 +302,7 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext>
     miopenPoolingMode_t mode_;
     const float alpha_;
     const float beta_;
+    float* poolBwdScratch;
 };
 
 namespace {
