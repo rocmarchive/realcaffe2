@@ -1,4 +1,4 @@
-node() {
+node('rocaffe2') {
     
     stage("checkout") {
         checkout scm
