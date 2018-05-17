@@ -227,8 +227,6 @@ bool MIOPENConvOp::DoRunWithType()
     int W_out = Y->ndim() > 3 ? Y->dim32(3) : 1;
     int D_out = Y->ndim() > 4 ? Y->dim32(4) : 1;
     CAFFE_ENFORCE_EQ(Weight.dim32(1), C / group_);
-    int group_offset_X = C / group_ * H * W * D;
-    int group_offset_Y = M / group_ * H_out * W_out * D_out;
 
     CAFFE_ENFORCE(C % group_ == 0,
                   "If you set group, the number of input channels should be divisible "
@@ -238,6 +236,7 @@ bool MIOPENConvOp::DoRunWithType()
                   "by group.");
 
     int group_offset_filter = Weight.size() / group_;
+    int group_offset_bias   = 0;
 
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(weight_desc_,
                                                miopenTypeWrapper<T_X>::type,
@@ -246,8 +245,8 @@ bool MIOPENConvOp::DoRunWithType()
                                                kernel_h(),
                                                kernel_w()));
 
-    MIOPEN_ENFORCE(
-        miopenSet4dTensorDescriptor(bottom_desc_, miopenTypeWrapper<T_X>::type, N, C, H, W));
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+        bottom_desc_, miopenTypeWrapper<T_X>::type, N, C / group_, H, W));
 
     MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(
         conv_desc_, bottom_desc_, weight_desc_, &N_out, &C_out, &H_out, &W_out));
@@ -257,8 +256,9 @@ bool MIOPENConvOp::DoRunWithType()
 
     if(InputSize() == 3)
     {
-        MIOPEN_ENFORCE(
-            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
+        MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+            bias_desc_, miopenTypeWrapper<T_X>::type, 1, C_out / group_, 1, 1));
+        group_offset_bias = C_out / group_;
     }
 
     MIOPEN_ENFORCE(miopenConvolutionForwardGetWorkSpaceSize(miopen_wrapper_.inline_miopen_handle(),
@@ -267,6 +267,9 @@ bool MIOPENConvOp::DoRunWithType()
                                                             conv_desc_,
                                                             top_desc_,
                                                             &fwdConvWsSize_));
+
+    int group_offset_X = C / group_ * H * W * D;
+    int group_offset_Y = M / group_ * H_out * W_out * D_out;
 
     fwdConvWsSize_ = (group_ > 1) ? miopen_ws_nbytes_limit_ : fwdConvWsSize_;
 
@@ -325,7 +328,7 @@ bool MIOPENConvOp::DoRunWithType()
                 miopenConvolutionForwardBias(miopen_wrapper_.inline_miopen_handle(),
                                              &alpha_,
                                              bias_desc_,
-                                             bias.template data<T_B>() + i * group_offset_Y,
+                                             bias.template data<T_B>() + i * group_offset_bias,
                                              &beta_,
                                              top_desc_,
                                              Y->template mutable_data<T_Y>() + i * group_offset_Y));
@@ -392,8 +395,6 @@ bool MIOPENConvGradientOp::DoRunWithType()
     D_out = dY.ndim() > 4 ? dY.dim32(4) : 1;
 
     CAFFE_ENFORCE_EQ(Weight.dim32(1), C / group_);
-    int group_offset_X = C / group_ * H * W * D;
-    int group_offset_Y = M / group_ * H_out * W_out * D_out;
 
     CAFFE_ENFORCE(C % group_ == 0,
                   "If you set group, the number of input channels should be divisible "
@@ -403,12 +404,17 @@ bool MIOPENConvGradientOp::DoRunWithType()
                   "by group.");
 
     int group_offset_filter = Weight.size() / group_;
+    int group_offset_bias   = 0;
+
+    MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(weight_desc_,
+                                               miopenTypeWrapper<T_X>::type,
+                                               M / group_,
+                                               C / group_,
+                                               kernel_h(),
+                                               kernel_w()));
 
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
-        weight_desc_, miopenTypeWrapper<T_X>::type, M, C, kernel_h(), kernel_w()));
-
-    MIOPEN_ENFORCE(
-        miopenSet4dTensorDescriptor(bottom_desc_, miopenTypeWrapper<T_X>::type, N, C, H, W));
+        bottom_desc_, miopenTypeWrapper<T_X>::type, N, C / group_, H, W));
 
     MIOPEN_ENFORCE(miopenGetConvolutionForwardOutputDim(
         conv_desc_, bottom_desc_, weight_desc_, &N_out, &C_out, &H_out, &W_out));
@@ -418,8 +424,9 @@ bool MIOPENConvGradientOp::DoRunWithType()
 
     if(!no_bias_)
     {
-        MIOPEN_ENFORCE(
-            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_X>::type, 1, M, 1, 1));
+        MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
+            bias_desc_, miopenTypeWrapper<T_X>::type, 1, C_out / group_, 1, 1));
+        group_offset_bias = C_out / group_;
     }
 
     MIOPEN_ENFORCE(
@@ -429,6 +436,9 @@ bool MIOPENConvGradientOp::DoRunWithType()
                                                       conv_desc_,
                                                       bottom_desc_,
                                                       &bwdDataWsSize_));
+
+    int group_offset_X = C / group_ * H * W * D;
+    int group_offset_Y = M / group_ * H_out * W_out * D_out;
 
     bwdDataWsSize_ = (group_ > 1) ? miopen_ws_nbytes_limit_ : bwdDataWsSize_;
     if((bwdDataWsSize_ > 0) && (bwdDataWs == nullptr))
@@ -536,7 +546,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
                 dY.template data<T_DY>() + i * group_offset_Y,
                 &beta_,
                 bias_desc_,
-                dbias->template mutable_data<T_DB>() + i * group_offset_Y));
+                dbias->template mutable_data<T_DB>() + i * group_offset_bias));
         }
     }
     // Synchronize the work across groups.
