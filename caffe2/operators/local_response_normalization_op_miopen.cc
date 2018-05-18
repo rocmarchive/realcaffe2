@@ -77,7 +77,9 @@ class MIOPENLRNGradientOp final : public Operator<HIPContext>
           alpha_(OperatorBase::GetSingleArgument<float>("alpha", 0)),
           beta_(OperatorBase::GetSingleArgument<float>("beta", 0)),
           bias_(OperatorBase::GetSingleArgument<float>("bias", 1)),
-          do_backward_(OperatorBase::GetSingleArgument<bool>("do_backward", false))
+          do_backward_(OperatorBase::GetSingleArgument<bool>("do_backward", false)),
+          bwdLRNWs_(nullptr),
+          LRNBwdScratch(nullptr)
     {
         MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&data_desc_));
         MIOPEN_ENFORCE(miopenCreateLRNDescriptor(&norm_desc_));
@@ -88,6 +90,17 @@ class MIOPENLRNGradientOp final : public Operator<HIPContext>
     {
         MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(data_desc_));
         MIOPEN_ENFORCE(miopenDestroyLRNDescriptor(norm_desc_));
+
+        if(bwdLRNWs_)
+        {
+            hipFree(bwdLRNWs_);
+            bwdLRNWs_ = nullptr;
+        }
+        if(LRNBwdScratch)
+        {
+            hipFree(LRNBwdScratch);
+            LRNBwdScratch = nullptr;
+        }
     }
 
     template <typename T, typename M>
@@ -107,6 +120,8 @@ class MIOPENLRNGradientOp final : public Operator<HIPContext>
     const float beta_;
     const float bias_;
     const bool do_backward_;
+    float* bwdLRNWs_;
+    float* LRNBwdScratch;
     // Input: X, Y, dY
     // Output: dX
 };
@@ -189,7 +204,30 @@ bool MIOPENLRNGradientOp::DoRunWithType()
             data_desc_, miopenTypeWrapper<T>::type, dY.dim32(0), C, H, W));
     }
 
-    // run the computation
+    size_t ws_size = 0;
+    MIOPEN_ENFORCE(miopenLRNGetWorkSpaceSize(data_desc_, &ws_size));
+    if(bwdLRNWs_ == nullptr)
+    {
+        HIP_CHECK(hipMalloc(&bwdLRNWs_, ws_size));
+    }
+
+    // Run fwd pass to populate workspace
+    if(LRNBwdScratch == nullptr)
+    {
+        HIP_CHECK(hipMalloc(&LRNBwdScratch, X.size() * sizeof(float)));
+    }
+    MIOPEN_ENFORCE(miopenLRNForward(miopen_wrapper_.inline_miopen_handle(),
+                                    norm_desc_,
+                                    &alpha_,
+                                    data_desc_,
+                                    X.template data<T>(),
+                                    &beta_,
+                                    data_desc_,
+                                    LRNBwdScratch,
+                                    true,
+                                    bwdLRNWs_));
+
+    // run the bwd computation
     MIOPEN_ENFORCE(miopenLRNBackward(miopen_wrapper_.inline_miopen_handle(),
                                      norm_desc_,
                                      &alpha_,
@@ -202,7 +240,7 @@ bool MIOPENLRNGradientOp::DoRunWithType()
                                      &beta_,
                                      data_desc_,
                                      dX->template mutable_data<T>(),
-                                     nullptr));
+                                     bwdLRNWs_));
     return true;
 }
 
