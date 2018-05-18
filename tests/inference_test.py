@@ -156,7 +156,7 @@ if use_gpu_engine == 1:
     init_net.RunAllOnGPU(use_gpu_engine=True)
     predict_net.RunAllOnGPU(use_gpu_engine=True)
 
-miopen_op_map = {'Conv':'Conv2D','MaxPool':'MaxPool2D','AveragePool':'AveragePool2D'}
+miopen_op_map = {'MaxPool':'MaxPool2D','AveragePool':'AveragePool2D'}
 for op in init_net.Proto().op:
     op.device_option.CopyFrom(device_opts)
     if op.type in miopen_op_map:
@@ -179,10 +179,6 @@ preds_gpu = np.squeeze(results_gpu)
 preds_cpu_norm = np.linalg.norm(preds_cpu, ord=None)
 preds_gpu_norm = np.linalg.norm(preds_gpu, ord=None)
 
-print("============== diff of preds:",abs(preds_cpu_norm-preds_gpu_norm))
-if abs(preds_cpu_norm - preds_gpu_norm) > 1e-4:
-    print("Mismatch between CPU and GPU")
-    exit()
 
 # Get the prediction and the confidence by finding the maximum value and index of maximum value in preds array
 print("=================== cpu output =================")
@@ -277,3 +273,9 @@ for line in response:
 # For each of the top-N results, associate the integer result with an actual class
 for n in topN:
     print("Model predicts '{}' with {}% confidence".format(class_LUT[int(n[0])],float("{0:.2f}".format(n[1]*100))))
+
+
+print("============== diff of preds:",abs(preds_cpu_norm-preds_gpu_norm))
+if abs(preds_cpu_norm - preds_gpu_norm) > 1e-4:
+    print("Mismatch between CPU and GPU")
+    exit()
