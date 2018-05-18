@@ -18,7 +18,7 @@
 #include "caffe2/operators/distance_op.h"
 #include "caffe2/utils/conversions.h"
 #include "hip/hip_runtime.h"
-#include <cub/block/block_reduce.cuh>
+#include <hipcub/hipcub.hpp>
 
 namespace caffe2 {
 
@@ -28,7 +28,7 @@ template <typename T>
 __global__ void
 SquaredL2DistanceKernel(const int N, const int D, const T* X, const T* Y, T* distance)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
 
     for(int i = hipBlockIdx_x; i < N; i += hipGridDim_x)
@@ -134,7 +134,7 @@ namespace {
 template <typename T>
 __global__ void L1DistanceKernel(const int N, const int D, const T* X, const T* Y, T* distance)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
 
     for(int i = hipBlockIdx_x; i < N; i += hipGridDim_x)
@@ -261,7 +261,7 @@ __global__ void DotProductKernel(const int N, const int D, const T* X, const T* 
             partialSum += X[offset + j] * Y[offset + j];
         }
 
-        typedef cub::BlockReduce<T, CAFFE_HIP_NUM_THREADS> BlockReduce;
+        using BlockReduce = hipcub::BlockReduce<T, CAFFE_HIP_NUM_THREADS>;
         __shared__ typename BlockReduce::TempStorage temp_storage;
         T sum = BlockReduce(temp_storage).Sum(partialSum);
         __syncthreads();
