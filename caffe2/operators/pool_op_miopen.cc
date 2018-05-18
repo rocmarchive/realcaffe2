@@ -183,6 +183,12 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext>
         MIOPEN_ENFORCE(miopenDestroyTensorDescriptor(top_desc_));
         MIOPEN_ENFORCE(miopenDestroyPoolingDescriptor(pooling_desc_));
         poolWsSize_ = 0;
+
+        if(poolBwdScratch)
+        {
+            hipFree(poolBwdScratch);
+            poolBwdScratch = nullptr;
+        }
     }
 
     template <typename T, typename M>
