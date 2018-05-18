@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <cub/block/block_reduce.cuh>
+#include <hipcub/hipcub.hpp>
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/find_op.h"
 #include "hip/hip_runtime.h"
@@ -35,9 +35,9 @@ __global__ void FindKernel(
             res = max(res, j);
         }
     }
-    typedef cub::BlockReduce<int, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<int, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
-    int min_res = BlockReduce(temp_storage).Reduce(res, cub::Max());
+    int min_res = BlockReduce(temp_storage).Reduce(res, hipcub::Max());
     if(hipThreadIdx_x == 0)
     {
         out[needle_idx] = min_res == (-1) ? missing_value : min_res;
