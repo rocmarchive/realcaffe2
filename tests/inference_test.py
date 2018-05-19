@@ -156,15 +156,10 @@ if use_gpu_engine == 1:
     init_net.RunAllOnGPU(use_gpu_engine=True)
     predict_net.RunAllOnGPU(use_gpu_engine=True)
 
-miopen_op_map = {'MaxPool':'MaxPool2D','AveragePool':'AveragePool2D'}
 for op in init_net.Proto().op:
     op.device_option.CopyFrom(device_opts)
-    if op.type in miopen_op_map:
-        op.type = miopen_op_map[op.type]
 for op in predict_net.Proto().op:
     op.device_option.CopyFrom(device_opts)
-    if op.type in miopen_op_map:
-        op.type = miopen_op_map[op.type]
         
 workspace.FeedBlob('gpu_0/data',img, device_option=device_opts)
 workspace.RunNetOnce(init_net)
