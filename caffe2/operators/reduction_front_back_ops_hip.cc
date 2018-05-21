@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#include <cub/block/block_reduce.cuh>
+#include <hipcub//hipcub.hpp>
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/reduction_front_back_ops.h"
 #include "hip/hip_runtime.h"
+#include <cfloat>
 
 namespace caffe2 {
 
@@ -40,7 +41,7 @@ template <typename T>
 __global__ void
 rowwise_sum_kernel(const int rows, const int cols, const float alpha, const T* data, T* out)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     for(int rowIndex = hipBlockIdx_x; rowIndex < rows; rowIndex += hipGridDim_x)
     {
@@ -50,7 +51,7 @@ rowwise_sum_kernel(const int rows, const int cols, const float alpha, const T* d
         {
             sum += data[rowOffset + colIndex];
         }
-        sum = BlockReduce(temp_storage).Reduce(sum, cub::Sum());
+        sum = BlockReduce(temp_storage).Reduce(sum, hipcub::Sum());
         if(hipThreadIdx_x == 0)
         {
             out[rowIndex] = alpha * sum;
@@ -63,7 +64,7 @@ template <typename T>
 __global__ void
 columnwise_sum_kernel(const int rows, const int cols, const float alpha, const T* data, T* out)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     for(int colIndex = hipBlockIdx_x; colIndex < cols; colIndex += hipGridDim_x)
     {
@@ -72,7 +73,7 @@ columnwise_sum_kernel(const int rows, const int cols, const float alpha, const T
         {
             sum += data[rowIndex * cols + colIndex];
         }
-        sum = BlockReduce(temp_storage).Reduce(sum, cub::Sum());
+        sum = BlockReduce(temp_storage).Reduce(sum, hipcub::Sum());
         if(hipThreadIdx_x == 0)
         {
             out[colIndex] = alpha * sum;
@@ -271,7 +272,7 @@ namespace {
 
 __global__ void columnwise_max_kernel(const int rows, const int cols, const float* data, float* out)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     for(int colIndex = hipBlockIdx_x; colIndex < cols; colIndex += hipGridDim_x)
     {
@@ -280,7 +281,7 @@ __global__ void columnwise_max_kernel(const int rows, const int cols, const floa
         {
             mx = fmaxf(mx, data[rowIndex * cols + colIndex]);
         }
-        mx = BlockReduce(temp_storage).Reduce(mx, cub::Max());
+        mx = BlockReduce(temp_storage).Reduce(mx, hipcub::Max());
         if(hipThreadIdx_x == 0)
         {
             out[colIndex] = mx;
@@ -291,7 +292,7 @@ __global__ void columnwise_max_kernel(const int rows, const int cols, const floa
 
 __global__ void rowwise_max_kernel(const int rows, const int cols, const float* data, float* out)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     for(int rowIndex = hipBlockIdx_x; rowIndex < rows; rowIndex += hipGridDim_x)
     {
@@ -300,7 +301,7 @@ __global__ void rowwise_max_kernel(const int rows, const int cols, const float* 
         {
             mx = fmaxf(mx, data[rowIndex * cols + colIndex]);
         }
-        mx = BlockReduce(temp_storage).Reduce(mx, cub::Max());
+        mx = BlockReduce(temp_storage).Reduce(mx, hipcub::Max());
         if(hipThreadIdx_x == 0)
         {
             out[rowIndex] = mx;
