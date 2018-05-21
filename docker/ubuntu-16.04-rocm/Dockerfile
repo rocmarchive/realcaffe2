@@ -62,9 +62,7 @@ ENV OPENCL_ROOT=$ROCM_PATH/opencl
 ENV PATH="$HCC_HOME/bin:$HIP_PATH/bin:${PATH}"
 ENV PATH="$ROCM_PATH/bin:${PATH}"
 ENV PATH="$OPENCL_ROOT/bin:${PATH}"
-ADD ./docker/ubuntu-16.04-rocm171/target.lst /opt/rocm/bin
-#ADD ./docker/ubuntu-16.04-rocm171/rocm-base/rocm_agent_enumerator /opt/rocm/bin
-
+ADD ./docker/ubuntu-16.04-rocm/target.lst /opt/rocm/bin
  
 # Setup environment variables, and add those environment variables at the end of ~/.bashrc 
 ARG HCC_HOME=/opt/rocm/hcc
@@ -93,7 +91,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     protobuf-compiler \
     python-dev \
     python-pip \                  
-    python-numpy python-scipy python3-dev python-yaml \
+    python-numpy python-scipy python3-dev python-yaml python-matplotlib\
     libfftw3-dev \
     libelf-dev
 
