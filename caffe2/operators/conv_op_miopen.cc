@@ -104,7 +104,8 @@ class MIOPENConvOp final : public MIOPENConvOpBase
           returnedAlgoCount_(OperatorBase::GetSingleArgument<int>("returnedAlgoCount_", 1)),
           bestAlgoFound_(OperatorBase::GetSingleArgument<bool>("bestAlgoFound_", false)),
           fwdConvWs(nullptr),
-          fwdConvWsSize_(0)
+          fwdConvWsSize_(0),
+          fwd_algo_(miopenConvolutionFwdAlgoGEMM)
     {
     }
 
@@ -128,7 +129,7 @@ class MIOPENConvOp final : public MIOPENConvOpBase
     bool bestAlgoFound_;
     char* fwdConvWs;
     size_t fwdConvWsSize_;
-    miopenConvAlgoPerf_t perf_;
+    miopenConvFwdAlgorithm_t fwd_algo_;
     // Input: X, W, b
     // Output: Y
     INPUT_TAGS(INPUT, FILTER, BIAS);
@@ -147,7 +148,9 @@ class MIOPENConvGradientOp final : public MIOPENConvOpBase
           bwdWeightWs(nullptr),
           bwdWeightWsSize_(0),
           bwdDataWs(nullptr),
-          bwdDataWsSize_(0)
+          bwdDataWsSize_(0),
+          bwd_wei_algo_(miopenConvolutionBwdWeightsAlgoGEMM),
+          bwd_data_algo_(miopenConvolutionBwdDataAlgoGEMM)
     {
         CAFFE_ENFORCE(!(no_bias_ && OutputSize() == 3),
                       "If bias is not present, you should not have 3 grad output.");
@@ -186,7 +189,8 @@ class MIOPENConvGradientOp final : public MIOPENConvOpBase
     int returnedAlgoCount_;
     bool bestDataAlgoFound_;
     bool bestWeightAlgoFound_;
-    miopenConvAlgoPerf_t perf_;
+    miopenConvBwdWeightsAlgorithm_t bwd_wei_algo_;
+    miopenConvBwdDataAlgorithm_t bwd_data_algo_;
     size_t bwdWeightWsSize_;
     size_t bwdDataWsSize_;
     char* bwdWeightWs;
@@ -281,7 +285,7 @@ bool MIOPENConvOp::DoRunWithType()
 
     while(!bestAlgoFound_)
     {
-
+        miopenConvAlgoPerf_t perf;
         MIOPEN_ENFORCE(miopenFindConvolutionForwardAlgorithm(miopen_wrapper_.inline_miopen_handle(),
                                                              bottom_desc_,
                                                              X.template data<T_X>(),
@@ -292,12 +296,12 @@ bool MIOPENConvOp::DoRunWithType()
                                                              Y->template mutable_data<T_Y>(),
                                                              requestAlgoCount_,
                                                              &returnedAlgoCount_,
-                                                             &perf_,
+                                                             &perf,
                                                              fwdConvWs,
                                                              fwdConvWsSize_,
                                                              false));
-
         bestAlgoFound_ = true;
+        fwd_algo_      = perf.fwd_algo;
     }
 
     for(int i = 0; i < group_; i++)
@@ -310,7 +314,7 @@ bool MIOPENConvOp::DoRunWithType()
                                      weight_desc_,
                                      Weight.template data<T_W>() + i * group_offset_filter,
                                      conv_desc_,
-                                     perf_.fwd_algo,
+                                     fwd_algo_,
                                      &beta_,
                                      top_desc_,
                                      Y->template mutable_data<T_Y>() + i * group_offset_Y,
@@ -468,6 +472,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
     {
         while(!bestDataAlgoFound_)
         {
+            miopenConvAlgoPerf_t perf;
             MIOPEN_ENFORCE(miopenFindConvolutionBackwardDataAlgorithm(
                 miopen_wrapper_.inline_miopen_handle(),
                 top_desc_,
@@ -479,12 +484,13 @@ bool MIOPENConvGradientOp::DoRunWithType()
                 dX->template mutable_data<T_DX>() + i * group_offset_X,
                 requestAlgoCount_,
                 &returnedAlgoCount_,
-                &perf_,
+                &perf,
                 bwdDataWs,
                 bwdDataWsSize_,
                 false));
 
             bestDataAlgoFound_ = true;
+            bwd_data_algo_     = perf.bwd_data_algo;
         }
 
         MIOPEN_ENFORCE(
@@ -495,7 +501,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
                                           weight_desc_,
                                           Weight.template data<T_W>() + i * group_offset_filter,
                                           conv_desc_,
-                                          perf_.bwd_data_algo,
+                                          bwd_data_algo_,
                                           &beta_,
                                           bottom_desc_,
                                           dX->template mutable_data<T_DX>() + i * group_offset_X,
@@ -505,6 +511,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
 
         while(!bestWeightAlgoFound_)
         {
+            miopenConvAlgoPerf_t perf;
             MIOPEN_ENFORCE(miopenFindConvolutionBackwardWeightsAlgorithm(
                 miopen_wrapper_.inline_miopen_handle(),
                 top_desc_,
@@ -516,11 +523,12 @@ bool MIOPENConvGradientOp::DoRunWithType()
                 dW->template mutable_data<T_DW>() + i * group_offset_filter,
                 requestAlgoCount_,
                 &returnedAlgoCount_,
-                &perf_,
+                &perf,
                 bwdWeightWs,
                 bwdWeightWsSize_,
                 false));
             bestWeightAlgoFound_ = true;
+            bwd_wei_algo_        = perf.bwd_weights_algo;
         }
         MIOPEN_ENFORCE(miopenConvolutionBackwardWeights(
             miopen_wrapper_.inline_miopen_handle(),
@@ -530,7 +538,7 @@ bool MIOPENConvGradientOp::DoRunWithType()
             bottom_desc_,
             X.template data<T_X>() + i * group_offset_X,
             conv_desc_,
-            perf_.bwd_weights_algo,
+            bwd_wei_algo_,
             &beta_,
             weight_desc_,
             dW->template mutable_data<T_DW>() + i * group_offset_filter,
