@@ -411,7 +411,6 @@ bool MIOPENConvGradientOp::DoRunWithType()
                   "by group.");
 
     int group_offset_filter = Weight.size() / group_;
-    int group_offset_bias   = 0;
 
     MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(weight_desc_,
                                                miopenTypeWrapper<T_X>::type,
@@ -431,9 +430,10 @@ bool MIOPENConvGradientOp::DoRunWithType()
 
     if(!no_bias_)
     {
+        MIOPEN_ENFORCE(
+            miopenSet4dTensorDescriptor(bias_desc_, miopenTypeWrapper<T_B>::type, 1, M, 1, 1));
         MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
-            bias_desc_, miopenTypeWrapper<T_X>::type, 1, C_out / group_, 1, 1));
-        group_offset_bias = C_out / group_;
+            top_desc_for_bias_, miopenTypeWrapper<T_X>::type, N_out, M, H_out, W_out));
     }
 
     MIOPEN_ENFORCE(
@@ -544,24 +544,23 @@ bool MIOPENConvGradientOp::DoRunWithType()
             dW->template mutable_data<T_DW>() + i * group_offset_filter,
             bwdWeightWs,
             bwdWeightWsSize_));
-
-        ////////////////////////////////////// BIAS ///////////////////////////
-        if(!no_bias_)
-        {
-            auto* dbias = Output(BIAS_OR_INPUT_GRAD);
-            dbias->Resize(M);
-            MIOPEN_ENFORCE(miopenConvolutionBackwardBias(
-                miopen_wrapper_.inline_miopen_handle(),
-                &alpha_,
-                top_desc_,
-                dY.template data<T_DY>() + i * group_offset_Y,
-                &beta_,
-                bias_desc_,
-                dbias->template mutable_data<T_DB>() + i * group_offset_bias));
-        }
     }
     // Synchronize the work across groups.
     hipDeviceSynchronize();
+
+    ////////////////////////////////////// BIAS ///////////////////////////
+    if(!no_bias_)
+    {
+        auto* dbias = Output(BIAS_OR_INPUT_GRAD);
+        dbias->Resize(M);
+        MIOPEN_ENFORCE(miopenConvolutionBackwardBias(miopen_wrapper_.inline_miopen_handle(),
+                                                     &alpha_,
+                                                     top_desc_for_bias_,
+                                                     dY.template data<T_DY>(),
+                                                     &beta_,
+                                                     bias_desc_,
+                                                     dbias->template mutable_data<T_DB>()));
+    }
     return true;
 }
 
