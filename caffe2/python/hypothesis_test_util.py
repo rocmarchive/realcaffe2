@@ -92,7 +92,7 @@ hypothesis.settings.register_profile(
 hypothesis.settings.register_profile(
     "dev",
     hypothesis.settings(
-        suppress_health_check=[hypothesis.HealthCheck.too_slow],
+        suppress_health_check=[hypothesis.HealthCheck.too_slow, hypothesis.HealthCheck.filter_too_much],
         database=None,
         max_examples=10,
         min_satisfying_examples=1,
