@@ -152,6 +152,8 @@ class MIOPENConvGradientOp final : public MIOPENConvOpBase
           bwd_wei_algo_(miopenConvolutionBwdWeightsAlgoGEMM),
           bwd_data_algo_(miopenConvolutionBwdDataAlgoGEMM)
     {
+        OPERATOR_NEEDS_FEATURE(group_ == 1,
+                               "Group convolution not supported yet for MIOpen ConvGradient.");
         CAFFE_ENFORCE(!(no_bias_ && OutputSize() == 3),
                       "If bias is not present, you should not have 3 grad output.");
     }
