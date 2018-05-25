@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-#include <cub/block/block_reduce.cuh>
-#include <cub/device/device_reduce.cuh>
-#include <cub/device/device_scan.cuh>
+#include <hipcub/hipcub.hpp>
 #include "caffe2/core/context_hip.h"
 #include "caffe2/core/operator.h"
 #include "caffe2/utils/math.h"
@@ -34,23 +32,23 @@ void inclusive_scan_wrapper(const int* length_data,
 {
     // Retrieve buffer size
     size_t temp_storage_bytes = 0;
-    cub::DeviceScan::InclusiveSum(NULL,
-                                  temp_storage_bytes,
-                                  length_data,
-                                  prefix_sum_out->mutable_data<int>(),
-                                  len_length,
-                                  context_->hip_stream());
+    hipcub::DeviceScan::InclusiveSum(NULL,
+                                     temp_storage_bytes,
+                                     length_data,
+                                     prefix_sum_out->mutable_data<int>(),
+                                     len_length,
+                                     context_->hip_stream());
     // Allocate temporary storage
     auto buffer_size = (temp_storage_bytes + sizeof(int)) / sizeof(int);
     temp_buffer->Resize(buffer_size);
     void* d_temp_storage = static_cast<void*>(temp_buffer->mutable_data<int>());
     // Run inclusive prefix sum
-    cub::DeviceScan::InclusiveSum(d_temp_storage,
-                                  temp_storage_bytes,
-                                  length_data,
-                                  prefix_sum_out->mutable_data<int>(),
-                                  len_length,
-                                  context_->hip_stream());
+    hipcub::DeviceScan::InclusiveSum(d_temp_storage,
+                                     temp_storage_bytes,
+                                     length_data,
+                                     prefix_sum_out->mutable_data<int>(),
+                                     len_length,
+                                     context_->hip_stream());
 }
 
 template <typename T, bool ExactBlock = false>
@@ -194,7 +192,7 @@ length_weighted_sum_with_main_input_gradient_kernel(const T* __restrict__ grad_i
     HIP_KERNEL_ASSERT(end <= N);
 
     // todo figure this num threads thing
-    typedef cub::BlockReduce<float, NumThreads> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, NumThreads>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
 
     // TODO(wyiming): parallelize this outter loop
@@ -207,7 +205,7 @@ length_weighted_sum_with_main_input_gradient_kernel(const T* __restrict__ grad_i
             data_grad_out[line * post + i] = weights_in[line] * g_in;
             w_grad += g_in * data_in[indices[line] * post + i];
         }
-        w_grad = BlockReduce(temp_storage).Reduce(w_grad, cub::Sum());
+        w_grad = BlockReduce(temp_storage).Reduce(w_grad, hipcub::Sum());
         if(hipThreadIdx_x == 0)
         {
             weights_grad_out[line] = w_grad;
@@ -605,7 +603,7 @@ class HIPSparseLengthsWeightedSumOp : public Operator<HIPContext>
 template <typename SIndex>
 __global__ void MaxSegmentKernel(int n, const SIndex* segment_ids, SIndex* max_segment)
 {
-    typedef cub::BlockReduce<SIndex, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<SIndex, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     int mx = 0;
 
@@ -613,7 +611,7 @@ __global__ void MaxSegmentKernel(int n, const SIndex* segment_ids, SIndex* max_s
     {
         mx = segment_ids[j] > mx ? segment_ids[j] : mx;
     }
-    SIndex max_seg = BlockReduce(temp_storage).Reduce(mx, cub::Max());
+    SIndex max_seg = BlockReduce(temp_storage).Reduce(mx, hipcub::Max());
     if(hipThreadIdx_x == 0)
     {
         *max_segment = max_seg;
@@ -689,21 +687,23 @@ class HIPUnsortedSegmentSumOp : public Operator<HIPContext>
             // when the input size is large, device reduce is better.
             size_t tmp_storage_bytes = 0;
             // the first call to `Max` do nothing, but set correct tmp_storage_bytes.
-            cub::DeviceReduce::Max(nullptr,
-                                   tmp_storage_bytes,
-                                   segment_ids.template data<SIndex>(),       // input device data
-                                   K_tensor_.template mutable_data<SIndex>(), // output device data
-                                   segment_ids.size(),                        // number of items
-                                   context_.hip_stream());
+            hipcub::DeviceReduce::Max(
+                nullptr,
+                tmp_storage_bytes,
+                segment_ids.template data<SIndex>(),       // input device data
+                K_tensor_.template mutable_data<SIndex>(), // output device data
+                segment_ids.size(),                        // number of items
+                context_.hip_stream());
 
             // the second call do the real computation.
             buffer_tensor_.Resize(tmp_storage_bytes);
-            cub::DeviceReduce::Max(static_cast<void*>(buffer_tensor_.mutable_data<char>()),
-                                   tmp_storage_bytes,
-                                   segment_ids.template data<SIndex>(),       // input device data
-                                   K_tensor_.template mutable_data<SIndex>(), // output device data
-                                   segment_ids.size(),                        // number of items
-                                   context_.hip_stream());
+            hipcub::DeviceReduce::Max(
+                static_cast<void*>(buffer_tensor_.mutable_data<char>()),
+                tmp_storage_bytes,
+                segment_ids.template data<SIndex>(),       // input device data
+                K_tensor_.template mutable_data<SIndex>(), // output device data
+                segment_ids.size(),                        // number of items
+                context_.hip_stream());
         }
         else
         {
@@ -853,21 +853,21 @@ class SortedSegmentRangeMeanOp : public Operator<Context>
                            indices.template data<SIndex>(),
                            segment_len_.template mutable_data<SIndex>());
         size_t temp_storage_bytes = 0;
-        cub::DeviceScan::ExclusiveSum(nullptr,
-                                      temp_storage_bytes,
-                                      segment_len_.template data<SIndex>(),
-                                      segment_len_prefix_sum_.template mutable_data<SIndex>(),
-                                      K,
-                                      context_.hip_stream());
+        hipcub::DeviceScan::ExclusiveSum(nullptr,
+                                         temp_storage_bytes,
+                                         segment_len_.template data<SIndex>(),
+                                         segment_len_prefix_sum_.template mutable_data<SIndex>(),
+                                         K,
+                                         context_.hip_stream());
         auto buffer_size = (temp_storage_bytes + sizeof(T)) / sizeof(T);
         prefix_buffer_.Resize(buffer_size);
         void* dev_temp_storage = static_cast<void*>(prefix_buffer_.mutable_data<T>());
-        cub::DeviceScan::ExclusiveSum(dev_temp_storage,
-                                      temp_storage_bytes,
-                                      segment_len_.template data<SIndex>(),
-                                      segment_len_prefix_sum_.template mutable_data<SIndex>(),
-                                      K,
-                                      context_.hip_stream());
+        hipcub::DeviceScan::ExclusiveSum(dev_temp_storage,
+                                         temp_storage_bytes,
+                                         segment_len_.template data<SIndex>(),
+                                         segment_len_prefix_sum_.template mutable_data<SIndex>(),
+                                         K,
+                                         context_.hip_stream());
         hipLaunchKernelGGL((sorted_segment_mean_kernel<T, SIndex, LOGEXP>),
                            dim3(min(K, CAFFE_MAXIMUM_NUM_BLOCKS)),
                            dim3(CAFFE_HIP_NUM_THREADS),
