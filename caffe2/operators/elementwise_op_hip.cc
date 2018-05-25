@@ -1,9 +1,7 @@
 #include "hip/hip_runtime.h"
 
 #define CUB_STDERR
-#include <cub/block/block_load.cuh>
-#include <cub/block/block_reduce.cuh>
-#include <cub/device/device_reduce.cuh>
+#include <hipcub/hipcub.hpp>
 #include "caffe2/core/common_hip.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/elementwise_op.h"
@@ -200,14 +198,14 @@ void device_reduce(const T* d_in, T* d_out, int N, Tensor<HIPContext>* buffer, H
 {
     // Determine temporary device storage requirements
     size_t temp_storage_bytes = 0;
-    cub::DeviceReduce::Sum(NULL, temp_storage_bytes, d_in, d_out, N, context->hip_stream());
+    hipcub::DeviceReduce::Sum(NULL, temp_storage_bytes, d_in, d_out, N, context->hip_stream());
 
     auto buffer_size = temp_storage_bytes / sizeof(T);
     buffer_size += temp_storage_bytes % sizeof(T) != 0 ? 1 : 0;
     buffer->Resize(buffer_size);
     void* d_temp_storage = static_cast<void*>(buffer->template mutable_data<T>());
     // Run sum-reduction
-    cub::DeviceReduce::Sum(
+    hipcub::DeviceReduce::Sum(
         d_temp_storage, temp_storage_bytes, d_in, d_out, N, context->hip_stream());
 }
 
@@ -257,7 +255,7 @@ __global__ void reduce_sum_like(const T* g_idata, T* g_odata, int pre, int N, in
         sum += convert::To<T, float>(g_idata[curPre * N * post + n * post + curPost]);
     }
     // uses a shared memory reduction within block
-    typedef cub::BlockReduce<float, BLOCK_THREADS> BlockReduceT;
+    using BlockReduceT = hipcub::BlockReduce<float, BLOCK_THREADS>;
     // Shared memory
     __shared__ typename BlockReduceT::TempStorage temp_storage;
     float aggregate = BlockReduceT(temp_storage).Sum(sum);
