@@ -5,9 +5,8 @@
 #include "caffe2/utils/conversions.h"
 #include "caffe2/utils/math.h"
 
-#include <cub/cub.cuh>
-#include <cub/block/block_reduce.cuh>
-
+#include <hipcub/hipcub.hpp>
+#include <cfloat>
 /*#if THRUST_VERSION >= 100800
 #define THRUST_SUPPORTS_PER_THREAD
 #endif  // THRUST_VERSION >= 100800
@@ -140,15 +139,15 @@ DELEGATE_SIMPLE_HIP_BINARY_PREFIX_FUNCTION(float, ElemwiseMax, fmaxf);
         const int N, const T* src, T* dst, Tensor<HIPContext>* scratch_ptr, HIPContext* context) \
     {                                                                                            \
         size_t memRequired = 0;                                                                  \
-        cub::DeviceReduce::func(nullptr, memRequired, src, dst, N, context->hip_stream());       \
+        hipcub::DeviceReduce::func(nullptr, memRequired, src, dst, N, context->hip_stream());    \
         auto buffer_size = static_cast<TIndex>((memRequired + sizeof(T) - 1) / sizeof(T));       \
         scratch_ptr->Resize(std::vector<TIndex>{buffer_size});                                   \
-        cub::DeviceReduce::func(static_cast<void*>(scratch_ptr->mutable_data<T>()),              \
-                                memRequired,                                                     \
-                                src,                                                             \
-                                dst,                                                             \
-                                N,                                                               \
-                                context->hip_stream());                                          \
+        hipcub::DeviceReduce::func(static_cast<void*>(scratch_ptr->mutable_data<T>()),           \
+                                   memRequired,                                                  \
+                                   src,                                                          \
+                                   dst,                                                          \
+                                   N,                                                            \
+                                   context->hip_stream());                                       \
     }
 
 DELEGATE_REDUCTION_FUNCTION(float, ReduceMin, Min)
@@ -822,7 +821,7 @@ void SumFloatIter(
     const int N, FloatIterT it, float*& dest, HIPContext* context, Tensor<HIPContext>* scratch_ptr)
 {
     size_t memRequired = 0;
-    cub::DeviceReduce::Sum(nullptr, memRequired, it, dest, N, context->hip_stream());
+    hipcub::DeviceReduce::Sum(nullptr, memRequired, it, dest, N, context->hip_stream());
     auto buffer_size = static_cast<TIndex>((memRequired + sizeof(float) - 1) / sizeof(float));
     if(!dest)
     {
@@ -834,12 +833,12 @@ void SumFloatIter(
     {
         scratch_ptr->Resize(std::vector<TIndex>{buffer_size});
     }
-    cub::DeviceReduce::Sum(static_cast<void*>(scratch_ptr->template mutable_data<float>()),
-                           memRequired,
-                           it,
-                           dest,
-                           N,
-                           context->hip_stream());
+    hipcub::DeviceReduce::Sum(static_cast<void*>(scratch_ptr->template mutable_data<float>()),
+                              memRequired,
+                              it,
+                              dest,
+                              N,
+                              context->hip_stream());
 }
 } // namespace
 
@@ -876,32 +875,32 @@ struct FloatTransform
 };
 } // namespace
 
-#define CAFFE2_MATH_SUM_FUNC(T)                                                               \
-    template <>                                                                               \
-    void Sum<T, HIPContext>(                                                                  \
-        const int N, const T* x, T* y, HIPContext* context, Tensor<HIPContext>* scratch_ptr)  \
-    {                                                                                         \
-        if(scratch_ptr && N > DEVICE_REDUCE_SIZE_THRESHOLD)                                   \
-        {                                                                                     \
-            FloatTransform<T> transform;                                                      \
-            cub::TransformInputIterator<float, FloatTransform<T>, const T*> it(x, transform); \
-            float* sum = nullptr;                                                             \
-            SumFloatIter(N, it, sum, context, scratch_ptr);                                   \
-            hipLaunchKernelGGL(                                                               \
-                (SumConvertKernel), dim3(1), dim3(1), 0, context->hip_stream(), sum, y);      \
-        }                                                                                     \
-        else                                                                                  \
-        {                                                                                     \
-            hipLaunchKernelGGL((SumKernel),                                                   \
-                               dim3(1),                                                       \
-                               dim3(SUM_KERNEL_NTHREADS),                                     \
-                               0,                                                             \
-                               context->hip_stream(),                                         \
-                               N,                                                             \
-                               x,                                                             \
-                               y,                                                             \
-                               false);                                                        \
-        }                                                                                     \
+#define CAFFE2_MATH_SUM_FUNC(T)                                                                  \
+    template <>                                                                                  \
+    void Sum<T, HIPContext>(                                                                     \
+        const int N, const T* x, T* y, HIPContext* context, Tensor<HIPContext>* scratch_ptr)     \
+    {                                                                                            \
+        if(scratch_ptr && N > DEVICE_REDUCE_SIZE_THRESHOLD)                                      \
+        {                                                                                        \
+            FloatTransform<T> transform;                                                         \
+            hipcub::TransformInputIterator<float, FloatTransform<T>, const T*> it(x, transform); \
+            float* sum = nullptr;                                                                \
+            SumFloatIter(N, it, sum, context, scratch_ptr);                                      \
+            hipLaunchKernelGGL(                                                                  \
+                (SumConvertKernel), dim3(1), dim3(1), 0, context->hip_stream(), sum, y);         \
+        }                                                                                        \
+        else                                                                                     \
+        {                                                                                        \
+            hipLaunchKernelGGL((SumKernel),                                                      \
+                               dim3(1),                                                          \
+                               dim3(SUM_KERNEL_NTHREADS),                                        \
+                               0,                                                                \
+                               context->hip_stream(),                                            \
+                               N,                                                                \
+                               x,                                                                \
+                               y,                                                                \
+                               false);                                                           \
+        }                                                                                        \
     }
 
 CAFFE2_MATH_SUM_FUNC(float16)
@@ -922,7 +921,7 @@ void SumSqr<float, HIPContext>(
     if(scratch_ptr && N > DEVICE_REDUCE_SIZE_THRESHOLD)
     {
         SqrTransform<float> transform;
-        cub::TransformInputIterator<float, SqrTransform<float>, const float*> it(x, transform);
+        hipcub::TransformInputIterator<float, SqrTransform<float>, const float*> it(x, transform);
         SumFloatIter(N, it, y, context, scratch_ptr);
     }
     else
@@ -939,36 +938,36 @@ void SumSqr<float, HIPContext>(
     }
 }
 
-#define CAFFE2_MATH_SUMSQR_FUNC(T)                                                           \
-    template <>                                                                              \
-    void SumSqr<T, HIPContext>(                                                              \
-        const int N, const T* x, T* y, HIPContext* context, Tensor<HIPContext>* scratch_ptr) \
-    {                                                                                        \
-        if(scratch_ptr && N > DEVICE_REDUCE_SIZE_THRESHOLD)                                  \
-        {                                                                                    \
-            FloatTransform<T> float_transform;                                               \
-            cub::TransformInputIterator<float, FloatTransform<T>, const T*> float_it(        \
-                x, float_transform);                                                         \
-            SqrTransform<float> sqr_transform;                                               \
-            cub::TransformInputIterator<float, SqrTransform<float>, decltype(float_it)> it(  \
-                float_it, sqr_transform);                                                    \
-            float* sum = nullptr;                                                            \
-            SumFloatIter(N, it, sum, context, scratch_ptr);                                  \
-            hipLaunchKernelGGL(                                                              \
-                (SumConvertKernel), dim3(1), dim3(1), 0, context->hip_stream(), sum, y);     \
-        }                                                                                    \
-        else                                                                                 \
-        {                                                                                    \
-            hipLaunchKernelGGL((SumKernel),                                                  \
-                               dim3(1),                                                      \
-                               dim3(SUM_KERNEL_NTHREADS),                                    \
-                               0,                                                            \
-                               context->hip_stream(),                                        \
-                               N,                                                            \
-                               x,                                                            \
-                               y,                                                            \
-                               true);                                                        \
-        }                                                                                    \
+#define CAFFE2_MATH_SUMSQR_FUNC(T)                                                             \
+    template <>                                                                                \
+    void SumSqr<T, HIPContext>(                                                                \
+        const int N, const T* x, T* y, HIPContext* context, Tensor<HIPContext>* scratch_ptr)   \
+    {                                                                                          \
+        if(scratch_ptr && N > DEVICE_REDUCE_SIZE_THRESHOLD)                                    \
+        {                                                                                      \
+            FloatTransform<T> float_transform;                                                 \
+            hipcub::TransformInputIterator<float, FloatTransform<T>, const T*> float_it(       \
+                x, float_transform);                                                           \
+            SqrTransform<float> sqr_transform;                                                 \
+            hipcub::TransformInputIterator<float, SqrTransform<float>, decltype(float_it)> it( \
+                float_it, sqr_transform);                                                      \
+            float* sum = nullptr;                                                              \
+            SumFloatIter(N, it, sum, context, scratch_ptr);                                    \
+            hipLaunchKernelGGL(                                                                \
+                (SumConvertKernel), dim3(1), dim3(1), 0, context->hip_stream(), sum, y);       \
+        }                                                                                      \
+        else                                                                                   \
+        {                                                                                      \
+            hipLaunchKernelGGL((SumKernel),                                                    \
+                               dim3(1),                                                        \
+                               dim3(SUM_KERNEL_NTHREADS),                                      \
+                               0,                                                              \
+                               context->hip_stream(),                                          \
+                               N,                                                              \
+                               x,                                                              \
+                               y,                                                              \
+                               true);                                                          \
+        }                                                                                      \
     }
 
 CAFFE2_MATH_SUMSQR_FUNC(float16)
@@ -1978,7 +1977,7 @@ void CopyVector<float, HIPContext>(const int N, const float* src, float* dst, HI
 namespace {
 __global__ void rowwise_max_kernel(const int rows, const int cols, const float* data, float* out)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     for(int rowIndex = hipBlockIdx_x; rowIndex < rows; rowIndex += hipGridDim_x)
     {
@@ -1992,7 +1991,7 @@ __global__ void rowwise_max_kernel(const int rows, const int cols, const float* 
         {
             maxval = fmaxf(data[rowIndex * cols + colIndex], maxval);
         }
-        maxval = BlockReduce(temp_storage).Reduce(maxval, cub::Max());
+        maxval = BlockReduce(temp_storage).Reduce(maxval, hipcub::Max());
         if(hipThreadIdx_x == 0)
         {
             out[rowIndex] = maxval;
@@ -2003,7 +2002,7 @@ __global__ void rowwise_max_kernel(const int rows, const int cols, const float* 
 
 __global__ void colwise_max_kernel(const int rows, const int cols, const float* data, float* out)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     for(int colIndex = hipBlockIdx_x; colIndex < cols; colIndex += hipGridDim_x)
     {
@@ -2012,7 +2011,7 @@ __global__ void colwise_max_kernel(const int rows, const int cols, const float* 
         {
             maxval = fmaxf(data[rowIndex * cols + colIndex], maxval);
         }
-        maxval = BlockReduce(temp_storage).Reduce(maxval, cub::Max());
+        maxval = BlockReduce(temp_storage).Reduce(maxval, hipcub::Max());
         if(hipThreadIdx_x == 0)
         {
             out[colIndex] = maxval;
