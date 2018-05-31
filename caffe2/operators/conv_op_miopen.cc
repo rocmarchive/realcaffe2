@@ -298,23 +298,23 @@ bool MIOPENConvOp::DoRunWithType()
         {
             miopenConvAlgoPerf_t perf;
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-              MIOPEN_ENFORCE(
-                miopenFindConvolutionForwardAlgorithm(state->miopen_handle(),
-                                                      bottom_desc_,
-                                                      X.template data<T_X>(),
-                                                      weight_desc_,
-                                                      Weight.template data<T_W>(),
-                                                      conv_desc_,
-                                                      top_desc_,
-                                                      Y->template mutable_data<T_Y>(),
-                                                      requestAlgoCount_,
-                                                      &returnedAlgoCount_,
-                                                      &perf,
-                                                      fwdConvWs,
-                                                      fwdConvWsSize_,
-                                                      false));
+                MIOPEN_ENFORCE(
+                    miopenFindConvolutionForwardAlgorithm(state->miopen_handle(),
+                                                          bottom_desc_,
+                                                          X.template data<T_X>(),
+                                                          weight_desc_,
+                                                          Weight.template data<T_W>(),
+                                                          conv_desc_,
+                                                          top_desc_,
+                                                          Y->template mutable_data<T_Y>(),
+                                                          requestAlgoCount_,
+                                                          &returnedAlgoCount_,
+                                                          &perf,
+                                                          fwdConvWs,
+                                                          fwdConvWsSize_,
+                                                          false));
             });
-            
+
             bestAlgoFound_ = true;
             fwd_algo_      = perf.fwd_algo;
         }
@@ -324,20 +324,21 @@ bool MIOPENConvOp::DoRunWithType()
             for(int g = 0; g < group_; g++)
             {
                 miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-                  MIOPEN_ENFORCE(miopenConvolutionForward(
-                    state->miopen_handle(),
-                    &alpha_,
-                    bottom_desc_,
-                    X.template data<T_X>() + (b * batch_offset_X) + (g * group_offset_X),
-                    weight_desc_,
-                    Weight.template data<T_W>() + g * group_offset_filter,
-                    conv_desc_,
-                    fwd_algo_,
-                    &beta_,
-                    top_desc_,
-                    Y->template mutable_data<T_Y>() + (b * batch_offset_Y) + (g * group_offset_Y),
-                    fwdConvWs,
-                    fwdConvWsSize_));
+                    MIOPEN_ENFORCE(miopenConvolutionForward(
+                        state->miopen_handle(),
+                        &alpha_,
+                        bottom_desc_,
+                        X.template data<T_X>() + (b * batch_offset_X) + (g * group_offset_X),
+                        weight_desc_,
+                        Weight.template data<T_W>() + g * group_offset_filter,
+                        conv_desc_,
+                        fwd_algo_,
+                        &beta_,
+                        top_desc_,
+                        Y->template mutable_data<T_Y>() + (b * batch_offset_Y) +
+                            (g * group_offset_Y),
+                        fwdConvWs,
+                        fwdConvWsSize_));
                 });
             }
         }
@@ -351,19 +352,19 @@ bool MIOPENConvOp::DoRunWithType()
             CAFFE_ENFORCE_EQ(bias.ndim(), 1);
             CAFFE_ENFORCE_EQ(bias.dim32(0), M);
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-              MIOPEN_ENFORCE(miopenConvolutionForwardBias(state->miopen_handle(),
-                                                        &alpha_,
-                                                        bias_desc_,
-                                                        bias.template data<T_B>(),
-                                                        &beta_,
-                                                        top_desc_for_bias_,
-                                                        Y->template mutable_data<T_Y>()));
+                MIOPEN_ENFORCE(miopenConvolutionForwardBias(state->miopen_handle(),
+                                                            &alpha_,
+                                                            bias_desc_,
+                                                            bias.template data<T_B>(),
+                                                            &beta_,
+                                                            top_desc_for_bias_,
+                                                            Y->template mutable_data<T_Y>()));
             });
         }
 
         hipDeviceSynchronize();
     }
-    else  // no group
+    else // no group
     {
         MIOPEN_ENFORCE(miopenSet4dTensorDescriptor(
             weight_desc_, miopenTypeWrapper<T_W>::type, M, C, kernel_h(), kernel_w()));
@@ -400,40 +401,40 @@ bool MIOPENConvOp::DoRunWithType()
         {
             miopenConvAlgoPerf_t perf;
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-              MIOPEN_ENFORCE(
-                miopenFindConvolutionForwardAlgorithm(state->miopen_handle(),
-                                                      bottom_desc_,
-                                                      X.template data<T_X>(),
-                                                      weight_desc_,
-                                                      Weight.template data<T_W>(),
-                                                      conv_desc_,
-                                                      top_desc_,
-                                                      Y->template mutable_data<T_Y>(),
-                                                      requestAlgoCount_,
-                                                      &returnedAlgoCount_,
-                                                      &perf,
-                                                      fwdConvWs,
-                                                      fwdConvWsSize_,
-                                                      false));
+                MIOPEN_ENFORCE(
+                    miopenFindConvolutionForwardAlgorithm(state->miopen_handle(),
+                                                          bottom_desc_,
+                                                          X.template data<T_X>(),
+                                                          weight_desc_,
+                                                          Weight.template data<T_W>(),
+                                                          conv_desc_,
+                                                          top_desc_,
+                                                          Y->template mutable_data<T_Y>(),
+                                                          requestAlgoCount_,
+                                                          &returnedAlgoCount_,
+                                                          &perf,
+                                                          fwdConvWs,
+                                                          fwdConvWsSize_,
+                                                          false));
             });
             bestAlgoFound_ = true;
             fwd_algo_      = perf.fwd_algo;
         }
 
         miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-          MIOPEN_ENFORCE(miopenConvolutionForward(state->miopen_handle(),
-                                                &alpha_,
-                                                bottom_desc_,
-                                                X.template data<T_X>(),
-                                                weight_desc_,
-                                                Weight.template data<T_W>(),
-                                                conv_desc_,
-                                                fwd_algo_,
-                                                &beta_,
-                                                top_desc_,
-                                                Y->template mutable_data<T_Y>(),
-                                                fwdConvWs,
-                                                fwdConvWsSize_));
+            MIOPEN_ENFORCE(miopenConvolutionForward(state->miopen_handle(),
+                                                    &alpha_,
+                                                    bottom_desc_,
+                                                    X.template data<T_X>(),
+                                                    weight_desc_,
+                                                    Weight.template data<T_W>(),
+                                                    conv_desc_,
+                                                    fwd_algo_,
+                                                    &beta_,
+                                                    top_desc_,
+                                                    Y->template mutable_data<T_Y>(),
+                                                    fwdConvWs,
+                                                    fwdConvWsSize_));
         });
 
         // BIAS
@@ -444,15 +445,14 @@ bool MIOPENConvOp::DoRunWithType()
             CAFFE_ENFORCE_EQ(bias.ndim(), 1);
             CAFFE_ENFORCE_EQ(bias.dim32(0), M);
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-              MIOPEN_ENFORCE(miopenConvolutionForwardBias(state->miopen_handle(),
-                                                        &alpha_,
-                                                        bias_desc_,
-                                                        bias.template data<T_B>(),
-                                                        &beta_,
-                                                        top_desc_,
-                                                        Y->template mutable_data<T_Y>()));
+                MIOPEN_ENFORCE(miopenConvolutionForwardBias(state->miopen_handle(),
+                                                            &alpha_,
+                                                            bias_desc_,
+                                                            bias.template data<T_B>(),
+                                                            &beta_,
+                                                            top_desc_,
+                                                            Y->template mutable_data<T_Y>()));
             });
-            
         }
 
         hipDeviceSynchronize();
@@ -589,21 +589,21 @@ bool MIOPENConvGradientOp::DoRunWithType()
         {
             miopenConvAlgoPerf_t perf;
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-              MIOPEN_ENFORCE(
-                miopenFindConvolutionBackwardDataAlgorithm(state->miopen_handle(),
-                                                           top_desc_,
-                                                           dY.template data<T_DY>(),
-                                                           weight_desc_,
-                                                           Weight.template data<T_W>(),
-                                                           conv_desc_,
-                                                           bottom_desc_,
-                                                           dX->template mutable_data<T_DX>(),
-                                                           requestAlgoCount_,
-                                                           &returnedAlgoCount_,
-                                                           &perf,
-                                                           bwdDataWs,
-                                                           bwdDataWsSize_,
-                                                           false));
+                MIOPEN_ENFORCE(
+                    miopenFindConvolutionBackwardDataAlgorithm(state->miopen_handle(),
+                                                               top_desc_,
+                                                               dY.template data<T_DY>(),
+                                                               weight_desc_,
+                                                               Weight.template data<T_W>(),
+                                                               conv_desc_,
+                                                               bottom_desc_,
+                                                               dX->template mutable_data<T_DX>(),
+                                                               requestAlgoCount_,
+                                                               &returnedAlgoCount_,
+                                                               &perf,
+                                                               bwdDataWs,
+                                                               bwdDataWsSize_,
+                                                               false));
 
             });
             bestDataAlgoFound_ = true;
@@ -614,21 +614,21 @@ bool MIOPENConvGradientOp::DoRunWithType()
         {
             miopenConvAlgoPerf_t perf;
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-              MIOPEN_ENFORCE(miopenFindConvolutionBackwardWeightsAlgorithm(
-                state->miopen_handle(),
-                top_desc_,
-                dY.template data<T_DY>(),
-                bottom_desc_,
-                X.template data<T_X>(),
-                conv_desc_,
-                weight_desc_,
-                dW->template mutable_data<T_DW>(),
-                requestAlgoCount_,
-                &returnedAlgoCount_,
-                &perf,
-                bwdWeightWs,
-                bwdWeightWsSize_,
-                false));
+                MIOPEN_ENFORCE(
+                    miopenFindConvolutionBackwardWeightsAlgorithm(state->miopen_handle(),
+                                                                  top_desc_,
+                                                                  dY.template data<T_DY>(),
+                                                                  bottom_desc_,
+                                                                  X.template data<T_X>(),
+                                                                  conv_desc_,
+                                                                  weight_desc_,
+                                                                  dW->template mutable_data<T_DW>(),
+                                                                  requestAlgoCount_,
+                                                                  &returnedAlgoCount_,
+                                                                  &perf,
+                                                                  bwdWeightWs,
+                                                                  bwdWeightWsSize_,
+                                                                  false));
             });
             bestWeightAlgoFound_ = true;
             bwd_wei_algo_        = perf.bwd_weights_algo;
@@ -639,39 +639,39 @@ bool MIOPENConvGradientOp::DoRunWithType()
             for(int g = 0; g < group_; g++)
             {
                 miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-                  MIOPEN_ENFORCE(miopenConvolutionBackwardData(
-                    state->miopen_handle(),
-                    &alpha_,
-                    top_desc_,
-                    dY.template data<T_DY>() + (b * batch_offset_Y) + (g * group_offset_Y),
-                    weight_desc_,
-                    Weight.template data<T_W>() + g * group_offset_filter,
-                    conv_desc_,
-                    bwd_data_algo_,
-                    &beta_,
-                    bottom_desc_,
-                    dX->template mutable_data<T_DX>() + (b * batch_offset_X) + (g * group_offset_X),
-                    bwdDataWs,
-                    bwdDataWsSize_));
+                    MIOPEN_ENFORCE(miopenConvolutionBackwardData(
+                        state->miopen_handle(),
+                        &alpha_,
+                        top_desc_,
+                        dY.template data<T_DY>() + (b * batch_offset_Y) + (g * group_offset_Y),
+                        weight_desc_,
+                        Weight.template data<T_W>() + g * group_offset_filter,
+                        conv_desc_,
+                        bwd_data_algo_,
+                        &beta_,
+                        bottom_desc_,
+                        dX->template mutable_data<T_DX>() + (b * batch_offset_X) +
+                            (g * group_offset_X),
+                        bwdDataWs,
+                        bwdDataWsSize_));
                 });
-                
+
                 miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-                  MIOPEN_ENFORCE(miopenConvolutionBackwardWeights(
-                    state->miopen_handle(),
-                    &alpha_,
-                    top_desc_,
-                    dY.template data<T_DY>() + (b * batch_offset_Y) + (g * group_offset_Y),
-                    bottom_desc_,
-                    X.template data<T_X>() + (b * batch_offset_X) + (g * group_offset_X),
-                    conv_desc_,
-                    bwd_wei_algo_,
-                    &beta_,
-                    weight_desc_,
-                    dW->template mutable_data<T_DW>() + g * group_offset_filter,
-                    bwdWeightWs,
-                    bwdWeightWsSize_));
+                    MIOPEN_ENFORCE(miopenConvolutionBackwardWeights(
+                        state->miopen_handle(),
+                        &alpha_,
+                        top_desc_,
+                        dY.template data<T_DY>() + (b * batch_offset_Y) + (g * group_offset_Y),
+                        bottom_desc_,
+                        X.template data<T_X>() + (b * batch_offset_X) + (g * group_offset_X),
+                        conv_desc_,
+                        bwd_wei_algo_,
+                        &beta_,
+                        weight_desc_,
+                        dW->template mutable_data<T_DW>() + g * group_offset_filter,
+                        bwdWeightWs,
+                        bwdWeightWsSize_));
                 });
-                
             }
         }
 
@@ -684,13 +684,13 @@ bool MIOPENConvGradientOp::DoRunWithType()
             auto* dbias = Output(BIAS_OR_INPUT_GRAD);
             dbias->Resize(M);
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-              MIOPEN_ENFORCE(miopenConvolutionBackwardBias(state->miopen_handle(),
-                                                         &alpha_,
-                                                         top_desc_for_bias_,
-                                                         dY.template data<T_DY>(),
-                                                         &beta_,
-                                                         bias_desc_,
-                                                         dbias->template mutable_data<T_DB>()));
+                MIOPEN_ENFORCE(miopenConvolutionBackwardBias(state->miopen_handle(),
+                                                             &alpha_,
+                                                             top_desc_for_bias_,
+                                                             dY.template data<T_DY>(),
+                                                             &beta_,
+                                                             bias_desc_,
+                                                             dbias->template mutable_data<T_DB>()));
             });
         }
     }
@@ -744,24 +744,24 @@ bool MIOPENConvGradientOp::DoRunWithType()
         {
             miopenConvAlgoPerf_t perf;
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-              MIOPEN_ENFORCE(
-                miopenFindConvolutionBackwardDataAlgorithm(state->miopen_handle(),
-                                                           top_desc_,
-                                                           dY.template data<T_DY>(),
-                                                           weight_desc_,
-                                                           Weight.template data<T_W>(),
-                                                           conv_desc_,
-                                                           bottom_desc_,
-                                                           dX->template mutable_data<T_DX>(),
-                                                           requestAlgoCount_,
-                                                           &returnedAlgoCount_,
-                                                           &perf,
-                                                           bwdDataWs,
-                                                           bwdDataWsSize_,
-                                                           false));
+                MIOPEN_ENFORCE(
+                    miopenFindConvolutionBackwardDataAlgorithm(state->miopen_handle(),
+                                                               top_desc_,
+                                                               dY.template data<T_DY>(),
+                                                               weight_desc_,
+                                                               Weight.template data<T_W>(),
+                                                               conv_desc_,
+                                                               bottom_desc_,
+                                                               dX->template mutable_data<T_DX>(),
+                                                               requestAlgoCount_,
+                                                               &returnedAlgoCount_,
+                                                               &perf,
+                                                               bwdDataWs,
+                                                               bwdDataWsSize_,
+                                                               false));
 
             });
-            
+
             bestDataAlgoFound_ = true;
             bwd_data_algo_     = perf.bwd_data_algo;
         }
@@ -770,57 +770,57 @@ bool MIOPENConvGradientOp::DoRunWithType()
         {
             miopenConvAlgoPerf_t perf;
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-              MIOPEN_ENFORCE(miopenFindConvolutionBackwardWeightsAlgorithm(
-                state->miopen_handle(),
-                top_desc_,
-                dY.template data<T_DY>(),
-                bottom_desc_,
-                X.template data<T_X>(),
-                conv_desc_,
-                weight_desc_,
-                dW->template mutable_data<T_DW>(),
-                requestAlgoCount_,
-                &returnedAlgoCount_,
-                &perf,
-                bwdWeightWs,
-                bwdWeightWsSize_,
-                false));
+                MIOPEN_ENFORCE(
+                    miopenFindConvolutionBackwardWeightsAlgorithm(state->miopen_handle(),
+                                                                  top_desc_,
+                                                                  dY.template data<T_DY>(),
+                                                                  bottom_desc_,
+                                                                  X.template data<T_X>(),
+                                                                  conv_desc_,
+                                                                  weight_desc_,
+                                                                  dW->template mutable_data<T_DW>(),
+                                                                  requestAlgoCount_,
+                                                                  &returnedAlgoCount_,
+                                                                  &perf,
+                                                                  bwdWeightWs,
+                                                                  bwdWeightWsSize_,
+                                                                  false));
             });
-            
+
             bestWeightAlgoFound_ = true;
             bwd_wei_algo_        = perf.bwd_weights_algo;
         }
 
         miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-          MIOPEN_ENFORCE(miopenConvolutionBackwardData(state->miopen_handle(),
-                                                     &alpha_,
-                                                     top_desc_,
-                                                     dY.template data<T_DY>(),
-                                                     weight_desc_,
-                                                     Weight.template data<T_W>(),
-                                                     conv_desc_,
-                                                     bwd_data_algo_,
-                                                     &beta_,
-                                                     bottom_desc_,
-                                                     dX->template mutable_data<T_DX>(),
-                                                     bwdDataWs,
-                                                     bwdDataWsSize_));
+            MIOPEN_ENFORCE(miopenConvolutionBackwardData(state->miopen_handle(),
+                                                         &alpha_,
+                                                         top_desc_,
+                                                         dY.template data<T_DY>(),
+                                                         weight_desc_,
+                                                         Weight.template data<T_W>(),
+                                                         conv_desc_,
+                                                         bwd_data_algo_,
+                                                         &beta_,
+                                                         bottom_desc_,
+                                                         dX->template mutable_data<T_DX>(),
+                                                         bwdDataWs,
+                                                         bwdDataWsSize_));
         });
 
         miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-          MIOPEN_ENFORCE(miopenConvolutionBackwardWeights(state->miopen_handle(),
-                                                        &alpha_,
-                                                        top_desc_,
-                                                        dY.template data<T_DY>(),
-                                                        bottom_desc_,
-                                                        X.template data<T_X>(),
-                                                        conv_desc_,
-                                                        bwd_wei_algo_,
-                                                        &beta_,
-                                                        weight_desc_,
-                                                        dW->template mutable_data<T_DW>(),
-                                                        bwdWeightWs,
-                                                        bwdWeightWsSize_));
+            MIOPEN_ENFORCE(miopenConvolutionBackwardWeights(state->miopen_handle(),
+                                                            &alpha_,
+                                                            top_desc_,
+                                                            dY.template data<T_DY>(),
+                                                            bottom_desc_,
+                                                            X.template data<T_X>(),
+                                                            conv_desc_,
+                                                            bwd_wei_algo_,
+                                                            &beta_,
+                                                            weight_desc_,
+                                                            dW->template mutable_data<T_DW>(),
+                                                            bwdWeightWs,
+                                                            bwdWeightWsSize_));
         });
 
         // Synchronize the work across groups.
@@ -832,13 +832,13 @@ bool MIOPENConvGradientOp::DoRunWithType()
             auto* dbias = Output(BIAS_OR_INPUT_GRAD);
             dbias->Resize(M);
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-              MIOPEN_ENFORCE(miopenConvolutionBackwardBias(state->miopen_handle(),
-                                                         &alpha_,
-                                                         top_desc_,
-                                                         dY.template data<T_DY>(),
-                                                         &beta_,
-                                                         bias_desc_,
-                                                         dbias->template mutable_data<T_DB>()));
+                MIOPEN_ENFORCE(miopenConvolutionBackwardBias(state->miopen_handle(),
+                                                             &alpha_,
+                                                             top_desc_,
+                                                             dY.template data<T_DY>(),
+                                                             &beta_,
+                                                             bias_desc_,
+                                                             dbias->template mutable_data<T_DB>()));
             });
         }
     }
