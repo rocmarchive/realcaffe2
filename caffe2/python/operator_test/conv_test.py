@@ -539,47 +539,49 @@ class TestConvolution(hu.HypothesisTestCase):
                 np.sum(np.square(output)),
                 1763719461732352.0,
                 rtol=1e-5)
-    # Rohith :  investigate later..
-    """
-    def test_use_cudnn_engine_interactions(self):
-       # Make sure the use_cudnn and engine kwargs work as expected.
+            
+    def test_use_gpu_engine_interactions(self):
+        # Make sure the use_gpu_engine and engine kwargs work as expected.
         for model_default in [None, True, False]:
             arg_scope = {}
             if model_default is not None:
-                arg_scope['use_cudnn'] = model_default
+                arg_scope['use_gpu_engine'] = model_default
             else:
                 model_default = True  # the default
 
             model = ModelHelper(arg_scope=arg_scope)
-            self.assertEqual(model.arg_scope['use_cudnn'], model_default)
+            self.assertEqual(model.arg_scope['use_gpu_engine'], model_default)
             f = functools.partial(brew.conv, model,
                                   'conv_in', 'conv_out', 10, 10, 5)
 
-            for op_cudnn in [None, True, False]:
-                for op_engine in [None, '', 'CUDNN']:
+            for op_gpu_engine in [None, True, False]:
+                for op_engine in [None, '', 'MIOPEN' if workspace.has_hip else 'CUDNN']:
                     kwargs = {}
-                    if op_cudnn is not None:
-                        kwargs['use_cudnn'] = op_cudnn
+                    if op_gpu_engine is not None:
+                        kwargs['use_gpu_engine'] = op_gpu_engine
                     else:
-                        op_cudnn = False  # the default
+                        op_gpu_engine = False  # the default
                     if op_engine is not None:
                         kwargs['engine'] = op_engine
 
-                    calculated_cudnn = kwargs.get('use_cudnn', model_default)
+                    calculated_gpu_engine = kwargs.get('use_gpu_engine', model_default)
+                    if calculated_gpu_engine:
+                        expected_engine_default = 'MIOPEN' if workspace.has_hip else 'CUDNN'
+                    else:
+                        expected_engine_default = ''
                     expected_engine = kwargs.get(
                         'engine',
-                        'CUDNN' if calculated_cudnn else '')
+                        expected_engine_default)
 
-                    if ((calculated_cudnn is True and op_engine == '') or
-                            (calculated_cudnn is False and op_engine == 'CUDNN')):
+                    if ((calculated_gpu_engine is True and op_engine == '') or
+                            (calculated_gpu_engine is False and op_engine == ('MIOPEN' if workspace.has_hip else 'CUDNN'))):
                         with self.assertRaises(ValueError):
                             f(**kwargs)
                     else:
                         f(**kwargs)
                         self.assertEqual(model.Proto().op[-1].engine,
                                          expected_engine)
-    """
-
+ 
 if __name__ == "__main__":
     import unittest
     unittest.main()

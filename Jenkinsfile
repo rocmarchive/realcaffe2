@@ -1,13 +1,13 @@
-node('rocaffe2') {
+node("rocaffe2") {
     
     stage("checkout") {
         checkout scm
         sh 'git submodule update --init'
     }
     stage("docker_image") {
-        sh './docker/ubuntu-16.04-rocm171/docker-build.sh caffe2-rocm171'
+        sh './docker/ubuntu-16.04-rocm/docker-build.sh caffe2_rocm1.8.0'
     }
-    withDockerContainer(image: "caffe2-rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
+    withDockerContainer(image: "caffe2_rocm1.8.0", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
         timeout(time: 2, unit: 'HOURS'){
             stage('clang_format') {
                 sh '''
@@ -68,9 +68,9 @@ node('rocaffe2') {
                 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
                 echo $PYTHONPATH
                 model=resnet50
-	            if [ ! -d $model ]; then
+                if [ ! -d $model ]; then
                     python caffe2/python/models/download.py $model
-	            fi
+                fi
                 cd build/bin
                 python ../../tests/inference_test.py -m ../../$model -s 224 -e 1
                 '''
