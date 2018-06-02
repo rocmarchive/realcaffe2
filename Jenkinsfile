@@ -1,13 +1,15 @@
-node("rocaffe2") {
+node("rocm17-caffe2") {
     
     stage("checkout") {
         checkout scm
         sh 'git submodule update --init'
     }
     stage("docker_image") {
-        sh './docker/ubuntu-16.04-rocm/docker-build.sh caffe2_rocm1.8.0'
+	sh 'mkdir tmp'
+        sh 'cp -r ../../MLOpen tmp/'
+        sh './docker/ubuntu-16.04-rocm171/docker-build.sh caffe2_rocm171'
     }
-    withDockerContainer(image: "caffe2_rocm1.8.0", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
+    withDockerContainer(image: "caffe2_rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
         timeout(time: 2, unit: 'HOURS'){
             stage('clang_format') {
                 sh '''
@@ -17,7 +19,7 @@ node("rocaffe2") {
                     | xargs -n 1 -P 1 -I{} -t sh -c 'clang-format-3.8 -style=file {} | diff - {}'
                 '''
             }
-            /*
+           
             stage("build_debug") {
 
                 sh '''
@@ -33,7 +35,7 @@ node("rocaffe2") {
                     make DESTDIR=./install install
                 '''
             }
-            */
+           
             stage("build_release") {
                 sh '''
                     export HCC_AMDGPU_TARGET=gfx900
