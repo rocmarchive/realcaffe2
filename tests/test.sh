@@ -2,7 +2,7 @@
 total_test_count=0
 passed_count=0
 failed_tests=()
-ignore_tests=("common_test","fixed_divisor_test","module_test","timer_test")
+ignore_tests=()
 for T in $(ls); do
     if [[ "$T" =~ "test" ]]; then
 	if [[ "${ignore_tests[*]}" =~ "$T" ]]; then
