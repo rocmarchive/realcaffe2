@@ -2,7 +2,8 @@
 FROM ubuntu:xenial-20170619
 MAINTAINER Jeff Poznanovic <jeffrey.poznanovic@amd.com>
 
-ARG DEB_ROCM_REPO=http://repo.radeon.com/rocm/apt/debian/
+#ARG DEB_ROCM_REPO=http://repo.radeon.com/rocm/apt/debian/
+ARG DEB_ROCM_REPO=http://172.27.226.104/artifactory/list/rocm-dkms-release-1.7-ubuntu
 ARG ROCM_PATH=/opt/rocm
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -12,7 +13,7 @@ RUN apt update && apt install -y wget software-properties-common
 
 # Add rocm repository
 RUN apt-get clean all
-RUN wget -qO - $DEB_ROCM_REPO/rocm.gpg.key | apt-key add -
+#RUN wget -qO - $DEB_ROCM_REPO/rocm.gpg.key | apt-key add -
 RUN sh -c  "echo deb [arch=amd64] $DEB_ROCM_REPO xenial main > /etc/apt/sources.list.d/rocm.list"
 
 # Install misc pkgs
@@ -51,7 +52,7 @@ RUN apt-get update --allow-insecure-repositories && DEBIAN_FRONTEND=noninteracti
 RUN apt-get update --allow-insecure-repositories && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated \
     rocm-dev rocm-libs rocm-utils \
-    rocfft miopen-hip miopengemm rocblas hipblas rocrand \
+    rocfft rocblas miopengemm hipblas rocrand \
     rocm-profiler cxlactivitylogger && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -63,14 +64,17 @@ ENV PATH="$HCC_HOME/bin:$HIP_PATH/bin:${PATH}"
 ENV PATH="$ROCM_PATH/bin:${PATH}"
 ENV PATH="$OPENCL_ROOT/bin:${PATH}"
 ADD ./docker/ubuntu-16.04-rocm171/target.lst /opt/rocm/bin
-#ADD ./docker/ubuntu-16.04-rocm171/rocm-base/rocm_agent_enumerator /opt/rocm/bin
-
+ADD ./tmp/MLOpen /root/MLOpen
  
 # Setup environment variables, and add those environment variables at the end of ~/.bashrc 
 ARG HCC_HOME=/opt/rocm/hcc
 ARG HIP_PATH=/opt/rocm/hip
 ARG PATH=$HCC_HOME/bin:$HIP_PATH/bin:$PATH
 
+RUN cd /root/MLOpen && cmake -P install_deps.cmake && \
+    mkdir -p build && cd build && \
+    CXX=/opt/rocm/hcc/bin/hcc cmake -DMIOPEN_BACKEND=HIP -DCMAKE_PREFIX_PATH="/opt/rocm/hcc;/opt/rocm/hip" -DCMAKE_CXX_FLAGS="-isystem /usr/include/x86_64-linux-gnu/" .. && \
+    make -j $(nproc) && make install
 
 WORKDIR $HOME
 ENV HOME /rocm-caffe2
