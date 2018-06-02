@@ -5,9 +5,13 @@ node("rocm17-caffe2") {
         sh 'git submodule update --init'
     }
     stage("docker_image") {
-	sh 'mkdir tmp'
-        sh 'cp -r ../../MLOpen tmp/'
-        sh './docker/ubuntu-16.04-rocm171/docker-build.sh caffe2_rocm171'
+	sh '''
+	    if [ ! -d tmp ]; then
+		mkdir tmp
+		cp -r ../../MLOpen tmp/
+            fi
+	    ./docker/ubuntu-16.04-rocm171/docker-build.sh caffe2_rocm171
+	   '''
     }
     withDockerContainer(image: "caffe2_rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
         timeout(time: 2, unit: 'HOURS'){
