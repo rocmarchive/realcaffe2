@@ -1,13 +1,19 @@
-node("rocaffe2") {
+node("rocm17-caffe2") {
     
     stage("checkout") {
         checkout scm
         sh 'git submodule update --init'
     }
     stage("docker_image") {
-        sh './docker/ubuntu-16.04-rocm/docker-build.sh caffe2_rocm1.8.0'
+	sh '''
+	    if [ ! -d tmp ]; then
+		mkdir tmp
+		cp -r ../../MLOpen tmp/
+            fi
+	    ./docker/ubuntu-16.04-rocm171/docker-build.sh caffe2_rocm171
+	   '''
     }
-    withDockerContainer(image: "caffe2_rocm1.8.0", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
+    withDockerContainer(image: "caffe2_rocm171", args: '--device=/dev/kfd --device=/dev/dri --group-add video -v $PWD:/rocm-caffe2') {
         timeout(time: 2, unit: 'HOURS'){
             stage('clang_format') {
                 sh '''
