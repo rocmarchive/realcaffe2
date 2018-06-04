@@ -19,7 +19,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from caffe2.proto import caffe2_pb2
-from caffe2.python import core
+from caffe2.python import core, workspace
 from hypothesis import assume, given, settings
 import caffe2.python.hypothesis_test_util as hu
 import hypothesis.strategies as st
@@ -34,7 +34,7 @@ class TestFcOperator(hu.HypothesisTestCase):
            k=st.integers(1, 5),
            multi_dim=st.sampled_from([True, False]),
            dtype=st.sampled_from([np.float32, np.float16]),
-           engine=st.sampled_from(['', 'TENSORCORE']),
+           engine=st.sampled_from(['' if workspace.has_hip else '', 'TENSORCORE']),
            **hu.gcs)
     def test_fc(self, n, m, k, multi_dim, dtype, engine, gc, dc):
         if dtype == np.float16:

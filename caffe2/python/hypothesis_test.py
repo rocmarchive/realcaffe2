@@ -2161,11 +2161,11 @@ class TestOperators(hu.HypothesisTestCase):
         **hu.gcs)
     def test_sparse_to_dense(self, inp, gc, dc):
         first_dim, X, I = inp
-        if X.dtype != np.dtype('float32') and gc.device_type == 1:
+        if X.dtype != np.dtype('float32') and (gc.device_type == 1 or gc.device_type == 4):
             # Cuda only support 32 bit float
             print("Bailout {}".format(X.dtype))
             return
-        if gc.device_type == 1:
+        if gc.device_type == 1 or gc.device_type == 4:
             # Cuda version only support int32
             I = I.astype(np.int32)
 

@@ -29,7 +29,7 @@ from caffe2.python.model_helper import ModelHelper
 import unittest
 
 class TestSpatialBN(hu.HypothesisTestCase):
-
+    @unittest.skipIf(workspace.has_hip, "MIOpen doesn't support 3D spatial batch norm")
     @given(size=st.integers(7, 10),
            input_channels=st.integers(1, 10),
            batch_size=st.integers(1, 3),
@@ -41,8 +41,6 @@ class TestSpatialBN(hu.HypothesisTestCase):
     def test_spatialbn_test_mode_3d(
             self, size, input_channels, batch_size, seed, order, epsilon,
             inplace, gc, dc):
-        if workspace.has_hip:
-            assume(order == "NCHW")
         op = core.CreateOperator(
             "SpatialBN",
             ["X", "scale", "bias", "mean", "var"],
@@ -50,7 +48,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
             order=order,
             is_test=True,
             epsilon=epsilon,
-            engine="MIOPEN" if workspace.has_hip else "CUDNN",
+            engine="CUDNN",
         )
         
         def reference_spatialbn_test(X, scale, bias, mean, var):
@@ -132,7 +130,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
     def test_spatialbn_test_mode(
             self, size, input_channels, batch_size, seed, order, epsilon,
             inplace, engine, gc, dc):
-        if engine == "MIOPEN":
+        if workspace.has_hip:
             assume(order == "NCHW")
         op = core.CreateOperator(
             "SpatialBN",
@@ -179,7 +177,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
     def test_spatialbn_train_mode(
             self, size, input_channels, batch_size, seed, order, epsilon,
             inplace, engine, gc, dc):
-        if engine == "MIOPEN":
+        if workspace.has_hip:
             assume(order == "NCHW")
         op = core.CreateOperator(
             "SpatialBN",
