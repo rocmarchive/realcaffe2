@@ -1,5 +1,5 @@
 #include "hip/hip_runtime.h"
-#include <cub/cub.cuh>
+#include <hipcub/hipcub.hpp>
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/pack_segments.h"
 
@@ -66,12 +66,12 @@ int64_t int_array_sum(const T* dev_array,
 {
     // Retrieve buffer size
     size_t temp_storage_bytes = 0;
-    cub::DeviceReduce::Sum(nullptr,
-                           temp_storage_bytes,
-                           dev_array,
-                           dev_sum.mutable_data<int64_t>(),
-                           num_items,
-                           context.hip_stream());
+    hipcub::DeviceReduce::Sum(nullptr,
+                              temp_storage_bytes,
+                              dev_array,
+                              dev_sum.mutable_data<int64_t>(),
+                              num_items,
+                              context.hip_stream());
 
     // Allocate temporary storage
     auto buffer_size = (temp_storage_bytes + sizeof(T)) / sizeof(T);
@@ -79,12 +79,12 @@ int64_t int_array_sum(const T* dev_array,
     void* dev_temp_storage = static_cast<void*>(dev_buffer.mutable_data<T>());
 
     // Find sumimum
-    cub::DeviceReduce::Sum(dev_temp_storage,
-                           temp_storage_bytes,
-                           dev_array,
-                           dev_sum.mutable_data<int64_t>(),
-                           num_items,
-                           context.hip_stream());
+    hipcub::DeviceReduce::Sum(dev_temp_storage,
+                              temp_storage_bytes,
+                              dev_array,
+                              dev_sum.mutable_data<int64_t>(),
+                              num_items,
+                              context.hip_stream());
 
     // Copy to host
     host_sum.CopyFrom<HIPContext>(dev_sum);
@@ -102,12 +102,12 @@ T array_max(const T* dev_array,
 {
     // Retrieve buffer size
     size_t temp_storage_bytes = 0;
-    cub::DeviceReduce::Max(nullptr,
-                           temp_storage_bytes,
-                           dev_array,
-                           dev_max.mutable_data<T>(),
-                           num_items,
-                           context.hip_stream());
+    hipcub::DeviceReduce::Max(nullptr,
+                              temp_storage_bytes,
+                              dev_array,
+                              dev_max.mutable_data<T>(),
+                              num_items,
+                              context.hip_stream());
 
     // Allocate temporary storage
     auto buffer_size = (temp_storage_bytes + sizeof(T)) / sizeof(T);
@@ -115,12 +115,12 @@ T array_max(const T* dev_array,
     void* dev_temp_storage = static_cast<void*>(dev_max_buffer.mutable_data<T>());
 
     // Find maximum
-    cub::DeviceReduce::Max(dev_temp_storage,
-                           temp_storage_bytes,
-                           dev_array,
-                           dev_max.mutable_data<T>(),
-                           num_items,
-                           context.hip_stream());
+    hipcub::DeviceReduce::Max(dev_temp_storage,
+                              temp_storage_bytes,
+                              dev_array,
+                              dev_max.mutable_data<T>(),
+                              num_items,
+                              context.hip_stream());
 
     // Copy to host
     host_max.CopyFrom<HIPContext>(dev_max);
@@ -138,12 +138,12 @@ void array_prefix_sum_exclusive(const T* dev_array,
     // Retrieve buffer size
     size_t temp_storage_bytes = 0;
     prefix_sum.Resize(num_items);
-    cub::DeviceScan::ExclusiveSum(nullptr,
-                                  temp_storage_bytes,
-                                  dev_array,
-                                  prefix_sum.mutable_data<T>(),
-                                  num_items,
-                                  context.hip_stream());
+    hipcub::DeviceScan::ExclusiveSum(nullptr,
+                                     temp_storage_bytes,
+                                     dev_array,
+                                     prefix_sum.mutable_data<T>(),
+                                     num_items,
+                                     context.hip_stream());
 
     // Allocate temporary storage
     auto buffer_size = (temp_storage_bytes + sizeof(T)) / sizeof(T);
@@ -151,12 +151,12 @@ void array_prefix_sum_exclusive(const T* dev_array,
     void* dev_temp_storage = static_cast<void*>(prefix_buffer.mutable_data<T>());
 
     // Exclusive sum
-    cub::DeviceScan::ExclusiveSum(dev_temp_storage,
-                                  temp_storage_bytes,
-                                  dev_array,
-                                  prefix_sum.mutable_data<T>(),
-                                  num_items,
-                                  context.hip_stream());
+    hipcub::DeviceScan::ExclusiveSum(dev_temp_storage,
+                                     temp_storage_bytes,
+                                     dev_array,
+                                     prefix_sum.mutable_data<T>(),
+                                     num_items,
+                                     context.hip_stream());
 }
 
 } // namespace

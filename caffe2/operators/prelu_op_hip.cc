@@ -17,7 +17,7 @@
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/prelu_op.h"
 #include "hip/hip_runtime.h"
-#include <cub/block/block_reduce.cuh>
+#include <hipcub/hipcub.hpp>
 
 namespace caffe2 {
 namespace {
@@ -86,7 +86,7 @@ PReluSharedWGradientKernelNCHW(const int num_items, const T* Xdata, const T* dYd
         wsum += (Xdata[i] <= 0) * dYdata[i] * Xdata[i];
     }
 
-    typedef cub::BlockReduce<T, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<T, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     T sum = BlockReduce(temp_storage).Sum(wsum);
     if(hipThreadIdx_x == 0)
@@ -113,7 +113,7 @@ __global__ void PReluWGradientKernelNCHW(
         wsum += (Xdata[ii] <= 0) * dYdata[ii] * Xdata[ii];
     }
 
-    typedef cub::BlockReduce<T, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<T, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     T sum = BlockReduce(temp_storage).Sum(wsum);
     if(hipThreadIdx_x == 0)
@@ -135,7 +135,7 @@ __global__ void PReluWGradientKernelNHWC(
         wsum += (Xdata[ii] <= 0) * dYdata[ii] * Xdata[ii];
     }
 
-    typedef cub::BlockReduce<T, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<T, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     T sum = BlockReduce(temp_storage).Sum(wsum);
     if(hipThreadIdx_x == 0)

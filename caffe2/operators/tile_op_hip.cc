@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include <cub/block/block_reduce.cuh>
+#include <hipcub/hipcub.hpp>
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/tile_op.h"
 
@@ -42,7 +42,7 @@ template <typename T>
 __global__ void
 TileGradientAxpyKernel(int outer_dim, int inner_dim, int tiles, const T* input_data, T* output_data)
 {
-    typedef cub::BlockReduce<T, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<T, CAFFE_HIP_NUM_THREADS>;
 
     for(int idx = blockIdx.x; idx < outer_dim * inner_dim; idx += gridDim.x)
     {
