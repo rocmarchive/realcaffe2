@@ -65,13 +65,13 @@ class BooleanMaskOp<HIPContext> final : public Operator<HIPContext>
         size_t numBytes = 0;
         hipcub::CountingInputIterator<int> itr(0);
         hipcub::DeviceSelect::Flagged(nullptr,
-                                   numBytes,
-                                   itr,
-                                   maskData,
-                                   indicesData,
-                                   static_cast<TIndex*>(nullptr),
-                                   outerSize,
-                                   context_.hip_stream());
+                                      numBytes,
+                                      itr,
+                                      maskData,
+                                      indicesData,
+                                      static_cast<TIndex*>(nullptr),
+                                      outerSize,
+                                      context_.hip_stream());
 
         auto numTIndex = static_cast<TIndex>((numBytes + sizeof(TIndex) - 1) / sizeof(TIndex));
         // allocate one more TIndex at the end of scratch for storing numOfOutput
@@ -80,13 +80,13 @@ class BooleanMaskOp<HIPContext> final : public Operator<HIPContext>
         auto* numOfOutputData = scratchData + numTIndex;
 
         hipcub::DeviceSelect::Flagged(static_cast<void*>(scratchData),
-                                   numBytes,
-                                   itr,
-                                   maskData,
-                                   indicesData,
-                                   numOfOutputData,
-                                   outerSize,
-                                   context_.hip_stream());
+                                      numBytes,
+                                      itr,
+                                      maskData,
+                                      indicesData,
+                                      numOfOutputData,
+                                      outerSize,
+                                      context_.hip_stream());
 
         // Copy numOfOutput from gpu to cpu
         TIndex numOfOutput;
