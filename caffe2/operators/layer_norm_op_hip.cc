@@ -52,14 +52,14 @@ void allocScratchAndReduce(InputIterator_t input,
 {
     size_t temp_storage_bytes;
     hipcub::DeviceSegmentedReduce::Sum(nullptr, // To retrieve required temporary storage size
-                                    temp_storage_bytes, // size_t &temp_storage_bytes
-                                    input,              // InputIteratorT d_i
-                                    output,             // OutputIteratorT d_out
-                                    num_segments,       // int num_segments
-                                    seg_indices,        // int *d_begin_offsets
-                                    seg_indices + 1,    // int *d_end_offsets
-                                    stream              // hipStream_t stream=0
-                                    );
+                                       temp_storage_bytes, // size_t &temp_storage_bytes
+                                       input,              // InputIteratorT d_i
+                                       output,             // OutputIteratorT d_out
+                                       num_segments,       // int num_segments
+                                       seg_indices,        // int *d_begin_offsets
+                                       seg_indices + 1,    // int *d_end_offsets
+                                       stream              // hipStream_t stream=0
+                                       );
     size_t temp_storage_floats =
         temp_storage_bytes / sizeof(float) + (temp_storage_bytes % sizeof(float) ? 1 : 0);
     scratch->Resize(vector<size_t>{temp_storage_floats});
