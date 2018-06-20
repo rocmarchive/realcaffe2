@@ -168,7 +168,7 @@ __global__ void LpPoolBackwardNCHW(const int nthreads,
                                    const int pad_t,
                                    const int pad_l,
                                    T* const bottom_diff,
-                                   const int p)
+                                   const T p)
 {
     HIP_1D_KERNEL_LOOP(index, nthreads)
     {
