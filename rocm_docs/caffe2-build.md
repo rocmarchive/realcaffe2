@@ -6,14 +6,7 @@ This instruction provides a starting point for build rocm-caffe2 (Caffe2 ROCm po
 
 ## Install ROCm
 
-Follow steps at [Basic Installation](https://github.com/petrex/rocm_caffe2/blob/documentation/rocm_docs/caffe2-install-basic.md) and [Docker Installation](https://github.com/petrex/rocm_caffe2/blob/documentation/rocm_docs/caffe2-docker.md) to install ROCm stack and docker.
-
-Setup environment variables, and add those environment variables at the end of ~/.bashrc 
-```
-export HCC_HOME=/opt/rocm/hcc
-export HIP_PATH=/opt/rocm/hip
-export PATH=$HCC_HOME/bin:$HIP_PATH/bin:$PATH
-```
+Follow steps at [Basic Installation](https://github.com/ROCmSoftwarePlatform/rocm-caffe2/blob/developer_preview/rocm_docs/caffe2-install-basic.md) and [Docker Installation](https://github.com/ROCmSoftwarePlatform/rocm-caffe2/blob/developer_preview/rocm_docs/caffe2-docker.md) to install ROCm stack and docker.
 
 ## Pull the Latest rocm-caffe2 Src
 * using https
@@ -30,14 +23,7 @@ git clone --recursive git@github.com:ROCmSoftwarePlatform/rocm-caffe2.git
 
 ## Spin off the Container
 	
-`docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video -v $PWD/rocm-caffe2:/rocm-caffe2 petrex/rocaffe2:developer_preview` 
-
-Inside the docker image, add THRUST_ROOT environment variable and navigate to rocm-caffe2 directory
-
-```
-export THRUST_ROOT=/data/Thrust
-cd /rocm-caffe2
-```
+`sudo docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video -v $PWD/rocm-caffe2:/rocm-caffe2 rohith612/caffe2:rocm1.8.0-miopen-develop_v2` 
 
 ## Build the rocm-caffe2 Project from Src
 
@@ -51,7 +37,8 @@ cd /rocm-caffe2
 
 * Compile, Link, and Install rocm-caffe2 
 
-	`sudo make install`
+	`make -j$(nproc)`
+	`make install`
 	
 * Test the rocm-caffe2 Installation 
 	Before running the tests, make sure that the required environment variables are set:

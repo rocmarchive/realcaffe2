@@ -39,6 +39,13 @@ class MIOPENConvOpBase : public ConvPoolOpBase<HIPContext>
           beta_(OperatorBase::GetSingleArgument<float>("beta", 0.0)),
           exhaustive_search_(OperatorBase::GetSingleArgument<bool>("exhaustive_search", false))
     {
+        bool unsupportedMIOArg = false;
+        // Check if the conv parameters are supported by MIOpen
+        if(((kernel_h() == 1) && (kernel_w() == 1)) && (pad_t() + pad_l() > 0))
+            unsupportedMIOArg = true;
+        OPERATOR_NEEDS_FEATURE(unsupportedMIOArg == false,
+                               "MIOpenConv does not support the requested conv arguments");
+
         MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bottom_desc_));
         MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&bias_desc_));
         MIOPEN_ENFORCE(miopenCreateTensorDescriptor(&weight_desc_));

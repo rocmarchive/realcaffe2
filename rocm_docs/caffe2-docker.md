@@ -16,11 +16,27 @@ or try these cmd to get docker community edition.
 	sudo adduser $LOGNAME docker
 		
 
-### Pull the Official docker image 
+### Pull the docker image with all dependecies
 * The fastest way to start ROCKING is through docker. You can pull the latest official docker image for rocm-caffe2 project:
 
 ```
-docker pull petrex/rocaffe2:developer_preview
+sudo docker pull rohith612/caffe2:rocm1.8.0-miopen-develop_v2
 ```
+This docker image has all dependencies for caffe2 and ROCM software stack for AMD platform. This docker image has rocm1.8.0 in it. 
 
-This docker image has all dependencies for caffe2 and ROCM software stack for AMD platform.
+### Pull the docker image with rocm-caffe2 pre-installed
+* You can pull the docker image with rocm-caffe2 pre-installed without having to build from the source.
+For rocm-1.8.0
+```
+sudo docker pull rocm/caffe2:rocm1.8.0-develop-v1
+``` 
+For rocm-1.7
+```
+sudo docker pull rocm/caffe2:rocm1.7-miopen-dev-v1
+``` 
+
+Launch the docker using:
+```
+sudo docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video <name_of_docker_image>
+```
+This will launch docker container with inside caffe2 directory with build folder inside it.
