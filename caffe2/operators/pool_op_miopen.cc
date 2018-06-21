@@ -199,7 +199,7 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext>
         auto& dY = Input(2);
         auto* dX = Output(0);
 
-        // cuDNN pooling support only 2 and 3 spatial dimensions.
+        // MIOPEN pooling support only 2 and 3 spatial dimensions.
         CAFFE_ENFORCE(X.ndim() >= 4 && X.ndim() <= 5);
 
         dX->ResizeLike(X);
@@ -217,14 +217,13 @@ class MIOPENPoolGradientOp : public ConvPoolOpBase<HIPContext>
         D_out = Y.ndim() > 4 ? Y.dim32(4) : 1;
 
         CAFFE_ENFORCE(kernel_.size() == 2, "MIOpen supports only 2D pooling");
-        MIOPEN_ENFORCE(miopenSet2dPoolingDescriptor(pooling_desc_,
-                                                    mode_,
-                                                    kernel_h(),
-                                                    kernel_w(),
-                                                    pad_t(),
-                                                    pad_l(),
-                                                    stride_h(),
-                                                    stride_w()));
+
+        // Need to infer the window size because kern() would not be updated unless SetOutputSize()
+        // is called
+        int kh = global_pooling_ ? H : kernel_h();
+        int kw = global_pooling_ ? W : kernel_w();
+        MIOPEN_ENFORCE(miopenSet2dPoolingDescriptor(
+            pooling_desc_, mode_, kh, kw, pad_t(), pad_l(), stride_h(), stride_w()));
 
         MIOPEN_ENFORCE(
             miopenSet4dTensorDescriptor(bottom_desc_, miopenTypeWrapper<T>::type, N, C, H, W));
