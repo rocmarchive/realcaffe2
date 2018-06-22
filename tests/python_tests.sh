@@ -3,8 +3,7 @@ rm -r ../caffe2/python/operator_test/__*
 
 failed_tests=()
 passed_tests=()
-ignore_tests=("conv_test.py",
-			  "cudnn_recurrent_test.py",
+ignore_tests=("cudnn_recurrent_test.py",
 			  "deform_conv_test.py",
 			  "elementwise_op_broadcast_test.py",
 			  "gru_test.py",
