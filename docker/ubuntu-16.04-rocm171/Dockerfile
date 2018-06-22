@@ -73,7 +73,7 @@ ARG PATH=$HCC_HOME/bin:$HIP_PATH/bin:$PATH
 
 RUN cd /root/MLOpen && cmake -P install_deps.cmake && \
     mkdir -p build && cd build && \
-    CXX=/opt/rocm/hcc/bin/hcc cmake -DMIOPEN_BACKEND=HIP -DCMAKE_PREFIX_PATH="/opt/rocm/hcc;/opt/rocm/hip" -DCMAKE_CXX_FLAGS="-isystem /usr/include/x86_64-linux-gnu/" .. && \
+    CXX=/opt/rocm/hcc/bin/hcc cmake -DMIOPEN_CACHE_DIR="" -DMIOPEN_BACKEND=HIP -DCMAKE_PREFIX_PATH="/opt/rocm/hcc;/opt/rocm/hip" -DCMAKE_CXX_FLAGS="-isystem /usr/include/x86_64-linux-gnu/" .. && \
     make -j $(nproc) && make install
 
 WORKDIR $HOME
