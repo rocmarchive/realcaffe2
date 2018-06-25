@@ -15,7 +15,7 @@
  */
 
 #include <assert.h>
-#include <cub/block/block_reduce.cuh>
+#include <hipcub/hipcub.hpp>
 #include "hip/hip_runtime.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/cross_entropy_op.h"
@@ -208,7 +208,7 @@ __global__ void SigmoidCrossEntropyWithLogitsKernel(const int outer_size,
         value += sigmoid_xent_forward(logits_ptr[in_idx], targets_ptr[in_idx]);
     }
 
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     float sum = BlockReduce(temp_storage).Sum(value);
     if(hipThreadIdx_x == 0)
@@ -321,7 +321,7 @@ __global__ void WeightedSigmoidCrossEntropyWithLogitsKernel(const int outer_size
             sigmoid_xent_forward(logits_ptr[in_idx], targets_ptr[in_idx]) * weights_ptr[in_idx];
     }
 
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     float sum = BlockReduce(temp_storage).Sum(value);
     if(hipThreadIdx_x == 0)

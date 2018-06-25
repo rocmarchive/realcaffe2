@@ -16,7 +16,7 @@
 
 #include "caffe2/operators/layer_norm_op.h"
 #include "hip/hip_runtime.h"
-#include <cub/cub.cuh>
+#include <hipcub/hipcub.hpp>
 #include "caffe2/core/context_hip.h"
 #include "caffe2/utils/math.h"
 
@@ -51,20 +51,20 @@ void allocScratchAndReduce(InputIterator_t input,
                            hipStream_t stream)
 {
     size_t temp_storage_bytes;
-    cub::DeviceSegmentedReduce::Sum(nullptr, // To retrieve required temporary storage size
-                                    temp_storage_bytes, // size_t &temp_storage_bytes
-                                    input,              // InputIteratorT d_i
-                                    output,             // OutputIteratorT d_out
-                                    num_segments,       // int num_segments
-                                    seg_indices,        // int *d_begin_offsets
-                                    seg_indices + 1,    // int *d_end_offsets
-                                    stream              // hipStream_t stream=0
-                                    );
+    hipcub::DeviceSegmentedReduce::Sum(nullptr, // To retrieve required temporary storage size
+                                       temp_storage_bytes, // size_t &temp_storage_bytes
+                                       input,              // InputIteratorT d_i
+                                       output,             // OutputIteratorT d_out
+                                       num_segments,       // int num_segments
+                                       seg_indices,        // int *d_begin_offsets
+                                       seg_indices + 1,    // int *d_end_offsets
+                                       stream              // hipStream_t stream=0
+                                       );
     size_t temp_storage_floats =
         temp_storage_bytes / sizeof(float) + (temp_storage_bytes % sizeof(float) ? 1 : 0);
     scratch->Resize(vector<size_t>{temp_storage_floats});
 
-    cub::DeviceSegmentedReduce::Sum(
+    hipcub::DeviceSegmentedReduce::Sum(
         scratch->mutable_data<float>(), // To retrieve required temporary storage
                                         // size
         temp_storage_bytes,             // size_t &temp_storage_bytes
@@ -140,7 +140,7 @@ bool LayerNormOp<HIPContext>::DoRunWithType<float>()
 
         // First stage: sum up row-wise squared values
         SqrTransform<float> transform;
-        cub::TransformInputIterator<float, SqrTransform<float>, const float*> it(
+        hipcub::TransformInputIterator<float, SqrTransform<float>, const float*> it(
             input.data<float>(), transform);
         allocScratchAndReduce(it,
                               stdev->mutable_data<float>(),
