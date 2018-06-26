@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <cub/cub.cuh>
+#include <hipcub/hipcub.hpp>
 #include "hip/hip_runtime.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/sequence_ops.h"
@@ -155,21 +155,21 @@ void lengths_prefix_sum(const int32_t* lengths,
     prefix_sum->Resize(num_items);
     if(Inclusive)
     {
-        cub::DeviceScan::InclusiveSum(NULL,
-                                      temp_storage_bytes,
-                                      lengths,
-                                      prefix_sum->mutable_data<int32_t>(),
-                                      num_items,
-                                      context->hip_stream());
+        hipcub::DeviceScan::InclusiveSum(NULL,
+                                         temp_storage_bytes,
+                                         lengths,
+                                         prefix_sum->mutable_data<int32_t>(),
+                                         num_items,
+                                         context->hip_stream());
     }
     else
     {
-        cub::DeviceScan::ExclusiveSum(NULL,
-                                      temp_storage_bytes,
-                                      lengths,
-                                      prefix_sum->mutable_data<int32_t>(),
-                                      num_items,
-                                      context->hip_stream());
+        hipcub::DeviceScan::ExclusiveSum(NULL,
+                                         temp_storage_bytes,
+                                         lengths,
+                                         prefix_sum->mutable_data<int32_t>(),
+                                         num_items,
+                                         context->hip_stream());
     }
 
     // Allocate temporary storage
@@ -179,21 +179,21 @@ void lengths_prefix_sum(const int32_t* lengths,
 
     if(Inclusive)
     {
-        cub::DeviceScan::InclusiveSum(d_temp_storage,
-                                      temp_storage_bytes,
-                                      lengths,
-                                      prefix_sum->mutable_data<int32_t>(),
-                                      num_items,
-                                      context->hip_stream());
+        hipcub::DeviceScan::InclusiveSum(d_temp_storage,
+                                         temp_storage_bytes,
+                                         lengths,
+                                         prefix_sum->mutable_data<int32_t>(),
+                                         num_items,
+                                         context->hip_stream());
     }
     else
     {
-        cub::DeviceScan::ExclusiveSum(d_temp_storage,
-                                      temp_storage_bytes,
-                                      lengths,
-                                      prefix_sum->mutable_data<int32_t>(),
-                                      num_items,
-                                      context->hip_stream());
+        hipcub::DeviceScan::ExclusiveSum(d_temp_storage,
+                                         temp_storage_bytes,
+                                         lengths,
+                                         prefix_sum->mutable_data<int32_t>(),
+                                         num_items,
+                                         context->hip_stream());
     }
 }
 } // namespace
@@ -341,7 +341,7 @@ __global__ void gather_padding_kernel(const int K,
                                       T* Y0,
                                       T* Y1)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage y0_tmp;
     __shared__ typename BlockReduce::TempStorage y1_tmp;
     for(int i = hipBlockIdx_x; i < N; i += hipGridDim_x)
@@ -363,8 +363,8 @@ __global__ void gather_padding_kernel(const int K,
             const int idx2 = idx1 + N * (I[j1] - Y1Width + j2);
             sum_2 += X[idx2 + i];
         }
-        sum_1 = BlockReduce(y0_tmp).Reduce(sum_1, cub::Sum());
-        sum_2 = BlockReduce(y1_tmp).Reduce(sum_2, cub::Sum());
+        sum_1 = BlockReduce(y0_tmp).Reduce(sum_1, hipcub::Sum());
+        sum_2 = BlockReduce(y1_tmp).Reduce(sum_2, hipcub::Sum());
         if(hipThreadIdx_x == 0)
         {
             Y0[i]            = sum_1;

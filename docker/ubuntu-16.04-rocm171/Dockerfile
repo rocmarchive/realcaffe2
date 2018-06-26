@@ -125,5 +125,11 @@ WORKDIR cub-hip
 RUN git checkout hip_port_1.7.4_caffe2
 ENV THRUST_ROOT=/data/Thrust
 
+WORKDIR /data
+RUN git clone https://github.com/ROCmSoftwarePlatform/rocPRIM.git
+RUN cd rocPRIM && mkdir build && cd build && \
+    CXX=/opt/rocm/hcc/bin/hcc cmake .. && \
+    make -j $(nproc) && make install
+
 WORKDIR $HOME
 

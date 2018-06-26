@@ -214,7 +214,7 @@ class TestSpatialBN(hu.HypothesisTestCase):
     def test_spatialbn_train_mode_gradient_check(
             self, size, input_channels, batch_size, seed, order, epsilon,
             engine, gc, dc):
-        if engine == "MIOPEN":
+        if workspace.has_hip:
             assume(order == "NCHW")
         op = core.CreateOperator(
             "SpatialBN",

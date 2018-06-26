@@ -17,7 +17,7 @@
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/boolean_mask_ops.h"
 #include "hip/hip_runtime.h"
-#include <cub/cub.cuh>
+#include <hipcub/hipcub.hpp>
 
 namespace caffe2 {
 
@@ -63,15 +63,15 @@ class BooleanMaskOp<HIPContext> final : public Operator<HIPContext>
         auto* indicesData = indices_.mutable_data<TIndex>();
 
         size_t numBytes = 0;
-        cub::CountingInputIterator<int> itr(0);
-        cub::DeviceSelect::Flagged(nullptr,
-                                   numBytes,
-                                   itr,
-                                   maskData,
-                                   indicesData,
-                                   static_cast<TIndex*>(nullptr),
-                                   outerSize,
-                                   context_.hip_stream());
+        hipcub::CountingInputIterator<int> itr(0);
+        hipcub::DeviceSelect::Flagged(nullptr,
+                                      numBytes,
+                                      itr,
+                                      maskData,
+                                      indicesData,
+                                      static_cast<TIndex*>(nullptr),
+                                      outerSize,
+                                      context_.hip_stream());
 
         auto numTIndex = static_cast<TIndex>((numBytes + sizeof(TIndex) - 1) / sizeof(TIndex));
         // allocate one more TIndex at the end of scratch for storing numOfOutput
@@ -79,14 +79,14 @@ class BooleanMaskOp<HIPContext> final : public Operator<HIPContext>
         auto* scratchData     = scratch_.mutable_data<TIndex>();
         auto* numOfOutputData = scratchData + numTIndex;
 
-        cub::DeviceSelect::Flagged(static_cast<void*>(scratchData),
-                                   numBytes,
-                                   itr,
-                                   maskData,
-                                   indicesData,
-                                   numOfOutputData,
-                                   outerSize,
-                                   context_.hip_stream());
+        hipcub::DeviceSelect::Flagged(static_cast<void*>(scratchData),
+                                      numBytes,
+                                      itr,
+                                      maskData,
+                                      indicesData,
+                                      numOfOutputData,
+                                      outerSize,
+                                      context_.hip_stream());
 
         // Copy numOfOutput from gpu to cpu
         TIndex numOfOutput;

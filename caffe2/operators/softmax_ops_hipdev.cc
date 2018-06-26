@@ -15,7 +15,7 @@
  */
 
 #include <cfloat>
-#include <cub/block/block_reduce.cuh>
+#include <hipcub/hipcub.hpp>
 #include "hip/hip_runtime.h"
 #include "caffe2/core/context_hip.h"
 #include "softmax_op.h"
@@ -75,7 +75,7 @@ __global__ void ProbCrossEntropyKernel(const int N,
                                        const float* weights,
                                        float* Ydata)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ typename BlockReduce::TempStorage temp_storage;
 
     for(int i = hipBlockIdx_x; i < N; i += hipGridDim_x)

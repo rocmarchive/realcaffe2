@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <cub/block/block_reduce.cuh>
+#include <hipcub/hipcub.hpp>
 #include "hip/hip_runtime.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/normalize_l1_op.h"
@@ -25,7 +25,7 @@ namespace caffe2 {
 __global__ void
 NormalizeKernel(const int m, const int n, const int sf, const float* xData, float* yData)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ BlockReduce::TempStorage temp_storage;
 
     for(int i = hipBlockIdx_x; i < n; i += hipGridDim_x)
@@ -64,7 +64,7 @@ __global__ void NormalizeGradientKernel(const int M,
                                         const float* grad_out_mat,
                                         float* grad_mat)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ BlockReduce::TempStorage temp_storage_sum;
     __shared__ BlockReduce::TempStorage temp_storage_norm;
     for(int i = hipBlockIdx_x; i < M; i += hipGridDim_x)
@@ -148,7 +148,7 @@ namespace {
 __global__ void
 NormalizeL1Kernel(const int m, const int n, const int sf, const float* xData, float* yData)
 {
-    typedef cub::BlockReduce<float, CAFFE_HIP_NUM_THREADS> BlockReduce;
+    using BlockReduce = hipcub::BlockReduce<float, CAFFE_HIP_NUM_THREADS>;
     __shared__ BlockReduce::TempStorage temp_storage;
 
     for(int i = hipBlockIdx_x; i < n; i += hipGridDim_x)

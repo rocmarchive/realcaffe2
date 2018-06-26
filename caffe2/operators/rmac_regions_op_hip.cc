@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-#include <cub/block/block_reduce.cuh>
+#include <hipcub/hipcub.hpp>
 #include "hip/hip_runtime.h"
 #include "caffe2/core/context_hip.h"
 #include "caffe2/operators/rmac_regions_op.h"
+#include <cfloat>
 
-namespace cub {
+namespace rocprim {
 
 template <typename KeyT, typename ValueT>
-inline __host__ __device__ bool operator<(const cub::KeyValuePair<KeyT, ValueT>& kv1,
-                                          const cub::KeyValuePair<KeyT, ValueT>& kv2)
+inline __host__ __device__ bool operator<(const hipcub::KeyValuePair<KeyT, ValueT>& kv1,
+                                          const hipcub::KeyValuePair<KeyT, ValueT>& kv2)
 {
     return (kv1.value < kv2.value) || (kv1.value == kv2.value && kv2.key < kv1.key);
 }
 
-} // namespace cub
+} // namespace rocprim
 
 namespace caffe2 {
 
@@ -43,7 +44,7 @@ __global__ void NumRMACRegionsKernel(const int W,
                                      int* num_rois_data)
 {
     // steps(idx) regions for long dimension
-    typedef cub::KeyValuePair<int, float> KeyValuePair; // <step, value>
+    typedef hipcub::KeyValuePair<int, float> KeyValuePair; // <step, value>
     KeyValuePair kv, min_kv;
     min_kv.value = FLT_MAX;
 
@@ -65,9 +66,9 @@ __global__ void NumRMACRegionsKernel(const int W,
     // Block-wise arg-min reduction to find step
     int step;
     {
-        typedef cub::BlockReduce<KeyValuePair, CAFFE_HIP_NUM_THREADS> BlockReduce;
+        using BlockReduce = hipcub::BlockReduce<KeyValuePair, CAFFE_HIP_NUM_THREADS>;
         __shared__ typename BlockReduce::TempStorage temp_storage;
-        min_kv = BlockReduce(temp_storage).Reduce(min_kv, cub::Min());
+        min_kv = BlockReduce(temp_storage).Reduce(min_kv, hipcub::Min());
 
         __shared__ int step_shared;
         if(hipThreadIdx_x == 0)
@@ -93,7 +94,7 @@ __global__ void NumRMACRegionsKernel(const int W,
 
     // Block-wise sum reduction to compute num_rois at all scales
     {
-        typedef cub::BlockReduce<int, CAFFE_HIP_NUM_THREADS> BlockReduce;
+        using BlockReduce = hipcub::BlockReduce<int, CAFFE_HIP_NUM_THREADS>;
         __shared__ typename BlockReduce::TempStorage temp_storage;
         num_rois = BlockReduce(temp_storage).Sum(num_rois);
     }
