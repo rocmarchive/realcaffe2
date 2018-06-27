@@ -17,7 +17,8 @@ node("rocm17-caffe2") {
         timeout(time: 2, unit: 'HOURS'){
             stage('clang_format') {
                 sh '''
-                    cd caffe2
+                    pwd
+		    cd caffe2
                     find . -iname *miopen* -o -iname *hip* \
                     | grep -v 'build/' \
                     | xargs -n 1 -P 1 -I{} -t sh -c 'clang-format-3.8 -style=file {} | diff - {}'
@@ -27,6 +28,7 @@ node("rocm17-caffe2") {
             stage("build_debug") {
 
                 sh '''
+		    pwd
                     export HCC_AMDGPU_TARGET=gfx900
                     ls /data/Thrust
                     export THRUST_ROOT=/data/Thrust
