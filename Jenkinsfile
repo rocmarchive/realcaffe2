@@ -1,4 +1,10 @@
 node("rocm17-caffe2") {
+    
+    properties(
+    [
+        pipelineTriggers([cron('00 19 * * *')]),
+    ]
+)
     triggers {
         cron('00 19 * * *')
     }    
