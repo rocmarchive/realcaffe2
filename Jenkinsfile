@@ -4,10 +4,7 @@ node("rocm17-caffe2") {
     [
         pipelineTriggers([cron('00 19 * * *')]),
     ]
-)
-    triggers {
-        cron('00 19 * * *')
-    }    
+    )
     stage("checkout") {
         checkout scm
         sh 'git submodule update --init'
